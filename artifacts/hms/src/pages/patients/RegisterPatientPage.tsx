@@ -1,14 +1,14 @@
 import { useForm, useWatch } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { useRegisterPatient } from "@workspace/api-client-react";
+import { useRegisterPatient, useGenerateToken, useListUsers, type User } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserPlus, ListOrdered } from "lucide-react";
 
 type FormValues = {
   fullName: string;
@@ -42,7 +42,14 @@ export default function RegisterPatientPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<FormValues>();
-  const mutation = useRegisterPatient();
+  const registerMutation = useRegisterPatient();
+  const tokenMutation = useGenerateToken();
+  const addToQueueRef = useRef(false);
+
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+
+  const { data: usersData } = useListUsers({ role: "doctor", limit: 100 });
+  const doctors = (usersData?.data ?? [] as User[]).filter((u) => u.isActive);
 
   const dobValue = useWatch({ control, name: "dateOfBirth" });
 
@@ -54,19 +61,52 @@ export default function RegisterPatientPage() {
   }, [dobValue, setValue]);
 
   const onSubmit = (data: FormValues) => {
+    const wantsQueue = addToQueueRef.current;
+
+    if (wantsQueue && !selectedDoctorId) {
+      toast({ title: "Doctor required", description: "Please select a consulting doctor to add patient to the queue.", variant: "destructive" });
+      return;
+    }
+
     const payload = {
       ...data,
       dateOfBirth: data.dateOfBirth || undefined,
       age: data.age || undefined,
     };
-    mutation.mutate({ data: payload }, {
-      onSuccess: (res) => {
-        toast({ title: "Patient registered", description: `ID: ${res.patientId}` });
-        setLocation(`/patients/${res.id}`);
+
+    registerMutation.mutate({ data: payload }, {
+      onSuccess: (patient) => {
+        if (wantsQueue) {
+          tokenMutation.mutate(
+            { data: { patientId: patient.id, doctorId: selectedDoctorId } },
+            {
+              onSuccess: (token) => {
+                toast({
+                  title: "Patient registered & added to queue",
+                  description: `${patient.fullName} — Token #${token.tokenNumber}`,
+                });
+                setLocation("/queue");
+              },
+              onError: () => {
+                toast({
+                  title: "Registered, but queue failed",
+                  description: `Patient ${patient.patientId} registered. Could not add to queue — try from the Queue page.`,
+                  variant: "destructive",
+                });
+                setLocation(`/patients/${patient.id}`);
+              },
+            },
+          );
+        } else {
+          toast({ title: "Patient registered", description: `ID: ${patient.patientId}` });
+          setLocation(`/patients/${patient.id}`);
+        }
       },
       onError: () => toast({ title: "Error", description: "Failed to register patient", variant: "destructive" }),
     });
   };
+
+  const isPending = registerMutation.isPending || tokenMutation.isPending;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -186,10 +226,47 @@ export default function RegisterPatientPage() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        {/* Queue section */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-3">
+          <h2 className="font-semibold text-foreground border-b border-border pb-2">Add to OPD Queue <span className="text-muted-foreground font-normal text-sm">(optional)</span></h2>
+          <p className="text-sm text-muted-foreground">Select a doctor below and use "Register &amp; Add to Queue" to immediately assign a token.</p>
+          <div className="space-y-1.5">
+            <Label>Consulting Doctor</Label>
+            <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+              <SelectTrigger data-testid="select-doctor">
+                <SelectValue placeholder="Select doctor" />
+              </SelectTrigger>
+              <SelectContent>
+                {doctors.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.fullName}{d.specialization ? ` — ${d.specialization}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => setLocation("/patients")}>Cancel</Button>
-          <Button type="submit" disabled={mutation.isPending} data-testid="btn-submit-patient">
-            {mutation.isPending ? "Registering..." : "Register Patient"}
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={isPending}
+            data-testid="btn-submit-patient"
+            onClick={() => { addToQueueRef.current = false; }}
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            {registerMutation.isPending && !addToQueueRef.current ? "Registering..." : "Register Patient"}
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending}
+            data-testid="btn-submit-and-queue"
+            onClick={() => { addToQueueRef.current = true; }}
+          >
+            <ListOrdered className="h-4 w-4 mr-2" />
+            {isPending && addToQueueRef.current ? "Adding to queue..." : "Register & Add to Queue"}
           </Button>
         </div>
       </form>
