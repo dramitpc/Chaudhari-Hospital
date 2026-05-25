@@ -1482,7 +1482,7 @@ components:
     # ── PATIENT SCHEMAS ──────────────────────────────────────────────────────
     Patient:
       type: object
-      required: [id, patientId, fullName, dateOfBirth, gender, createdAt]
+      required: [id, patientId, fullName, gender, createdAt]
       properties:
         id:
           type: string
@@ -1491,7 +1491,9 @@ components:
         fullName:
           type: string
         dateOfBirth:
-          type: string
+          type: ["string", "null"]
+        age:
+          type: ["string", "null"]
         gender:
           type: string
           enum: [male, female, other]
@@ -1526,11 +1528,13 @@ components:
 
     PatientInput:
       type: object
-      required: [fullName, dateOfBirth, gender]
+      required: [fullName, gender]
       properties:
         fullName:
           type: string
         dateOfBirth:
+          type: string
+        age:
           type: string
         gender:
           type: string
@@ -1564,6 +1568,8 @@ components:
         fullName:
           type: string
         dateOfBirth:
+          type: string
+        age:
           type: string
         phone:
           type: string

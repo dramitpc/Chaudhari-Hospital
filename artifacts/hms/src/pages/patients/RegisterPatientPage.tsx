@@ -1,4 +1,5 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useRegisterPatient } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import { ArrowLeft } from "lucide-react";
 
 type FormValues = {
   fullName: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
+  age?: string;
   gender: "male" | "female" | "other";
   phone?: string;
   email?: string;
@@ -26,14 +28,38 @@ type FormValues = {
   currentMedications?: string;
 };
 
+function calcAge(dob: string): string {
+  const today = new Date();
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return "";
+  let years = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) years--;
+  return years >= 0 ? String(years) : "";
+}
+
 export default function RegisterPatientPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>();
+  const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<FormValues>();
   const mutation = useRegisterPatient();
 
+  const dobValue = useWatch({ control, name: "dateOfBirth" });
+
+  useEffect(() => {
+    if (dobValue) {
+      const computed = calcAge(dobValue);
+      if (computed) setValue("age", computed);
+    }
+  }, [dobValue, setValue]);
+
   const onSubmit = (data: FormValues) => {
-    mutation.mutate({ data }, {
+    const payload = {
+      ...data,
+      dateOfBirth: data.dateOfBirth || undefined,
+      age: data.age || undefined,
+    };
+    mutation.mutate({ data: payload }, {
       onSuccess: (res) => {
         toast({ title: "Patient registered", description: `ID: ${res.patientId}` });
         setLocation(`/patients/${res.id}`);
@@ -58,15 +84,26 @@ export default function RegisterPatientPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="font-semibold text-foreground border-b border-border pb-2">Basic Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 md:col-span-2">
               <Label>Full Name *</Label>
               <Input {...register("fullName", { required: true })} data-testid="input-fullname" placeholder="Patient full name" />
               {errors.fullName && <p className="text-xs text-destructive">Required</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Date of Birth *</Label>
-              <Input type="date" {...register("dateOfBirth", { required: true })} data-testid="input-dob" />
-              {errors.dateOfBirth && <p className="text-xs text-destructive">Required</p>}
+              <Label>Date of Birth <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input type="date" {...register("dateOfBirth")} data-testid="input-dob" />
+              <p className="text-xs text-muted-foreground">Age is calculated automatically from DOB</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Age (years) <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                type="number"
+                min="0"
+                max="150"
+                {...register("age")}
+                data-testid="input-age"
+                placeholder="e.g. 35"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Gender *</Label>

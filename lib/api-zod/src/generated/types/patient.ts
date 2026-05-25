@@ -11,7 +11,10 @@ export interface Patient {
   id: string;
   patientId: string;
   fullName: string;
-  dateOfBirth: string;
+  /** @nullable */
+  dateOfBirth?: string | null;
+  /** @nullable */
+  age?: string | null;
   gender: PatientGender;
   /** @nullable */
   phone?: string | null;

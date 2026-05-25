@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
-function calcAge(dob: string) {
+function calcAge(dob: string | null | undefined) {
+  if (!dob) return null;
   const birth = new Date(dob);
   const now = new Date();
   return now.getFullYear() - birth.getFullYear() - (now < new Date(now.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
@@ -92,7 +93,7 @@ export default function PatientsPage() {
                 >
                   <td className="px-4 py-3 font-mono text-xs text-primary">{p.patientId}</td>
                   <td className="px-4 py-3 font-medium">{p.fullName}</td>
-                  <td className="px-4 py-3">{calcAge(p.dateOfBirth)}</td>
+                  <td className="px-4 py-3">{calcAge(p.dateOfBirth) ?? p.age ?? "—"}</td>
                   <td className="px-4 py-3 capitalize">{p.gender}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.phone ?? "-"}</td>
                   <td className="px-4 py-3">

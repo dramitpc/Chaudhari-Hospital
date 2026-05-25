@@ -9,6 +9,7 @@
 export interface PatientUpdate {
   fullName?: string;
   dateOfBirth?: string;
+  age?: string;
   phone?: string;
   email?: string;
   address?: string;

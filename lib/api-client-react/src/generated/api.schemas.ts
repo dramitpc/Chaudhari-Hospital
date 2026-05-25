@@ -118,7 +118,10 @@ export interface Patient {
   id: string;
   patientId: string;
   fullName: string;
-  dateOfBirth: string;
+  /** @nullable */
+  dateOfBirth?: string | null;
+  /** @nullable */
+  age?: string | null;
   gender: PatientGender;
   /** @nullable */
   phone?: string | null;
@@ -158,7 +161,8 @@ export const PatientInputGender = {
 
 export interface PatientInput {
   fullName: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
+  age?: string;
   gender: PatientInputGender;
   phone?: string;
   email?: string;
@@ -176,6 +180,7 @@ export interface PatientInput {
 export interface PatientUpdate {
   fullName?: string;
   dateOfBirth?: string;
+  age?: string;
   phone?: string;
   email?: string;
   address?: string;

@@ -15,10 +15,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, Edit, FileText, Receipt } from "lucide-react";
 
-function calcAge(dob: string) {
+function calcAge(dob: string | null | undefined) {
+  if (!dob) return null;
   const birth = new Date(dob);
   const now = new Date();
-  return now.getFullYear() - birth.getFullYear();
+  return now.getFullYear() - birth.getFullYear() - (now < new Date(now.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
 }
 
 function FieldRow({ label, value }: { label: string; value?: string | null }) {
@@ -99,7 +100,7 @@ export default function PatientDetailPage() {
             </div>
             <h1 className="text-2xl font-bold mt-1">{patient.fullName}</h1>
             <p className="text-sm text-muted-foreground">
-              {calcAge(patient.dateOfBirth)} years • {patient.gender} • {patient.phone ?? "No phone"}
+              {(calcAge(patient.dateOfBirth) ?? patient.age) ? `${calcAge(patient.dateOfBirth) ?? patient.age} yrs • ` : ""}{patient.gender} • {patient.phone ?? "No phone"}
             </p>
           </div>
         </div>
