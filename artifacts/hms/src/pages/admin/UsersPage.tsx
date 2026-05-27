@@ -49,7 +49,10 @@ export default function UsersPage() {
         setShowCreate(false);
         setForm({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "" });
       },
-      onError: () => toast({ title: "Error creating user", variant: "destructive" }),
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        toast({ title: msg ?? "Error creating user", variant: "destructive" });
+      },
     });
   };
 

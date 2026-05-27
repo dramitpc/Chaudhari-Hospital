@@ -69,9 +69,19 @@ router.post("/users", authenticate, requireRole("admin"), async (req, res): Prom
   }
   const { password, ...rest } = parsed.data as { password: string; username: string; role: "admin" | "doctor" | "staff"; fullName: string; email?: string; phone?: string; registrationNumber?: string; specialization?: string };
   const passwordHash = hashPassword(password);
-  const [user] = await db.insert(usersTable).values({ ...rest, passwordHash }).returning();
-  await logAudit(req, req.user!.id, "CREATE_USER", "users", user.id);
-  res.status(201).json(formatUser(user));
+  try {
+    const [user] = await db.insert(usersTable).values({ ...rest, passwordHash }).returning();
+    await logAudit(req, req.user!.id, "CREATE_USER", "users", user.id);
+    res.status(201).json(formatUser(user));
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string; constraint?: string };
+    if (pgErr.code === "23505") {
+      const field = pgErr.constraint?.includes("username") ? "username" : "email";
+      res.status(409).json({ error: `A user with that ${field} already exists.` });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.get("/users/:id", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
