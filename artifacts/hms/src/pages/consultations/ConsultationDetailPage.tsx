@@ -246,9 +246,9 @@ export default function ConsultationDetailPage() {
               })}
             </TabsContent>
 
-            <TabsContent value="medhistory" className="mt-4 space-y-3">
+            <TabsContent value="medhistory" className="mt-4">
               {patient ? (
-                <>
+                <div className="med-history-scroll space-y-4">
                   {([
                     { field: "allergies",         label: "Known Allergies",       placeholder: "Drug allergies, food allergies, environmental triggers..." },
                     { field: "medicalHistory",    label: "Past Medical History",  placeholder: "Chronic conditions, past illnesses, hospitalisations..." },
@@ -257,18 +257,19 @@ export default function ConsultationDetailPage() {
                     { field: "currentMedications",label: "Current Medications",   placeholder: "Ongoing medications, dosages, duration..." },
                   ] as const).map(({ field, label, placeholder }) => (
                     <div key={field} className="space-y-1.5">
-                      <Label className="text-xs font-medium">{label}</Label>
+                      <Label className="text-xs font-medium text-red-700 dark:text-red-400">{label}</Label>
                       <Textarea
                         key={`${patientId}-${field}`}
                         defaultValue={(patient as unknown as Record<string, string | null>)[field] ?? ""}
                         onBlur={e => handleMedHistBlur(field, e.target.value)}
                         rows={3}
                         placeholder={placeholder}
+                        className="bg-white dark:bg-red-950/30 border-red-200 dark:border-red-800 focus-visible:ring-red-400"
                       />
                     </div>
                   ))}
-                  <p className="text-xs text-muted-foreground">Changes auto-save on blur and update the patient record.</p>
-                </>
+                  <p className="text-xs text-red-500 dark:text-red-400">Changes auto-save on blur and update the patient record.</p>
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">Loading patient record…</p>
               )}
