@@ -39,6 +39,7 @@ import UsersPage from "@/pages/admin/UsersPage";
 import DrugsPage from "@/pages/admin/DrugsPage";
 import AuditLogsPage from "@/pages/admin/AuditLogsPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
+import ChargesMasterPage from "@/pages/admin/ChargesMasterPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -136,6 +137,9 @@ function Router() {
       </Route>
       <Route path="/admin/drugs">
         <Protected roles={["admin"]}><DrugsPage /></Protected>
+      </Route>
+      <Route path="/admin/charges">
+        <Protected roles={["admin"]}><ChargesMasterPage /></Protected>
       </Route>
       <Route path="/admin/audit-logs">
         <Protected roles={["admin"]}><AuditLogsPage /></Protected>

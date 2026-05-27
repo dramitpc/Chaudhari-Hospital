@@ -13,6 +13,7 @@ import {
   Settings, 
   ShieldCheck, 
   Database,
+  BadgeDollarSign,
   LogOut,
   Moon,
   Sun
@@ -47,6 +48,7 @@ export function Sidebar() {
     // Admin Only
     { name: "Users", href: "/admin/users", icon: ShieldCheck, show: isAdmin, group: "Admin" },
     { name: "Drugs Master", href: "/admin/drugs", icon: Database, show: isAdmin, group: "Admin" },
+    { name: "Charges Master", href: "/admin/charges", icon: BadgeDollarSign, show: isAdmin, group: "Admin" },
     { name: "Audit Logs", href: "/admin/audit-logs", icon: FileText, show: isAdmin, group: "Admin" },
     { name: "Settings", href: "/admin/settings", icon: Settings, show: isAdmin, group: "Admin" },
   ];

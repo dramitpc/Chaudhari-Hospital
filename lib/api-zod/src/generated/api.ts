@@ -1438,6 +1438,38 @@ export const CreateChargeTypeBody = zod.object({
 
 
 /**
+ * @summary Update a charge type
+ */
+export const UpdateChargeTypeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateChargeTypeBody = zod.object({
+  "name": zod.string(),
+  "category": zod.enum(['consultation', 'procedure', 'investigation', 'other']),
+  "unitPrice": zod.number(),
+  "taxPercent": zod.number().optional()
+})
+
+export const UpdateChargeTypeResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['consultation', 'procedure', 'investigation', 'other']),
+  "unitPrice": zod.number(),
+  "taxPercent": zod.number().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Soft-delete a charge type
+ */
+export const DeleteChargeTypeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+/**
  * @summary List medical certificates
  */
 export const ListCertificatesQueryParams = zod.object({

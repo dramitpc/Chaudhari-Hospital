@@ -203,4 +203,29 @@ router.post("/billing/charge-types", authenticate, requireRole("admin"), async (
   res.status(201).json({ id: ct.id, name: ct.name, category: ct.category, unitPrice: ct.unitPrice, taxPercent: ct.taxPercent, isActive: ct.isActive });
 });
 
+router.patch("/billing/charge-types/:id", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
+  const parsed = CreateChargeTypeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [ct] = await db.update(chargeTypesTable)
+    .set(parsed.data as Partial<typeof chargeTypesTable.$inferInsert>)
+    .where(eq(chargeTypesTable.id, req.params.id))
+    .returning();
+  if (!ct) { res.status(404).json({ error: "Not found" }); return; }
+  await logAudit(req, (req as { user?: { id: string } }).user?.id ?? "", "update", "charge_type", ct.id);
+  res.json({ id: ct.id, name: ct.name, category: ct.category, unitPrice: ct.unitPrice, taxPercent: ct.taxPercent, isActive: ct.isActive });
+});
+
+router.delete("/billing/charge-types/:id", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
+  const [ct] = await db.update(chargeTypesTable)
+    .set({ isActive: false })
+    .where(eq(chargeTypesTable.id, req.params.id))
+    .returning();
+  if (!ct) { res.status(404).json({ error: "Not found" }); return; }
+  await logAudit(req, (req as { user?: { id: string } }).user?.id ?? "", "delete", "charge_type", ct.id);
+  res.status(204).end();
+});
+
 export default router;

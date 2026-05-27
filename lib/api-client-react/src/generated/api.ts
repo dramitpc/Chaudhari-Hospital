@@ -3931,6 +3931,148 @@ export const useCreateChargeType = <TError = ErrorType<unknown>,
       return useMutation(getCreateChargeTypeMutationOptions(options));
     }
 
+export const getUpdateChargeTypeUrl = (id: string,) => {
+
+
+
+
+  return `/api/billing/charge-types/${id}`
+}
+
+/**
+ * @summary Update a charge type
+ */
+export const updateChargeType = async (id: string,
+    chargeTypeInput: ChargeTypeInput, options?: RequestInit): Promise<ChargeType> => {
+
+  return customFetch<ChargeType>(getUpdateChargeTypeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      chargeTypeInput,)
+  }
+);}
+
+
+
+
+export const getUpdateChargeTypeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChargeType>>, TError,{id: string;data: BodyType<ChargeTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateChargeType>>, TError,{id: string;data: BodyType<ChargeTypeInput>}, TContext> => {
+
+const mutationKey = ['updateChargeType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateChargeType>>, {id: string;data: BodyType<ChargeTypeInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateChargeType(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateChargeTypeMutationResult = NonNullable<Awaited<ReturnType<typeof updateChargeType>>>
+    export type UpdateChargeTypeMutationBody = BodyType<ChargeTypeInput>
+    export type UpdateChargeTypeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a charge type
+ */
+export const useUpdateChargeType = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChargeType>>, TError,{id: string;data: BodyType<ChargeTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateChargeType>>,
+        TError,
+        {id: string;data: BodyType<ChargeTypeInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateChargeTypeMutationOptions(options));
+    }
+
+export const getDeleteChargeTypeUrl = (id: string,) => {
+
+
+
+
+  return `/api/billing/charge-types/${id}`
+}
+
+/**
+ * @summary Soft-delete a charge type
+ */
+export const deleteChargeType = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteChargeTypeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteChargeTypeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChargeType>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteChargeType>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteChargeType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChargeType>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteChargeType(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteChargeTypeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChargeType>>>
+
+    export type DeleteChargeTypeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Soft-delete a charge type
+ */
+export const useDeleteChargeType = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChargeType>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteChargeType>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteChargeTypeMutationOptions(options));
+    }
+
 export const getListCertificatesUrl = (params?: ListCertificatesParams,) => {
   const normalizedParams = new URLSearchParams();
 
