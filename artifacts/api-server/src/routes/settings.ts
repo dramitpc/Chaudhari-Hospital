@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, clinicSettingsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { authenticate, requireRole } from "../middlewares/authenticate";
 
 const router = Router();
@@ -36,13 +37,34 @@ router.get("/settings/clinic", authenticate, async (req, res): Promise<void> => 
 });
 
 router.patch("/settings/clinic", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
+  const {
+    clinicName, address, phone, email, website,
+    registrationNumber, taxId, currency, timezone,
+    sessionTimeoutMinutes, defaultConsultationFee, logoUrl,
+  } = req.body as Partial<typeof clinicSettingsTable.$inferInsert>;
+
+  const patch = Object.fromEntries(
+    Object.entries({
+      clinicName, address, phone, email, website,
+      registrationNumber, taxId, currency, timezone,
+      sessionTimeoutMinutes, defaultConsultationFee, logoUrl,
+    }).filter(([, v]) => v !== undefined),
+  );
+
   const [existing] = await db.select().from(clinicSettingsTable).limit(1);
   if (!existing) {
-    const [created] = await db.insert(clinicSettingsTable).values({ clinicName: "My Clinic", ...req.body }).returning();
+    const [created] = await db
+      .insert(clinicSettingsTable)
+      .values({ clinicName: "My Clinic", ...patch })
+      .returning();
     res.json(formatSettings(created));
     return;
   }
-  const [updated] = await db.update(clinicSettingsTable).set(req.body).returning();
+  const [updated] = await db
+    .update(clinicSettingsTable)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(clinicSettingsTable.id, existing.id))
+    .returning();
   res.json(formatSettings(updated));
 });
 
