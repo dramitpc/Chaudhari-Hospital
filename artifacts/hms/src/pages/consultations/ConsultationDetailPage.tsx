@@ -3,8 +3,8 @@ import { useState } from "react";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
-  useGetPatient, useUpdatePatient,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey
+  useGetPatient, useUpdatePatient, useGetClinicSettings,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send } from "lucide-react";
 
 type DrugItem = {
   drugId?: string | null;
@@ -57,11 +57,42 @@ export default function ConsultationDetailPage() {
   const { data: patient } = useGetPatient(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
+  const { data: clinicSettings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
 
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
+
+  const [showThankingLetter, setShowThankingLetter] = useState(false);
+  const [thankingDoctorName, setThankingDoctorName] = useState("");
+  const [thankingDoctorAddress, setThankingDoctorAddress] = useState("");
+
+  const [showReferralLetter, setShowReferralLetter] = useState(false);
+  const [referralToDoctor, setReferralToDoctor] = useState("");
+  const [referralToSpecialty, setReferralToSpecialty] = useState("");
+  const [referralToAddress, setReferralToAddress] = useState("");
+  const [referralReason, setReferralReason] = useState("");
+
+  const handlePrintLetter = (elementId: string, title: string) => {
+    const content = document.getElementById(elementId)?.innerHTML;
+    if (!content) return;
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
+      body{font-family:"Times New Roman",serif;max-width:680px;margin:48px auto;padding:0 24px;line-height:1.7;color:#111}
+      h2{font-size:1.1rem;font-weight:bold;margin:0 0 2px}
+      h3{font-size:0.95rem;font-weight:bold;margin:20px 0 4px}
+      p{margin:6px 0}
+      .clinic-header{border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:24px}
+      .clinic-name{font-size:1.3rem;font-weight:bold;letter-spacing:0.02em}
+      .letter-body{margin-top:20px}
+      .signature-block{margin-top:48px}
+      @media print{body{margin:24px}}
+    </style></head><body>${content}</body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 300);
+  };
 
   const handleBlur = (field: string, value: string) => {
     if (!id) return;
@@ -243,6 +274,12 @@ export default function ConsultationDetailPage() {
                 <FileText className="mr-2 h-3 w-3" /> Generate Certificate
               </Button>
             </Link>
+            <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => setShowThankingLetter(true)}>
+              <Mail className="mr-2 h-3 w-3" /> Thanking Letter
+            </Button>
+            <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => setShowReferralLetter(true)}>
+              <Send className="mr-2 h-3 w-3" /> Referral Letter
+            </Button>
           </div>
         </div>
 
@@ -439,6 +476,202 @@ export default function ConsultationDetailPage() {
               </Button>
               <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
                 Save Prescription
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Thanking Letter Modal */}
+      <Dialog open={showThankingLetter} onOpenChange={setShowThankingLetter}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Thanking Letter to Referring Doctor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Referring Doctor's Name</Label>
+                <Input
+                  value={thankingDoctorName}
+                  onChange={e => setThankingDoctorName(e.target.value)}
+                  placeholder="Dr. ..."
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Referring Doctor's Address / Hospital</Label>
+                <Input
+                  value={thankingDoctorAddress}
+                  onChange={e => setThankingDoctorAddress(e.target.value)}
+                  placeholder="Clinic / Hospital name"
+                />
+              </div>
+            </div>
+
+            <div className="rounded border border-border bg-muted/20 p-4 text-sm font-serif leading-relaxed" id="thanking-letter-content">
+              <div className="clinic-header">
+                <div className="clinic-name">{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "ClinicOS Healthcare"}</div>
+                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.address ?? ""}</div>
+                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.phone ?? ""}</div>
+              </div>
+              <p><strong>Date:</strong> {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+              <br />
+              <p><strong>To,</strong></p>
+              <p>{thankingDoctorName || "Dr. _______________"}</p>
+              <p>{thankingDoctorAddress || "_______________"}</p>
+              <br />
+              <p><strong>Sub: Acknowledgement &amp; Thank You — Patient Referral</strong></p>
+              <br />
+              <p>Dear {thankingDoctorName || "Doctor"},</p>
+              <br />
+              <p>
+                I am writing to sincerely thank you for referring your patient,{" "}
+                <strong>{consultation?.patientName ?? "—"}</strong>
+                {(patient as unknown as Record<string, string> | undefined)?.age ? ` (Age: ${(patient as unknown as Record<string, string>).age})` : ""},
+                to our clinic. The patient was seen on <strong>{consultation?.visitDate ?? "—"}</strong>.
+              </p>
+              <br />
+              {consultation?.diagnosis && (
+                <p>
+                  Upon examination, the working diagnosis was noted as:{" "}
+                  <strong>{consultation.diagnosis}</strong>.
+                  {consultation.soapPlan ? ` The management plan includes: ${consultation.soapPlan}.` : ""}
+                </p>
+              )}
+              <br />
+              <p>
+                We appreciate your confidence in our care and are committed to keeping you informed about this patient's progress. Please do not hesitate to contact us should you require any further information or wish to discuss the case.
+              </p>
+              <br />
+              <p>Thanking you once again for your valued referral.</p>
+              <br />
+              <div className="signature-block">
+                <p>Yours sincerely,</p>
+                <br /><br />
+                <p><strong>{consultation?.doctorName ?? "_______________"}</strong></p>
+                <p>{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? ""}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowThankingLetter(false)}>Close</Button>
+              <Button onClick={() => handlePrintLetter("thanking-letter-content", "Thanking Letter")}>
+                <Printer className="mr-2 h-4 w-4" /> Print Letter
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Referral Letter Modal */}
+      <Dialog open={showReferralLetter} onOpenChange={setShowReferralLetter}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Referral Letter</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Refer To (Doctor Name)</Label>
+                <Input
+                  value={referralToDoctor}
+                  onChange={e => setReferralToDoctor(e.target.value)}
+                  placeholder="Dr. ..."
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Specialty</Label>
+                <Input
+                  value={referralToSpecialty}
+                  onChange={e => setReferralToSpecialty(e.target.value)}
+                  placeholder="e.g. Cardiology, Orthopaedics..."
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Hospital / Clinic Address</Label>
+              <Input
+                value={referralToAddress}
+                onChange={e => setReferralToAddress(e.target.value)}
+                placeholder="Referred hospital or clinic"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Reason for Referral (additional notes)</Label>
+              <Textarea
+                value={referralReason}
+                onChange={e => setReferralReason(e.target.value)}
+                rows={2}
+                placeholder="Specific concerns, investigations requested, urgency..."
+              />
+            </div>
+
+            <div className="rounded border border-border bg-muted/20 p-4 text-sm font-serif leading-relaxed" id="referral-letter-content">
+              <div className="clinic-header">
+                <div className="clinic-name">{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "ClinicOS Healthcare"}</div>
+                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.address ?? ""}</div>
+                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.phone ?? ""}</div>
+              </div>
+              <p><strong>Date:</strong> {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+              <br />
+              <p><strong>To,</strong></p>
+              <p>{referralToDoctor || "Dr. _______________"}</p>
+              <p>{referralToSpecialty ? `Consultant — ${referralToSpecialty}` : "_______________"}</p>
+              <p>{referralToAddress || ""}</p>
+              <br />
+              <p><strong>Sub: Referral Letter — {consultation?.patientName ?? "Patient"}</strong></p>
+              <br />
+              <p>Dear {referralToDoctor ? `Dr. ${referralToDoctor.replace(/^Dr\.?\s*/i, "")}` : "Doctor"},</p>
+              <br />
+              <p>
+                I am referring my patient, <strong>{consultation?.patientName ?? "—"}</strong>
+                {(patient as unknown as Record<string, string> | undefined)?.age ? `, aged ${(patient as unknown as Record<string, string>).age}` : ""}
+                {(patient as unknown as Record<string, string> | undefined)?.gender ? `, ${(patient as unknown as Record<string, string>).gender}` : ""},
+                for your expert opinion and management
+                {referralToSpecialty ? ` in ${referralToSpecialty}` : ""}.
+              </p>
+              <br />
+              {consultation?.diagnosis && (
+                <p><strong>Diagnosis:</strong> {consultation.diagnosis}{consultation.icd10Code ? ` (ICD-10: ${consultation.icd10Code})` : ""}</p>
+              )}
+              {consultation?.chiefComplaint && (
+                <p><strong>Chief Complaint:</strong> {consultation.chiefComplaint}</p>
+              )}
+              {consultation?.soapAssessment && (
+                <p><strong>Assessment:</strong> {consultation.soapAssessment}</p>
+              )}
+              {(patient as unknown as Record<string, string> | undefined)?.medicalHistory && (
+                <p><strong>Past Medical History:</strong> {(patient as unknown as Record<string, string>).medicalHistory}</p>
+              )}
+              {(patient as unknown as Record<string, string> | undefined)?.currentMedications && (
+                <p><strong>Current Medications:</strong> {(patient as unknown as Record<string, string>).currentMedications}</p>
+              )}
+              {(patient as unknown as Record<string, string> | undefined)?.allergies && (
+                <p><strong>Allergies:</strong> {(patient as unknown as Record<string, string>).allergies}</p>
+              )}
+              {referralReason && (
+                <>
+                  <br />
+                  <p><strong>Reason for Referral:</strong> {referralReason}</p>
+                </>
+              )}
+              <br />
+              <p>
+                Your expert evaluation and management of this patient would be greatly appreciated. Please feel free to contact us for any additional clinical details.
+              </p>
+              <br />
+              <div className="signature-block">
+                <p>Yours sincerely,</p>
+                <br /><br />
+                <p><strong>{consultation?.doctorName ?? "_______________"}</strong></p>
+                <p>{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? ""}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowReferralLetter(false)}>Close</Button>
+              <Button onClick={() => handlePrintLetter("referral-letter-content", "Referral Letter")}>
+                <Printer className="mr-2 h-4 w-4" /> Print Letter
               </Button>
             </div>
           </div>
