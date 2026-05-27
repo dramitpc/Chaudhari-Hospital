@@ -61,7 +61,6 @@ export default function PrescriptionDetailPage() {
         </div>
 
         <div className="text-center mb-4">
-          <h2 className="text-lg font-semibold uppercase tracking-wide">Prescription</h2>
           <p className="text-sm text-muted-foreground">Date: {prescription.visitDate}</p>
         </div>
 
