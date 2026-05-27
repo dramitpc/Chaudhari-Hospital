@@ -241,7 +241,7 @@ export default function UsersPage() {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.name}</span>?
-              This will deactivate their account and revoke all access. This action can be reversed by reactivating the user.
+              This will <span className="font-semibold text-destructive">permanently delete</span> their account and all associated login credentials. This cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>

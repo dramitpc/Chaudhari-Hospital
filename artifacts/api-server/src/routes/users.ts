@@ -114,7 +114,7 @@ router.delete("/users/:id", authenticate, requireRole("admin"), async (req, res)
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  await db.update(usersTable).set({ isActive: false }).where(eq(usersTable.id, params.data.id));
+  await db.delete(usersTable).where(eq(usersTable.id, params.data.id));
   await logAudit(req, req.user!.id, "DELETE_USER", "users", params.data.id);
   res.sendStatus(204);
 });
