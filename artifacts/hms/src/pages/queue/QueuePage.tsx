@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   useGetQueue, useCallNextPatient, useUpdateTokenStatus, useGenerateToken,
-  useListUsers, useListPatients,
+  useCreateConsultation, useListUsers, useListPatients,
   getGetQueueQueryKey, getListUsersQueryKey, getListPatientsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export default function QueuePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -61,6 +63,7 @@ export default function QueuePage() {
   const callNextMutation = useCallNextPatient();
   const updateStatusMutation = useUpdateTokenStatus();
   const generateTokenMutation = useGenerateToken();
+  const createConsultationMutation = useCreateConsultation();
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -85,6 +88,27 @@ export default function QueuePage() {
     updateStatusMutation.mutate({ id, data: { status: status as "waiting" | "called" | "in_consultation" | "completed" | "skipped" | "cancelled" } }, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() }),
     });
+  };
+
+  const handleStartConsultation = (tokenId: string, patientId: string, doctorId: string) => {
+    updateStatusMutation.mutate(
+      { id: tokenId, data: { status: "in_consultation" } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+          createConsultationMutation.mutate(
+            { data: { patientId, doctorId, tokenId } },
+            {
+              onSuccess: (consultation) => {
+                navigate(`/consultations/${consultation.id}`);
+              },
+              onError: () => toast({ title: "Error", description: "Failed to create consultation", variant: "destructive" }),
+            }
+          );
+        },
+        onError: () => toast({ title: "Error", description: "Failed to update token status", variant: "destructive" }),
+      }
+    );
   };
 
   const handleGenerateToken = () => {
@@ -189,7 +213,13 @@ export default function QueuePage() {
                   </>
                 )}
                 {(token.status === "called") && (
-                  <Button size="sm" onClick={() => handleUpdateStatus(token.id, "in_consultation")}>Start Consultation</Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
+                    disabled={createConsultationMutation.isPending || updateStatusMutation.isPending}
+                  >
+                    Start Consultation
+                  </Button>
                 )}
                 {token.status === "in_consultation" && (
                   <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "completed")}>Complete</Button>
