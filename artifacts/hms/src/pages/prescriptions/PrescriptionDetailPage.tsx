@@ -1,4 +1,5 @@
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, useSearch } from "wouter";
+import { useEffect } from "react";
 import { useGetPrescription, useGetClinicSettings, getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,11 +19,20 @@ export default function PrescriptionDetailPage() {
   const [, params] = useRoute("/prescriptions/:id");
   const id = params?.id ?? "";
   const [, setLocation] = useLocation();
+  const search = useSearch();
 
   const { data: prescription, isLoading } = useGetPrescription(id, {
     query: { enabled: !!id, queryKey: getGetPrescriptionQueryKey(id) }
   });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
+
+  useEffect(() => {
+    if (!isLoading && prescription && new URLSearchParams(search).get("print") === "1") {
+      const timer = setTimeout(() => window.print(), 300);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isLoading, prescription, search]);
 
   if (isLoading) return <Skeleton className="h-96 w-full" />;
   if (!prescription) return <div className="text-center py-8 text-muted-foreground">Prescription not found</div>;

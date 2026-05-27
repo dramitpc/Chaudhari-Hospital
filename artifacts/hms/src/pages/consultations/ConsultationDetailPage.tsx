@@ -33,7 +33,7 @@ type DrugItem = {
 export default function ConsultationDetailPage() {
   const [, params] = useRoute("/consultations/:id");
   const id = params?.id ?? "";
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -87,24 +87,25 @@ export default function ConsultationDetailPage() {
     });
   };
 
-  const handleAddPrescription = () => {
+  const buildPrescriptionPayload = () => ({
+    patientId: consultation!.patientId,
+    doctorId: consultation!.doctorId,
+    consultationId: id,
+    diagnosis: consultation!.diagnosis ?? undefined,
+    advice: consultation!.advice ?? undefined,
+    followUpDate: consultation!.followUpDate ?? undefined,
+    items: drugItems.filter(i => i.drugName),
+  });
+
+  const handleAddPrescription = (andPrint = false) => {
     if (!consultation) return;
-    createPrescriptionMutation.mutate({
-      data: {
-        patientId: consultation.patientId,
-        doctorId: consultation.doctorId,
-        consultationId: id,
-        diagnosis: consultation.diagnosis ?? undefined,
-        advice: consultation.advice ?? undefined,
-        followUpDate: consultation.followUpDate ?? undefined,
-        items: drugItems.filter(i => i.drugName),
-      }
-    }, {
-      onSuccess: () => {
+    createPrescriptionMutation.mutate({ data: buildPrescriptionPayload() }, {
+      onSuccess: (rx) => {
         toast({ title: "Prescription created" });
         queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
         setShowPrescriptionModal(false);
         setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
+        if (andPrint) navigate(`/prescriptions/${rx.id}?print=1`);
       },
     });
   };
@@ -125,7 +126,7 @@ export default function ConsultationDetailPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/consultations")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/consultations")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -396,7 +397,15 @@ export default function ConsultationDetailPage() {
             </Button>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowPrescriptionModal(false)}>Cancel</Button>
-              <Button onClick={handleAddPrescription} disabled={createPrescriptionMutation.isPending}>
+              <Button
+                variant="outline"
+                onClick={() => handleAddPrescription(true)}
+                disabled={createPrescriptionMutation.isPending}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Save &amp; Print
+              </Button>
+              <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
                 Save Prescription
               </Button>
             </div>
