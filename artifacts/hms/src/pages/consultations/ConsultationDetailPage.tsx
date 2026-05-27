@@ -79,6 +79,47 @@ export default function ConsultationDetailPage() {
     }
   }, [consultation, diagAdvInit]);
 
+  // ── Medical History controlled state ──────────────────────────────────────
+  type MedHistField = "allergies" | "medicalHistory" | "surgicalHistory" | "familyHistory" | "currentMedications";
+  const [medHistValues, setMedHistValues] = useState<Record<MedHistField, string>>({
+    allergies: "", medicalHistory: "", surgicalHistory: "", familyHistory: "", currentMedications: ""
+  });
+  const [medHistInit, setMedHistInit] = useState(false);
+
+  useEffect(() => {
+    if (patient && !medHistInit) {
+      setMedHistValues({
+        allergies:          (patient as unknown as Record<string, string | null>).allergies          ?? "",
+        medicalHistory:     (patient as unknown as Record<string, string | null>).medicalHistory     ?? "",
+        surgicalHistory:    (patient as unknown as Record<string, string | null>).surgicalHistory    ?? "",
+        familyHistory:      (patient as unknown as Record<string, string | null>).familyHistory      ?? "",
+        currentMedications: (patient as unknown as Record<string, string | null>).currentMedications ?? "",
+      });
+      setMedHistInit(true);
+    }
+  }, [patient, medHistInit]);
+
+  // ── Clinical Notes + Investigation controlled state ───────────────────────
+  type ClinicalField = "chiefComplaint" | "historyOfPresentIllness" | "clinicalNotes" | "followUpNotes";
+  const [clinicalValues, setClinicalValues] = useState<Record<ClinicalField, string>>({
+    chiefComplaint: "", historyOfPresentIllness: "", clinicalNotes: "", followUpNotes: ""
+  });
+  const [investigationValue, setInvestigationValue] = useState("");
+  const [clinicalInit, setClinicalInit] = useState(false);
+
+  useEffect(() => {
+    if (consultation && !clinicalInit) {
+      setClinicalValues({
+        chiefComplaint:          consultation.chiefComplaint          ?? "",
+        historyOfPresentIllness: consultation.historyOfPresentIllness ?? "",
+        clinicalNotes:           consultation.clinicalNotes           ?? "",
+        followUpNotes:           consultation.followUpNotes           ?? "",
+      });
+      setInvestigationValue(consultation.investigationOrders ?? "");
+      setClinicalInit(true);
+    }
+  }, [consultation, clinicalInit]);
+
   // ── Prescription templates ─────────────────────────────────────────────────
   type RxTemplate = { id: string; name: string; items: DrugItem[]; savedAt: number };
   const [showRxTemplatePanel, setShowRxTemplatePanel] = useState(false);
@@ -543,18 +584,24 @@ export default function ConsultationDetailPage() {
               {patient ? (
                 <>
                   {([
-                    { field: "allergies",         label: "Known Allergies",       placeholder: "Drug allergies, food allergies, environmental triggers..." },
-                    { field: "medicalHistory",    label: "Past Medical History",  placeholder: "Chronic conditions, past illnesses, hospitalisations..." },
-                    { field: "surgicalHistory",   label: "Surgical History",      placeholder: "Previous surgeries, procedures, dates..." },
-                    { field: "familyHistory",     label: "Family History",        placeholder: "Hereditary conditions, family illnesses..." },
-                    { field: "currentMedications",label: "Current Medications",   placeholder: "Ongoing medications, dosages, duration..." },
-                  ] as const).map(({ field, label, placeholder }) => (
-                    <div key={field} className="space-y-1.5">
+                    { field: "allergies"         as MedHistField, label: "Known Allergies",       placeholder: "Drug allergies, food allergies, environmental triggers..." },
+                    { field: "medicalHistory"    as MedHistField, label: "Past Medical History",  placeholder: "Chronic conditions, past illnesses, hospitalisations..." },
+                    { field: "surgicalHistory"   as MedHistField, label: "Surgical History",      placeholder: "Previous surgeries, procedures, dates..." },
+                    { field: "familyHistory"     as MedHistField, label: "Family History",        placeholder: "Hereditary conditions, family illnesses..." },
+                    { field: "currentMedications"as MedHistField, label: "Current Medications",   placeholder: "Ongoing medications, dosages, duration..." },
+                  ]).map(({ field, label, placeholder }) => (
+                    <div key={field} className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
                       <Label className="text-xs font-medium">{label}</Label>
+                      <FieldFavPanel
+                        lsKey={`clinicos_medh_${field}`}
+                        currentValue={medHistValues[field]}
+                        onApply={v => { setMedHistValues(prev => ({ ...prev, [field]: v })); handleMedHistBlur(field, v); }}
+                      />
                       <Textarea
-                        key={`${patientId}-${field}`}
-                        defaultValue={(patient as unknown as Record<string, string | null>)[field] ?? ""}
-                        onBlur={e => handleMedHistBlur(field, e.target.value)}
+                        className="col-span-full"
+                        value={medHistValues[field]}
+                        onChange={e => setMedHistValues(prev => ({ ...prev, [field]: e.target.value }))}
+                        onBlur={e => { handleMedHistBlur(field, e.target.value); trackFieldRecent(`clinicos_medh_${field}`, e.target.value); }}
                         rows={3}
                         placeholder={placeholder}
                       />
@@ -568,49 +615,54 @@ export default function ConsultationDetailPage() {
             </TabsContent>
 
             <TabsContent value="clinical" className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Chief Complaint</Label>
-                <Input
-                  defaultValue={consultation.chiefComplaint ?? ""}
-                  onBlur={e => handleBlur("chiefComplaint", e.target.value)}
-                  placeholder="Main presenting complaint"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">History of Present Illness</Label>
-                <Textarea
-                  defaultValue={consultation.historyOfPresentIllness ?? ""}
-                  onBlur={e => handleBlur("historyOfPresentIllness", e.target.value)}
-                  rows={4}
-                  placeholder="Detailed illness history..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Clinical Notes</Label>
-                <Textarea
-                  defaultValue={consultation.clinicalNotes ?? ""}
-                  onBlur={e => handleBlur("clinicalNotes", e.target.value)}
-                  rows={6}
-                  placeholder="Additional clinical observations..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Follow-up Notes</Label>
-                <Textarea
-                  defaultValue={consultation.followUpNotes ?? ""}
-                  onBlur={e => handleBlur("followUpNotes", e.target.value)}
-                  rows={3}
-                  placeholder="Follow-up instructions..."
-                />
-              </div>
+              {([
+                { field: "chiefComplaint"          as ClinicalField, label: "Chief Complaint",              rows: 1, placeholder: "Main presenting complaint",        isInput: true  },
+                { field: "historyOfPresentIllness" as ClinicalField, label: "History of Present Illness",   rows: 4, placeholder: "Detailed illness history...",      isInput: false },
+                { field: "clinicalNotes"           as ClinicalField, label: "Clinical Notes",               rows: 6, placeholder: "Additional clinical observations...", isInput: false },
+                { field: "followUpNotes"           as ClinicalField, label: "Follow-up Notes",              rows: 3, placeholder: "Follow-up instructions...",        isInput: false },
+              ]).map(({ field, label, rows, placeholder, isInput }) => (
+                <div key={field} className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
+                  <Label className="text-xs">{label}</Label>
+                  <FieldFavPanel
+                    lsKey={`clinicos_clin_${field}`}
+                    currentValue={clinicalValues[field]}
+                    onApply={v => { setClinicalValues(prev => ({ ...prev, [field]: v })); handleBlur(field, v); }}
+                  />
+                  {isInput ? (
+                    <Input
+                      className="col-span-full"
+                      value={clinicalValues[field]}
+                      onChange={e => setClinicalValues(prev => ({ ...prev, [field]: e.target.value }))}
+                      onBlur={e => { handleBlur(field, e.target.value); trackFieldRecent(`clinicos_clin_${field}`, e.target.value); }}
+                      placeholder={placeholder}
+                    />
+                  ) : (
+                    <Textarea
+                      className="col-span-full"
+                      value={clinicalValues[field]}
+                      onChange={e => setClinicalValues(prev => ({ ...prev, [field]: e.target.value }))}
+                      onBlur={e => { handleBlur(field, e.target.value); trackFieldRecent(`clinicos_clin_${field}`, e.target.value); }}
+                      rows={rows}
+                      placeholder={placeholder}
+                    />
+                  )}
+                </div>
+              ))}
             </TabsContent>
 
             <TabsContent value="investigation" className="mt-4 space-y-3">
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
                 <Label className="text-xs">Investigation Orders</Label>
+                <FieldFavPanel
+                  lsKey="clinicos_invest"
+                  currentValue={investigationValue}
+                  onApply={v => { setInvestigationValue(v); handleBlur("investigationOrders", v); }}
+                />
                 <Textarea
-                  defaultValue={consultation.investigationOrders ?? ""}
-                  onBlur={e => handleBlur("investigationOrders", e.target.value)}
+                  className="col-span-full"
+                  value={investigationValue}
+                  onChange={e => setInvestigationValue(e.target.value)}
+                  onBlur={e => { handleBlur("investigationOrders", e.target.value); trackFieldRecent("clinicos_invest", e.target.value); }}
                   rows={10}
                   placeholder="Blood tests, imaging, referrals..."
                 />
