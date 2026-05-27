@@ -19,6 +19,25 @@ let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 
 /**
+ * A refresher is an async function that, given the current (expired) access
+ * token, attempts to obtain a new one.  It should return the new access token
+ * on success, or null/throw on failure.  When it returns null the caller is
+ * responsible for clearing credentials and redirecting to login.
+ */
+export type TokenRefresher = (expiredToken: string | null) => Promise<string | null>;
+let _tokenRefresher: TokenRefresher | null = null;
+let _refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * Register an async function that attempts to silently refresh the auth token.
+ * `customFetch` will call this once on a 401, retry the request with the new
+ * token, and only surface the error if the refresh itself fails.
+ */
+export function setTokenRefresher(refresher: TokenRefresher | null): void {
+  _tokenRefresher = refresher;
+}
+
+/**
  * Set a base URL that is prepended to every relative request URL
  * (i.e. paths that start with `/`).
  *
@@ -322,18 +341,13 @@ async function parseSuccessBody(
   }
 }
 
-export async function customFetch<T = unknown>(
+async function doFetch<T>(
   input: RequestInfo | URL,
-  options: CustomFetchOptions = {},
+  options: CustomFetchOptions,
+  token: string | null,
 ): Promise<T> {
-  input = applyBaseUrl(input);
   const { responseType = "auto", headers: headersInit, ...init } = options;
-
   const method = resolveMethod(input, init.method);
-
-  if (init.body != null && (method === "GET" || method === "HEAD")) {
-    throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
-  }
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
@@ -349,17 +363,11 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  // Attach bearer token when an auth getter is configured and no
-  // Authorization header has been explicitly provided.
-  if (_authTokenGetter && !headers.has("authorization")) {
-    const token = await _authTokenGetter();
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
-    }
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
-
   const response = await fetch(input, { ...init, method, headers });
 
   if (!response.ok) {
@@ -368,4 +376,46 @@ export async function customFetch<T = unknown>(
   }
 
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+}
+
+export async function customFetch<T = unknown>(
+  input: RequestInfo | URL,
+  options: CustomFetchOptions = {},
+): Promise<T> {
+  input = applyBaseUrl(input);
+
+  const method = resolveMethod(input, options.method);
+  if (options.body != null && (method === "GET" || method === "HEAD")) {
+    throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
+  }
+
+  // Resolve current token (may be null)
+  let token: string | null = null;
+  if (_authTokenGetter && !(options.headers && new Headers(options.headers).has("authorization"))) {
+    token = await _authTokenGetter();
+  }
+
+  try {
+    return await doFetch<T>(input, options, token);
+  } catch (err) {
+    // Attempt a silent token refresh on 401, but only once and only when a
+    // refresher is registered.  Concurrent requests all share a single
+    // in-flight refresh promise so we only hit the refresh endpoint once.
+    if (err instanceof ApiError && err.status === 401 && _tokenRefresher) {
+      if (!_refreshInFlight) {
+        _refreshInFlight = _tokenRefresher(token).finally(() => {
+          _refreshInFlight = null;
+        });
+      }
+
+      const newToken = await _refreshInFlight;
+
+      if (newToken) {
+        // Retry the original request with the fresh token
+        return doFetch<T>(input, options, newToken);
+      }
+    }
+
+    throw err;
+  }
 }
