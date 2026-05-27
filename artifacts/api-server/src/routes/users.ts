@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, ilike, or, desc } from "drizzle-orm";
+import { eq, and, ilike, or, desc } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import {
   ListUsersQueryParams,
@@ -30,6 +30,15 @@ function formatUser(u: typeof usersTable.$inferSelect) {
     createdAt: u.createdAt.toISOString(),
   };
 }
+
+router.get("/users/doctors", authenticate, async (req, res): Promise<void> => {
+  const doctors = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)))
+    .orderBy(usersTable.fullName);
+  res.json({ data: doctors.map(formatUser) });
+});
 
 router.get("/users", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
   const params = ListUsersQueryParams.safeParse(req.query);

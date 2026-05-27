@@ -64,6 +64,7 @@ export * from './listAppointmentsParams';
 export * from './listAuditLogsParams';
 export * from './listCertificatesParams';
 export * from './listConsultationsParams';
+export * from './listDoctors200';
 export * from './listDrugsParams';
 export * from './listInvoicesParams';
 export * from './listPatientsParams';

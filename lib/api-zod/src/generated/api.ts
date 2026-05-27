@@ -94,6 +94,25 @@ export const ChangePasswordBody = zod.object({
 
 
 /**
+ * @summary List active doctors (all authenticated users)
+ */
+export const ListDoctorsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "username": zod.string(),
+  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "fullName": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "registrationNumber": zod.string().nullish(),
+  "specialization": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
  * @summary List all users (admin)
  */
 export const ListUsersQueryParams = zod.object({

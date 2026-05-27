@@ -116,6 +116,25 @@ paths:
           description: Password changed
 
   # ── USERS ─────────────────────────────────────────────────────────────────
+  /users/doctors:
+    get:
+      operationId: listDoctors
+      tags: [users]
+      summary: List active doctors (all authenticated users)
+      responses:
+        "200":
+          description: Active doctors
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+
   /users:
     get:
       operationId: listUsers

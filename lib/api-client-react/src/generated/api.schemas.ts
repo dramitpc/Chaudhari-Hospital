@@ -999,6 +999,10 @@ export interface ClinicSettingsUpdate {
   defaultConsultationFee?: number;
 }
 
+export type ListDoctors200 = {
+  data: User[];
+};
+
 export type ListUsersParams = {
 role?: string;
 search?: string;

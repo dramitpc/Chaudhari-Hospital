@@ -64,6 +64,7 @@ import type {
   ListAuditLogsParams,
   ListCertificatesParams,
   ListConsultationsParams,
+  ListDoctors200,
   ListDrugsParams,
   ListInvoicesParams,
   ListPatientsParams,
@@ -548,6 +549,83 @@ export const useChangePassword = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getChangePasswordMutationOptions(options));
     }
+
+export const getListDoctorsUrl = () => {
+
+
+
+
+  return `/api/users/doctors`
+}
+
+/**
+ * @summary List active doctors (all authenticated users)
+ */
+export const listDoctors = async ( options?: RequestInit): Promise<ListDoctors200> => {
+
+  return customFetch<ListDoctors200>(getListDoctorsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDoctorsQueryKey = () => {
+    return [
+    `/api/users/doctors`
+    ] as const;
+    }
+
+
+export const getListDoctorsQueryOptions = <TData = Awaited<ReturnType<typeof listDoctors>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDoctors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDoctorsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDoctors>>> = ({ signal }) => listDoctors({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDoctors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDoctorsQueryResult = NonNullable<Awaited<ReturnType<typeof listDoctors>>>
+export type ListDoctorsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List active doctors (all authenticated users)
+ */
+
+export function useListDoctors<TData = Awaited<ReturnType<typeof listDoctors>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDoctors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDoctorsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListUsersUrl = (params?: ListUsersParams,) => {
   const normalizedParams = new URLSearchParams();

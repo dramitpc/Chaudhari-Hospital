@@ -1,7 +1,7 @@
 import { useForm, useWatch } from "react-hook-form";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { useRegisterPatient, useGenerateToken, useListUsers, type User } from "@workspace/api-client-react";
+import { useRegisterPatient, useGenerateToken, useListDoctors } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,15 +41,16 @@ function calcAge(dob: string): string {
 export default function RegisterPatientPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<FormValues>();
+  const { register, handleSubmit, setValue, watch, control, formState: { errors } } = useForm<FormValues>();
+  const selectedGender = watch("gender");
   const registerMutation = useRegisterPatient();
   const tokenMutation = useGenerateToken();
   const addToQueueRef = useRef(false);
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
 
-  const { data: usersData } = useListUsers({ role: "doctor", limit: 100 });
-  const doctors = (usersData?.data ?? [] as User[]).filter((u) => u.isActive);
+  const { data: doctorsData } = useListDoctors();
+  const doctors = doctorsData?.data ?? [];
 
   const dobValue = useWatch({ control, name: "dateOfBirth" });
 
@@ -62,6 +63,11 @@ export default function RegisterPatientPage() {
 
   const onSubmit = (data: FormValues) => {
     const wantsQueue = addToQueueRef.current;
+
+    if (!data.gender) {
+      toast({ title: "Gender required", description: "Please select the patient's gender.", variant: "destructive" });
+      return;
+    }
 
     if (wantsQueue && !selectedDoctorId) {
       toast({ title: "Doctor required", description: "Please select a consulting doctor to add patient to the queue.", variant: "destructive" });
@@ -148,7 +154,7 @@ export default function RegisterPatientPage() {
             <div className="space-y-1.5">
               <Label>Gender *</Label>
               <Select onValueChange={(v) => setValue("gender", v as "male" | "female" | "other")}>
-                <SelectTrigger data-testid="select-gender">
+                <SelectTrigger data-testid="select-gender" className={!selectedGender ? "border-muted-foreground/40" : ""}>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent>
@@ -157,6 +163,7 @@ export default function RegisterPatientPage() {
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
+              {!selectedGender && <p className="text-xs text-muted-foreground">Required</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Blood Group</Label>
