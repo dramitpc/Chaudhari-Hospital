@@ -1,5 +1,5 @@
 import { useRoute, useLocation, Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked } from "lucide-react";
 
 type DrugItem = {
   drugId?: string | null;
@@ -63,6 +63,81 @@ export default function ConsultationDetailPage() {
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
+
+  // ── SOAP templates ────────────────────────────────────────────────────────
+  type SoapTemplate = { id: string; name: string; fields: Record<string, string>; savedAt: number };
+  const SOAP_FIELDS = ["soapSubjective", "soapObjective", "soapAssessment", "soapPlan"] as const;
+  type SoapField = typeof SOAP_FIELDS[number];
+
+  const [soapValues, setSoapValues] = useState<Record<SoapField, string>>({
+    soapSubjective: "", soapObjective: "", soapAssessment: "", soapPlan: ""
+  });
+  const [soapInitialized, setSoapInitialized] = useState(false);
+  const [showTemplatePanel, setShowTemplatePanel] = useState(false);
+  const [showSaveFav, setShowSaveFav] = useState(false);
+  const [favName, setFavName] = useState("");
+  const [, forceTemplateRefresh] = useState(0);
+
+  useEffect(() => {
+    if (consultation && !soapInitialized) {
+      setSoapValues({
+        soapSubjective: consultation.soapSubjective ?? "",
+        soapObjective:  consultation.soapObjective  ?? "",
+        soapAssessment: consultation.soapAssessment ?? "",
+        soapPlan:       consultation.soapPlan       ?? "",
+      });
+      setSoapInitialized(true);
+    }
+  }, [consultation, soapInitialized]);
+
+  const LS_FAV = "clinicos_soap_favourites";
+  const LS_RECENT = "clinicos_soap_recent";
+  const getFavourites  = (): SoapTemplate[] => JSON.parse(localStorage.getItem(LS_FAV)    ?? "[]");
+  const getRecent      = (): SoapTemplate[] => JSON.parse(localStorage.getItem(LS_RECENT) ?? "[]");
+  const persistFav     = (list: SoapTemplate[]) => { localStorage.setItem(LS_FAV, JSON.stringify(list)); forceTemplateRefresh(n => n + 1); };
+  const persistRecent  = (list: SoapTemplate[]) => { localStorage.setItem(LS_RECENT, JSON.stringify(list)); forceTemplateRefresh(n => n + 1); };
+
+  const handleSoapChange = (field: SoapField, value: string) =>
+    setSoapValues(prev => ({ ...prev, [field]: value }));
+
+  const handleSoapBlur = (field: SoapField, value: string) => {
+    handleBlur(field, value);
+    const current = { ...soapValues, [field]: value };
+    if (!Object.values(current).some(v => v.trim())) return;
+    const deduped = getRecent().filter(r =>
+      !(r.fields.soapSubjective === current.soapSubjective &&
+        r.fields.soapObjective  === current.soapObjective  &&
+        r.fields.soapAssessment === current.soapAssessment &&
+        r.fields.soapPlan       === current.soapPlan)
+    ).slice(0, 4);
+    persistRecent([{ id: Date.now().toString(), name: "", fields: current, savedAt: Date.now() }, ...deduped]);
+  };
+
+  const applyTemplate = (fields: Record<string, string>) => {
+    const next: Record<SoapField, string> = {
+      soapSubjective: fields.soapSubjective ?? "",
+      soapObjective:  fields.soapObjective  ?? "",
+      soapAssessment: fields.soapAssessment ?? "",
+      soapPlan:       fields.soapPlan       ?? "",
+    };
+    setSoapValues(next);
+    SOAP_FIELDS.forEach(f => handleBlur(f, next[f]));
+    setShowTemplatePanel(false);
+    toast({ title: "Template applied" });
+  };
+
+  const saveAsFavourite = () => {
+    if (!favName.trim()) return;
+    persistFav([...getFavourites(), { id: Date.now().toString(), name: favName.trim(), fields: soapValues, savedAt: Date.now() }]);
+    setFavName(""); setShowSaveFav(false);
+    toast({ title: "Saved to favourites" });
+  };
+
+  const deleteFav = (fid: string) => persistFav(getFavourites().filter(f => f.id !== fid));
+  const deleteRecent = (rid: string) => persistRecent(getRecent().filter(r => r.id !== rid));
+  const templateLabel = (t: SoapTemplate) =>
+    t.name || (t.fields.soapSubjective?.slice(0, 45) + (t.fields.soapSubjective?.length > 45 ? "…" : "")) || "Untitled";
+  // ────────────────────────────────────────────────────────────────────────────
 
   const [showThankingLetter, setShowThankingLetter] = useState(false);
   const [thankingDoctorName, setThankingDoctorName] = useState("");
@@ -293,19 +368,95 @@ export default function ConsultationDetailPage() {
             </TabsList>
 
             <TabsContent value="soap" className="mt-4 space-y-3">
-              {(["soapSubjective", "soapObjective", "soapAssessment", "soapPlan"] as const).map(field => {
+              {/* Template toolbar */}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm" variant="outline"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => setShowTemplatePanel(v => !v)}
+                >
+                  <BookMarked className="h-3 w-3" />
+                  Favourites &amp; Recent
+                </Button>
+                <Button
+                  size="sm" variant="ghost"
+                  className="h-7 gap-1.5 text-xs text-muted-foreground"
+                  onClick={() => setShowSaveFav(true)}
+                >
+                  <Star className="h-3 w-3" />
+                  Save as Favourite
+                </Button>
+              </div>
+
+              {/* Template panel */}
+              {showTemplatePanel && (() => {
+                const favs   = getFavourites();
+                const recent = getRecent();
+                return (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-xs">
+                    {favs.length === 0 && recent.length === 0 && (
+                      <p className="text-muted-foreground text-center py-2">No favourites or recent entries yet. Fill in SOAP notes and save.</p>
+                    )}
+
+                    {favs.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          <Star className="h-3 w-3" /> Favourites
+                        </div>
+                        {favs.map(t => (
+                          <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-border bg-card px-2 py-1.5">
+                            <span className="truncate flex-1 font-medium">{templateLabel(t)}</span>
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => applyTemplate(t.fields)}>Apply</Button>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" onClick={() => deleteFav(t.id)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {recent.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                          <Clock className="h-3 w-3" /> Recently Used
+                        </div>
+                        {recent.map(t => (
+                          <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-border bg-card px-2 py-1.5">
+                            <div className="flex-1 min-w-0">
+                              <span className="truncate block">{templateLabel(t)}</span>
+                              <span className="text-muted-foreground">{new Date(t.savedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => applyTemplate(t.fields)}>Apply</Button>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" onClick={() => deleteRecent(t.id)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* SOAP fields — controlled */}
+              {(SOAP_FIELDS).map(field => {
                 const labels: Record<string, string> = {
                   soapSubjective: "S — Subjective (What the patient reports)",
-                  soapObjective: "O — Objective (Examination findings)",
+                  soapObjective:  "O — Objective (Examination findings)",
                   soapAssessment: "A — Assessment (Diagnosis, differential)",
-                  soapPlan: "P — Plan (Treatment, investigations, follow-up)",
+                  soapPlan:       "P — Plan (Treatment, investigations, follow-up)",
                 };
                 return (
                   <div key={field} className="space-y-1.5">
                     <Label className="text-xs font-medium">{labels[field]}</Label>
                     <Textarea
-                      defaultValue={consultation[field] ?? ""}
-                      onBlur={e => handleBlur(field, e.target.value)}
+                      value={soapValues[field]}
+                      onChange={e => handleSoapChange(field, e.target.value)}
+                      onBlur={e => handleSoapBlur(field, e.target.value)}
                       rows={4}
                       placeholder={`Enter ${field.replace("soap", "")} notes...`}
                       data-testid={`textarea-${field}`}
@@ -476,6 +627,38 @@ export default function ConsultationDetailPage() {
               </Button>
               <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
                 Save Prescription
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save as Favourite Dialog */}
+      <Dialog open={showSaveFav} onOpenChange={setShowSaveFav}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save SOAP Notes as Favourite</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Template Name</Label>
+              <Input
+                value={favName}
+                onChange={e => setFavName(e.target.value)}
+                placeholder="e.g. URTI, Post-op follow-up, Hypertension review…"
+                onKeyDown={e => e.key === "Enter" && saveAsFavourite()}
+                autoFocus
+              />
+            </div>
+            <div className="rounded border border-border bg-muted/30 p-2 text-xs text-muted-foreground space-y-0.5">
+              {SOAP_FIELDS.map(f => soapValues[f] ? (
+                <p key={f} className="truncate"><span className="font-medium capitalize">{f.replace("soap", "")}:</span> {soapValues[f]}</p>
+              ) : null)}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowSaveFav(false)}>Cancel</Button>
+              <Button size="sm" onClick={saveAsFavourite} disabled={!favName.trim()}>
+                <Star className="mr-1.5 h-3 w-3" /> Save
               </Button>
             </div>
           </div>
