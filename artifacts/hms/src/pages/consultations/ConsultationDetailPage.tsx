@@ -122,8 +122,27 @@ export default function ConsultationDetailPage() {
   if (isLoading) return <Skeleton className="h-96 w-full" />;
   if (!consultation) return <div className="text-center py-8 text-muted-foreground">Consultation not found</div>;
 
+  const medHistoryParts: string[] = [];
+  if (patient) {
+    const p = patient as unknown as Record<string, string | null>;
+    if (p.allergies)       medHistoryParts.push(`🚨 Allergies: ${p.allergies}`);
+    if (p.medicalHistory)  medHistoryParts.push(`🏥 Past Medical: ${p.medicalHistory}`);
+    if (p.surgicalHistory) medHistoryParts.push(`🔪 Surgical: ${p.surgicalHistory}`);
+    if (p.familyHistory)   medHistoryParts.push(`👨‍👩‍👧 Family: ${p.familyHistory}`);
+  }
+  const marqueeText = medHistoryParts.join("   •   ");
+
   return (
     <div className="space-y-4">
+      <style>{`
+        @keyframes marquee-scroll {
+          0%   { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee { animation: marquee-scroll 30s linear infinite; }
+        .animate-marquee:hover { animation-play-state: paused; }
+      `}</style>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/consultations")}>
@@ -144,6 +163,19 @@ export default function ConsultationDetailPage() {
           </Button>
         )}
       </div>
+
+      {marqueeText && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-3 py-1.5 overflow-hidden">
+          <span className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+            Med History
+          </span>
+          <div className="relative flex-1 overflow-hidden">
+            <p className="animate-marquee whitespace-nowrap text-xs text-amber-800 dark:text-amber-300 cursor-default">
+              {marqueeText}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="space-y-4">
