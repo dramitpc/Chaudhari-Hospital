@@ -18,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked } from "lucide-react";
+import { FieldFavPanel } from "@/components/FieldFavPanel";
+import { trackFieldRecent } from "@/lib/favUtils";
 
 type DrugItem = {
   drugId?: string | null;
@@ -63,6 +65,58 @@ export default function ConsultationDetailPage() {
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
+
+  // ── Diagnosis & Advice controlled state ───────────────────────────────────
+  const [diagnosisValue, setDiagnosisValue] = useState("");
+  const [adviceValue, setAdviceValue] = useState("");
+  const [diagAdvInit, setDiagAdvInit] = useState(false);
+
+  useEffect(() => {
+    if (consultation && !diagAdvInit) {
+      setDiagnosisValue(consultation.diagnosis ?? "");
+      setAdviceValue(consultation.advice ?? "");
+      setDiagAdvInit(true);
+    }
+  }, [consultation, diagAdvInit]);
+
+  // ── Prescription templates ─────────────────────────────────────────────────
+  type RxTemplate = { id: string; name: string; items: DrugItem[]; savedAt: number };
+  const [showRxTemplatePanel, setShowRxTemplatePanel] = useState(false);
+  const [rxFavName, setRxFavName] = useState("");
+  const [, forceRxRefresh] = useState(0);
+
+  const LS_RX_FAV    = "clinicos_rx_fav";
+  const LS_RX_RECENT = "clinicos_rx_recent";
+  const getRxFavs    = (): RxTemplate[] => JSON.parse(localStorage.getItem(LS_RX_FAV)    ?? "[]");
+  const getRxRecent  = (): RxTemplate[] => JSON.parse(localStorage.getItem(LS_RX_RECENT) ?? "[]");
+  const persistRxFavs    = (list: RxTemplate[]) => { localStorage.setItem(LS_RX_FAV,    JSON.stringify(list)); forceRxRefresh(n => n + 1); };
+  const persistRxRecent  = (list: RxTemplate[]) => { localStorage.setItem(LS_RX_RECENT, JSON.stringify(list)); forceRxRefresh(n => n + 1); };
+
+  const applyRxTemplate = (tpl: RxTemplate) => {
+    setDrugItems(tpl.items.map(i => ({ ...i })));
+    setShowRxTemplatePanel(false);
+    toast({ title: "Prescription template applied" });
+  };
+
+  const saveRxFav = () => {
+    if (!rxFavName.trim()) return;
+    if (!drugItems.some(i => i.drugName.trim())) {
+      toast({ title: "Add at least one drug first", variant: "destructive" }); return;
+    }
+    persistRxFavs([...getRxFavs(), { id: Date.now().toString(), name: rxFavName.trim(), items: drugItems, savedAt: Date.now() }]);
+    setRxFavName("");
+    toast({ title: "Saved as prescription template" });
+  };
+
+  const trackRxRecent = () => {
+    if (!drugItems.some(i => i.drugName.trim())) return;
+    const deduped = getRxRecent().slice(0, 4);
+    persistRxRecent([{ id: Date.now().toString(), name: "", items: drugItems, savedAt: Date.now() }, ...deduped]);
+  };
+
+  const rxTemplateLabel = (t: RxTemplate) =>
+    t.name || t.items.filter(i => i.drugName).map(i => i.drugName).join(", ").slice(0, 50) || "Untitled";
+  // ──────────────────────────────────────────────────────────────────────────
 
   // ── SOAP per-field favourites & recent ───────────────────────────────────
   type SoapEntry = { id: string; name: string; value: string; savedAt: number };
@@ -193,6 +247,7 @@ export default function ConsultationDetailPage() {
 
   const handleAddPrescription = (andPrint = false) => {
     if (!consultation) return;
+    trackRxRecent();
     createPrescriptionMutation.mutate({ data: buildPrescriptionPayload() }, {
       onSuccess: (rx) => {
         toast({ title: "Prescription created" });
@@ -275,11 +330,18 @@ export default function ConsultationDetailPage() {
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <h3 className="font-semibold text-sm">Diagnosis &amp; Advice</h3>
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
               <Label className="text-xs">Diagnosis</Label>
+              <FieldFavPanel
+                lsKey="clinicos_diag"
+                currentValue={diagnosisValue}
+                onApply={v => { setDiagnosisValue(v); handleBlur("diagnosis", v); }}
+              />
               <Input
-                defaultValue={consultation.diagnosis ?? ""}
-                onBlur={e => handleBlur("diagnosis", e.target.value)}
+                className="col-span-full"
+                value={diagnosisValue}
+                onChange={e => setDiagnosisValue(e.target.value)}
+                onBlur={e => { handleBlur("diagnosis", e.target.value); trackFieldRecent("clinicos_diag", e.target.value); }}
                 placeholder="Primary diagnosis"
                 data-testid="input-diagnosis"
               />
@@ -300,11 +362,18 @@ export default function ConsultationDetailPage() {
                 onBlur={e => handleBlur("followUpDate", e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
               <Label className="text-xs">Advice</Label>
+              <FieldFavPanel
+                lsKey="clinicos_advice"
+                currentValue={adviceValue}
+                onApply={v => { setAdviceValue(v); handleBlur("advice", v); }}
+              />
               <Textarea
-                defaultValue={consultation.advice ?? ""}
-                onBlur={e => handleBlur("advice", e.target.value)}
+                className="col-span-full"
+                value={adviceValue}
+                onChange={e => setAdviceValue(e.target.value)}
+                onBlur={e => { handleBlur("advice", e.target.value); trackFieldRecent("clinicos_advice", e.target.value); }}
                 rows={3}
                 placeholder="Advice and instructions..."
               />
@@ -553,7 +622,89 @@ export default function ConsultationDetailPage() {
 
       <Dialog open={showPrescriptionModal} onOpenChange={setShowPrescriptionModal}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>Add Prescription</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle>Add Prescription</DialogTitle>
+              <Button
+                type="button" size="sm"
+                variant={showRxTemplatePanel ? "secondary" : "outline"}
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => { setShowRxTemplatePanel(v => !v); setRxFavName(""); }}
+              >
+                <BookMarked className="h-3 w-3" />
+                {(() => { const f = getRxFavs().length; const r = getRxRecent().length; return f > 0 || r > 0 ? `${f} fav · ${r} recent` : "Templates"; })()}
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {/* Template panel */}
+          {showRxTemplatePanel && (() => {
+            const favs   = getRxFavs();
+            const recent = getRxRecent();
+            return (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-xs">
+                {favs.length === 0 && recent.length === 0 && (
+                  <p className="text-muted-foreground text-center py-1">
+                    No templates yet — add drugs and save as a template to reuse them.
+                  </p>
+                )}
+
+                {favs.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                      <Star className="h-3 w-3" /> Saved Templates
+                    </p>
+                    {favs.map(t => (
+                      <div key={t.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                        <span className="truncate flex-1 font-medium">{rxTemplateLabel(t)}</span>
+                        <span className="text-muted-foreground shrink-0">{t.items.filter(i => i.drugName).length} drug(s)</span>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => persistRxFavs(getRxFavs().filter(f => f.id !== t.id))}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {recent.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
+                      <Clock className="h-3 w-3" /> Recently Used
+                    </p>
+                    {recent.map(t => (
+                      <div key={t.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                        <div className="flex-1 min-w-0">
+                          <span className="truncate block">{rxTemplateLabel(t)}</span>
+                          <span className="text-muted-foreground text-[10px]">
+                            {new Date(t.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {t.items.filter(i => i.drugName).length} drug(s)
+                          </span>
+                        </div>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => persistRxRecent(getRxRecent().filter(r => r.id !== t.id))}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-1.5 pt-1 border-t border-border">
+                  <Input
+                    className="h-7 text-xs flex-1"
+                    value={rxFavName}
+                    onChange={e => setRxFavName(e.target.value)}
+                    placeholder="Name this template…"
+                    onKeyDown={e => e.key === "Enter" && saveRxFav()}
+                  />
+                  <Button type="button" size="sm" className="h-7 px-3 text-xs" onClick={saveRxFav}>
+                    <Star className="h-3 w-3 mr-1" /> Save
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
