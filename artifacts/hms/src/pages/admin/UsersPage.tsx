@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { UserPlus, KeyRound } from "lucide-react";
+import { UserPlus, KeyRound, Trash2 } from "lucide-react";
 
 const roleColors: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
@@ -26,6 +26,7 @@ export default function UsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [roleFilter, setRoleFilter] = useState("");
   const [form, setForm] = useState({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "" });
 
@@ -35,6 +36,7 @@ export default function UsersPage() {
   );
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
+  const deleteMutation = useDeleteUser();
   const resetMutation = useAdminResetPassword();
 
   const users = data?.data ?? [];
@@ -48,6 +50,18 @@ export default function UsersPage() {
         setForm({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "" });
       },
       onError: () => toast({ title: "Error creating user", variant: "destructive" }),
+    });
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate({ id: deleteTarget.id }, {
+      onSuccess: () => {
+        toast({ title: "User deleted" });
+        queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+        setDeleteTarget(null);
+      },
+      onError: () => toast({ title: "Error deleting user", variant: "destructive" }),
     });
   };
 
@@ -126,14 +140,25 @@ export default function UsersPage() {
                 <td className="px-4 py-3">
                   <Badge variant={u.isActive ? "default" : "secondary"}>{u.isActive ? "Active" : "Inactive"}</Badge>
                 </td>
-                <td className="px-4 py-3 flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setResetUserId(u.id)}>
-                    <KeyRound className="h-3 w-3 mr-1" /> Reset
-                  </Button>
-                  <Button size="sm" variant={u.isActive ? "destructive" : "outline"}
-                    onClick={() => handleDeactivate(u.id, u.isActive)}>
-                    {u.isActive ? "Deactivate" : "Activate"}
-                  </Button>
+                <td className="px-4 py-3">
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setResetUserId(u.id)}>
+                      <KeyRound className="h-3 w-3 mr-1" /> Reset
+                    </Button>
+                    <Button size="sm" variant={u.isActive ? "destructive" : "outline"}
+                      onClick={() => handleDeactivate(u.id, u.isActive)}>
+                      {u.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTarget({ id: u.id, name: u.fullName })}
+                      data-testid={`btn-delete-user-${u.id}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -205,6 +230,24 @@ export default function UsersPage() {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setResetUserId(null)}>Cancel</Button>
               <Button onClick={handleReset} disabled={!newPassword || resetMutation.isPending}>Reset</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Delete User</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.name}</span>?
+              This will deactivate their account and revoke all access. This action can be reversed by reactivating the user.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                {deleteMutation.isPending ? "Deleting…" : "Delete User"}
+              </Button>
             </div>
           </div>
         </DialogContent>
