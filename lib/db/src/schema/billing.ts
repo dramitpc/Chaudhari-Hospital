@@ -30,7 +30,7 @@ export const invoicesTable = pgTable("invoices", {
   invoiceNumber: text("invoice_number").notNull().unique(),
   patientId: text("patient_id").notNull().references(() => patientsTable.id),
   consultationId: text("consultation_id").references(() => consultationsTable.id),
-  doctorId: text("doctor_id").references(() => usersTable.id),
+  doctorId: text("doctor_id").references(() => usersTable.id, { onDelete: "set null" }),
   items: jsonb("items").notNull().default([]),
   subtotal: real("subtotal").notNull().default(0),
   discount: real("discount").notNull().default(0),
@@ -41,7 +41,7 @@ export const invoicesTable = pgTable("invoices", {
   paymentMode: paymentModeEnum("payment_mode"),
   status: invoiceStatusEnum("status").notNull().default("pending"),
   notes: text("notes"),
-  createdById: text("created_by_id").references(() => usersTable.id),
+  createdById: text("created_by_id").references(() => usersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

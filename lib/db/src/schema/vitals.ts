@@ -19,7 +19,7 @@ export const vitalsTable = pgTable("vitals", {
   height: real("height"),
   bmi: real("bmi"),
   notes: text("notes"),
-  recordedById: text("recorded_by_id").references(() => usersTable.id),
+  recordedById: text("recorded_by_id").references(() => usersTable.id, { onDelete: "set null" }),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

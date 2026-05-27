@@ -13,7 +13,7 @@ export const consultationStatusEnum = pgEnum("consultation_status", [
 export const consultationsTable = pgTable("consultations", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   patientId: text("patient_id").notNull().references(() => patientsTable.id),
-  doctorId: text("doctor_id").notNull().references(() => usersTable.id),
+  doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   appointmentId: text("appointment_id").references(() => appointmentsTable.id),
   tokenId: text("token_id").references(() => queueTokensTable.id),
   visitDate: text("visit_date").notNull(),

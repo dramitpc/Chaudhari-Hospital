@@ -12,7 +12,7 @@ export const certificateTypeEnum = pgEnum("certificate_type", [
 export const certificatesTable = pgTable("certificates", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   patientId: text("patient_id").notNull().references(() => patientsTable.id),
-  doctorId: text("doctor_id").notNull().references(() => usersTable.id),
+  doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   consultationId: text("consultation_id").references(() => consultationsTable.id),
   type: certificateTypeEnum("type").notNull(),
   issuedDate: text("issued_date").notNull(),

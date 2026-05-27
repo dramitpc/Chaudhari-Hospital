@@ -8,7 +8,7 @@ import { consultationsTable } from "./consultations";
 export const prescriptionsTable = pgTable("prescriptions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   patientId: text("patient_id").notNull().references(() => patientsTable.id),
-  doctorId: text("doctor_id").notNull().references(() => usersTable.id),
+  doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   consultationId: text("consultation_id").references(() => consultationsTable.id),
   visitDate: text("visit_date").notNull(),
   diagnosis: text("diagnosis"),
@@ -22,7 +22,7 @@ export const prescriptionsTable = pgTable("prescriptions", {
 
 export const prescriptionTemplatesTable = pgTable("prescription_templates", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  doctorId: text("doctor_id").notNull().references(() => usersTable.id),
+  doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   items: jsonb("items").notNull().default([]),

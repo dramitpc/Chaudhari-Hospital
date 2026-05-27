@@ -11,13 +11,13 @@ export const appointmentStatusEnum = pgEnum("appointment_status", [
 export const appointmentsTable = pgTable("appointments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   patientId: text("patient_id").notNull().references(() => patientsTable.id),
-  doctorId: text("doctor_id").notNull().references(() => usersTable.id),
+  doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   appointmentDate: text("appointment_date").notNull(),
   appointmentTime: text("appointment_time"),
   reason: text("reason"),
   status: appointmentStatusEnum("status").notNull().default("scheduled"),
   notes: text("notes"),
-  createdById: text("created_by_id").references(() => usersTable.id),
+  createdById: text("created_by_id").references(() => usersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

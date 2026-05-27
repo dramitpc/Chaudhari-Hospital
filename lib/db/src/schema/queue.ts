@@ -13,7 +13,7 @@ export const queueTokensTable = pgTable("queue_tokens", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   tokenNumber: integer("token_number").notNull(),
   patientId: text("patient_id").notNull().references(() => patientsTable.id),
-  doctorId: text("doctor_id").notNull().references(() => usersTable.id),
+  doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   appointmentId: text("appointment_id").references(() => appointmentsTable.id),
   status: queueStatusEnum("status").notNull().default("waiting"),
   priority: integer("priority").notNull().default(0),
