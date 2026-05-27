@@ -21,11 +21,6 @@ type FormValues = {
   bloodGroup?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
-  allergies?: string;
-  medicalHistory?: string;
-  surgicalHistory?: string;
-  familyHistory?: string;
-  currentMedications?: string;
 };
 
 function calcAge(dob: string): string {
@@ -203,32 +198,6 @@ export default function RegisterPatientPage() {
             <div className="space-y-1.5">
               <Label>Contact Phone</Label>
               <Input {...register("emergencyContactPhone")} placeholder="Emergency contact phone" />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <h2 className="font-semibold text-foreground border-b border-border pb-2">Medical History</h2>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Known Allergies</Label>
-              <Textarea {...register("allergies")} rows={2} placeholder="Drug allergies, food allergies..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Past Medical History</Label>
-              <Textarea {...register("medicalHistory")} rows={2} placeholder="Chronic conditions, past illnesses..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Surgical History</Label>
-              <Textarea {...register("surgicalHistory")} rows={2} placeholder="Previous surgeries, procedures..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Family History</Label>
-              <Textarea {...register("familyHistory")} rows={2} placeholder="Family medical conditions..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Current Medications</Label>
-              <Textarea {...register("currentMedications")} rows={2} placeholder="Ongoing medications..." />
             </div>
           </div>
         </div>

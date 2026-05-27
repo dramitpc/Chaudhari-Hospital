@@ -3,7 +3,8 @@ import { useState } from "react";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey
+  useGetPatient, useUpdatePatient,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,6 +51,12 @@ export default function ConsultationDetailPage() {
   const updateMutation = useUpdateConsultation();
   const completeMutation = useCompleteConsultation();
   const createPrescriptionMutation = useCreatePrescription();
+  const updatePatientMutation = useUpdatePatient();
+
+  const patientId = consultation?.patientId ?? "";
+  const { data: patient } = useGetPatient(patientId, {
+    query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
+  });
 
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
@@ -60,6 +67,13 @@ export default function ConsultationDetailPage() {
     if (!id) return;
     updateMutation.mutate({ id, data: { [field]: value } }, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) }),
+    });
+  };
+
+  const handleMedHistBlur = (field: string, value: string) => {
+    if (!patientId) return;
+    updatePatientMutation.mutate({ id: patientId, data: { [field]: value } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(patientId) }),
     });
   };
 
@@ -203,6 +217,7 @@ export default function ConsultationDetailPage() {
           <Tabs defaultValue="soap">
             <TabsList className="w-full">
               <TabsTrigger value="soap" className="flex-1">SOAP Notes</TabsTrigger>
+              <TabsTrigger value="medhistory" className="flex-1">Medical History</TabsTrigger>
               <TabsTrigger value="clinical" className="flex-1">Clinical Notes</TabsTrigger>
               <TabsTrigger value="investigation" className="flex-1">Investigations</TabsTrigger>
             </TabsList>
@@ -228,6 +243,34 @@ export default function ConsultationDetailPage() {
                   </div>
                 );
               })}
+            </TabsContent>
+
+            <TabsContent value="medhistory" className="mt-4 space-y-3">
+              {patient ? (
+                <>
+                  {([
+                    { field: "allergies",         label: "Known Allergies",       placeholder: "Drug allergies, food allergies, environmental triggers..." },
+                    { field: "medicalHistory",    label: "Past Medical History",  placeholder: "Chronic conditions, past illnesses, hospitalisations..." },
+                    { field: "surgicalHistory",   label: "Surgical History",      placeholder: "Previous surgeries, procedures, dates..." },
+                    { field: "familyHistory",     label: "Family History",        placeholder: "Hereditary conditions, family illnesses..." },
+                    { field: "currentMedications",label: "Current Medications",   placeholder: "Ongoing medications, dosages, duration..." },
+                  ] as const).map(({ field, label, placeholder }) => (
+                    <div key={field} className="space-y-1.5">
+                      <Label className="text-xs font-medium">{label}</Label>
+                      <Textarea
+                        key={`${patientId}-${field}`}
+                        defaultValue={(patient as unknown as Record<string, string | null>)[field] ?? ""}
+                        onBlur={e => handleMedHistBlur(field, e.target.value)}
+                        rows={3}
+                        placeholder={placeholder}
+                      />
+                    </div>
+                  ))}
+                  <p className="text-xs text-muted-foreground">Changes auto-save on blur and update the patient record.</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground py-4 text-center">Loading patient record…</p>
+              )}
             </TabsContent>
 
             <TabsContent value="clinical" className="mt-4 space-y-3">
