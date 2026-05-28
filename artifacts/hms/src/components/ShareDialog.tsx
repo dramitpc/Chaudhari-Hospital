@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 
 type Props = {
   open: boolean;
@@ -13,6 +14,8 @@ type Props = {
   patientEmail?: string | null;
   message: string;
   emailSubject: string;
+  onDownloadPdf?: () => Promise<void>;
+  pdfFileName?: string;
 };
 
 function formatWhatsAppPhone(raw: string): string {
@@ -23,9 +26,13 @@ function formatWhatsAppPhone(raw: string): string {
   return digits;
 }
 
-export default function ShareDialog({ open, onOpenChange, patientName, patientPhone, patientEmail, message, emailSubject }: Props) {
+export default function ShareDialog({
+  open, onOpenChange, patientName, patientPhone, patientEmail,
+  message, emailSubject, onDownloadPdf, pdfFileName,
+}: Props) {
   const [phone, setPhone] = useState(patientPhone ?? "");
   const [email, setEmail] = useState(patientEmail ?? "");
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => { setPhone(patientPhone ?? ""); }, [patientPhone]);
   useEffect(() => { setEmail(patientEmail ?? ""); }, [patientEmail]);
@@ -43,6 +50,22 @@ export default function ShareDialog({ open, onOpenChange, patientName, patientPh
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const handleEmailWithPdf = async () => {
+    if (!email.trim()) return;
+    if (onDownloadPdf) {
+      setPdfLoading(true);
+      try { await onDownloadPdf(); } finally { setPdfLoading(false); }
+    }
+    const url = `mailto:${encodeURIComponent(email.trim())}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!onDownloadPdf) return;
+    setPdfLoading(true);
+    try { await onDownloadPdf(); } finally { setPdfLoading(false); }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -51,6 +74,32 @@ export default function ShareDialog({ open, onOpenChange, patientName, patientPh
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {/* PDF download (when applicable) */}
+          {onDownloadPdf && (
+            <>
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📄</span>
+                  <p className="font-semibold text-sm">PDF</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Download as PDF to attach to email or share via any app.
+                  {pdfFileName && <span className="ml-1 font-medium">{pdfFileName}</span>}
+                </p>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  size="sm"
+                  onClick={handleDownloadPdf}
+                  disabled={pdfLoading}
+                >
+                  {pdfLoading ? "Generating PDF…" : "Download PDF"}
+                </Button>
+              </div>
+              <Separator />
+            </>
+          )}
+
           {/* WhatsApp */}
           <div className="rounded-lg border border-border p-4 space-y-3">
             <div className="flex items-center gap-2">
@@ -98,15 +147,31 @@ export default function ShareDialog({ open, onOpenChange, patientName, patientPh
                 <p className="text-[11px] text-muted-foreground">No email on record — enter manually</p>
               )}
             </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              size="sm"
-              onClick={handleEmail}
-              disabled={!email.trim()}
-            >
-              Send Email
-            </Button>
+            {onDownloadPdf ? (
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={handleEmailWithPdf}
+                  disabled={!email.trim() || pdfLoading}
+                >
+                  {pdfLoading ? "Generating PDF…" : "Download PDF & Open Email"}
+                </Button>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  PDF will be downloaded — attach it to the email that opens
+                </p>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full"
+                size="sm"
+                onClick={handleEmail}
+                disabled={!email.trim()}
+              >
+                Send Email
+              </Button>
+            )}
           </div>
 
           {/* Message preview */}
@@ -115,7 +180,7 @@ export default function ShareDialog({ open, onOpenChange, patientName, patientPh
             <Textarea
               readOnly
               value={message}
-              rows={6}
+              rows={5}
               className="text-xs font-mono resize-none bg-muted/30"
             />
           </div>

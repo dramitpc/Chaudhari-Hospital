@@ -1,8 +1,15 @@
+import { useRef, useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useGetCertificate, useGetClinicSettings, getGetCertificateQueryKey, getGetClinicSettingsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetCertificate, useGetClinicSettings, useGetPatient,
+  getGetCertificateQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Share2 } from "lucide-react";
+import ShareDialog from "@/components/ShareDialog";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const certTitles: Record<string, string> = {
   sick_leave: "Sick Leave Certificate",
@@ -16,14 +23,67 @@ export default function CertificateDetailPage() {
   const [, params] = useRoute("/certificates/:id");
   const id = params?.id ?? "";
   const [, setLocation] = useLocation();
+  const [showShare, setShowShare] = useState(false);
+  const certRef = useRef<HTMLDivElement>(null);
 
   const { data: cert, isLoading } = useGetCertificate(id, {
     query: { enabled: !!id, queryKey: getGetCertificateQueryKey(id) }
   });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
+  const patientId = cert?.patientId ?? "";
+  const { data: patient } = useGetPatient(patientId, {
+    query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
+  });
+
+  const certTitle = cert ? (certTitles[cert.type] ?? "Medical Certificate") : "Certificate";
+
+  const handleDownloadPdf = async () => {
+    const element = certRef.current;
+    if (!element) return;
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+    });
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const ratio = canvas.width / canvas.height;
+    let imgW = pageWidth;
+    let imgH = imgW / ratio;
+    if (imgH > pageHeight) { imgH = pageHeight; imgW = imgH * ratio; }
+    const x = (pageWidth - imgW) / 2;
+    pdf.addImage(imgData, "JPEG", x, 0, imgW, imgH);
+
+    const fileName = `${certTitle.replace(/\s+/g, "_")}_${(cert?.patientName ?? "patient").replace(/\s+/g, "_")}.pdf`;
+    pdf.save(fileName);
+  };
 
   if (isLoading) return <Skeleton className="h-96 w-full" />;
   if (!cert) return <div className="text-center py-8 text-muted-foreground">Certificate not found</div>;
+
+  const certShareMessage = (() => {
+    const clinic = settings?.clinicName ?? "ClinicOS";
+    const lines: string[] = [];
+    lines.push(`*${certTitle} — ${clinic}*`);
+    if (settings?.phone) lines.push(settings.phone);
+    if (settings?.address) lines.push(settings.address);
+    lines.push("");
+    lines.push(`Patient: ${cert.patientName}`);
+    lines.push(`Date: ${cert.issuedDate}`);
+    lines.push(`Doctor: Dr. ${cert.doctorName}`);
+    if (cert.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${cert.diagnosis}`); }
+    if (cert.fromDate && cert.toDate) { lines.push(`Period: ${cert.fromDate} to ${cert.toDate}`); }
+    if (cert.content) { lines.push(""); lines.push(cert.content); }
+    if (cert.qrCode) { lines.push(""); lines.push(`Verification: ${cert.qrCode}`); }
+    lines.push("");
+    lines.push(`Thank you for visiting ${clinic}!`);
+    return lines.join("\n");
+  })();
 
   return (
     <div>
@@ -31,12 +91,20 @@ export default function CertificateDetailPage() {
         <Button variant="ghost" size="icon" onClick={() => setLocation("/certificates")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Button onClick={() => window.print()} data-testid="btn-print-certificate">
-          <Printer className="mr-2 h-4 w-4" /> Print
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowShare(true)}>
+            <Share2 className="mr-1.5 h-4 w-4" /> Share
+          </Button>
+          <Button onClick={() => window.print()} data-testid="btn-print-certificate">
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+        </div>
       </div>
 
-      <div className="max-w-2xl mx-auto bg-white dark:bg-card rounded-lg border-2 border-border p-10 print:border-0">
+      <div
+        ref={certRef}
+        className="max-w-2xl mx-auto bg-white dark:bg-card rounded-lg border-2 border-border p-10 print:border-0"
+      >
         {/* Header */}
         <div className="text-center border-b-2 border-primary pb-6 mb-6">
           <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
@@ -47,7 +115,7 @@ export default function CertificateDetailPage() {
 
         <div className="text-center mb-8">
           <h2 className="text-xl font-bold uppercase tracking-widest border-b-2 border-foreground inline-block pb-1">
-            {certTitles[cert.type] ?? "Medical Certificate"}
+            {certTitle}
           </h2>
           <p className="text-sm text-muted-foreground mt-2">Date: {cert.issuedDate}</p>
         </div>
@@ -110,6 +178,18 @@ export default function CertificateDetailPage() {
           nav, aside { display: none !important; }
         }
       `}</style>
+
+      <ShareDialog
+        open={showShare}
+        onOpenChange={setShowShare}
+        patientName={cert.patientName ?? "Patient"}
+        patientPhone={patient?.phone}
+        patientEmail={patient?.email}
+        message={certShareMessage}
+        emailSubject={`${certTitle} — ${settings?.clinicName ?? "ClinicOS"}`}
+        onDownloadPdf={handleDownloadPdf}
+        pdfFileName={`${certTitle}_${cert.patientName ?? "patient"}.pdf`}
+      />
     </div>
   );
 }
