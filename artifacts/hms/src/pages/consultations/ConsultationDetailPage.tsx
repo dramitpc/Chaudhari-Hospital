@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
-  useGetPatient, useUpdatePatient, useGetClinicSettings,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey
+  useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,7 +60,11 @@ export default function ConsultationDetailPage() {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
   const { data: clinicSettings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
+  const { data: patientHistory } = useGetPatientHistory(patientId, {
+    query: { enabled: !!patientId, queryKey: getGetPatientHistoryQueryKey(patientId) }
+  });
 
+  const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
@@ -463,6 +467,17 @@ export default function ConsultationDetailPage() {
               <TabsTrigger value="medhistory" className="flex-1">Medical History</TabsTrigger>
               <TabsTrigger value="clinical" className="flex-1">Clinical Notes</TabsTrigger>
               <TabsTrigger value="investigation" className="flex-1">Investigations</TabsTrigger>
+              <TabsTrigger value="emrhistory" className="flex-1 relative">
+                EMR History
+                {(() => {
+                  const cnt = (patientHistory?.consultations ?? []).filter(c => c.id !== id).length;
+                  return cnt > 0 ? (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-[10px] font-semibold px-1.5 min-w-[18px] h-[18px]">
+                      {cnt}
+                    </span>
+                  ) : null;
+                })()}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="soap" className="mt-4 space-y-4">
@@ -667,6 +682,217 @@ export default function ConsultationDetailPage() {
                   placeholder="Blood tests, imaging, referrals..."
                 />
               </div>
+            </TabsContent>
+
+            {/* ── EMR History tab ─────────────────────────────────────────── */}
+            <TabsContent value="emrhistory" className="mt-4">
+              {(() => {
+                const pastVisits = (patientHistory?.consultations ?? [])
+                  .filter(c => c.id !== id)
+                  .sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime());
+
+                if (!patientHistory) {
+                  return (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+                    </div>
+                  );
+                }
+
+                if (pastVisits.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                      <FileText className="h-10 w-10 mb-3 opacity-30" />
+                      <p className="text-sm font-medium">No previous visits</p>
+                      <p className="text-xs mt-1">This is the patient's first consultation on record.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {pastVisits.map(visit => {
+                      const isOpen = expandedVisit === visit.id;
+                      const rxForVisit = (patientHistory.prescriptions ?? []).filter(
+                        p => p.consultationId === visit.id
+                      );
+                      const hasDiagnosis = !!(visit.diagnosis || visit.icd10Code);
+
+                      return (
+                        <div key={visit.id} className="rounded-lg border border-border bg-card overflow-hidden">
+                          {/* Visit header — always visible */}
+                          <button
+                            type="button"
+                            className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+                            onClick={() => setExpandedVisit(isOpen ? null : visit.id)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-semibold">
+                                  {new Date(visit.visitDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                </span>
+                                <Badge
+                                  variant={visit.status === "completed" ? "default" : "secondary"}
+                                  className="text-[10px] h-4 px-1.5"
+                                >
+                                  {visit.status}
+                                </Badge>
+                                {rxForVisit.length > 0 && (
+                                  <span className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                                    💊 {rxForVisit.length} Rx
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {visit.doctorName ? `Dr. ${visit.doctorName}` : "—"}
+                                {visit.chiefComplaint ? ` · ${visit.chiefComplaint}` : ""}
+                              </p>
+                              {hasDiagnosis && (
+                                <p className="text-xs font-medium mt-0.5 truncate">
+                                  Dx: {visit.diagnosis}{visit.icd10Code ? ` (${visit.icd10Code})` : ""}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-muted-foreground shrink-0 mt-0.5 text-sm select-none">
+                              {isOpen ? "▲" : "▼"}
+                            </span>
+                          </button>
+
+                          {/* Expanded detail */}
+                          {isOpen && (
+                            <div className="border-t border-border px-4 py-3 space-y-4 text-xs">
+                              {/* SOAP notes */}
+                              {(visit.soapSubjective || visit.soapObjective || visit.soapAssessment || visit.soapPlan) && (
+                                <div className="space-y-2">
+                                  <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">SOAP Notes</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {[
+                                      { label: "S — Subjective", val: visit.soapSubjective },
+                                      { label: "O — Objective", val: visit.soapObjective },
+                                      { label: "A — Assessment", val: visit.soapAssessment },
+                                      { label: "P — Plan", val: visit.soapPlan },
+                                    ].filter(r => r.val).map(r => (
+                                      <div key={r.label} className="rounded border border-border bg-muted/30 p-2">
+                                        <p className="font-semibold text-[10px] text-muted-foreground mb-0.5">{r.label}</p>
+                                        <p className="whitespace-pre-wrap">{r.val}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Clinical / HPI */}
+                              {(visit.clinicalNotes || visit.historyOfPresentIllness) && (
+                                <div className="space-y-2">
+                                  <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">Clinical Notes</p>
+                                  {visit.historyOfPresentIllness && (
+                                    <div className="rounded border border-border bg-muted/30 p-2">
+                                      <p className="font-semibold text-[10px] text-muted-foreground mb-0.5">History of Present Illness</p>
+                                      <p className="whitespace-pre-wrap">{visit.historyOfPresentIllness}</p>
+                                    </div>
+                                  )}
+                                  {visit.clinicalNotes && (
+                                    <div className="rounded border border-border bg-muted/30 p-2">
+                                      <p className="font-semibold text-[10px] text-muted-foreground mb-0.5">Clinical Notes</p>
+                                      <p className="whitespace-pre-wrap">{visit.clinicalNotes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Investigations */}
+                              {visit.investigationOrders && (
+                                <div>
+                                  <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Investigations</p>
+                                  <div className="rounded border border-border bg-muted/30 p-2 whitespace-pre-wrap">{visit.investigationOrders}</div>
+                                </div>
+                              )}
+
+                              {/* Advice / Follow-up */}
+                              {(visit.advice || visit.followUpDate) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {visit.advice && (
+                                    <div className="rounded border border-border bg-muted/30 p-2">
+                                      <p className="font-semibold text-[10px] text-muted-foreground mb-0.5">Advice</p>
+                                      <p className="whitespace-pre-wrap">{visit.advice}</p>
+                                    </div>
+                                  )}
+                                  {visit.followUpDate && (
+                                    <div className="rounded border border-border bg-muted/30 p-2">
+                                      <p className="font-semibold text-[10px] text-muted-foreground mb-0.5">Follow-up</p>
+                                      <p>{new Date(visit.followUpDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                                      {visit.followUpNotes && <p className="mt-0.5 text-muted-foreground">{visit.followUpNotes}</p>}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Prescriptions for this visit */}
+                              {rxForVisit.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">Prescriptions</p>
+                                  {rxForVisit.map(rx => (
+                                    <div key={rx.id} className="rounded border border-border bg-muted/30 p-2 space-y-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {new Date(rx.visitDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                        </span>
+                                        <Link
+                                          href={`/prescriptions/${rx.id}`}
+                                          className="text-[10px] text-blue-600 hover:underline"
+                                        >
+                                          View Rx →
+                                        </Link>
+                                      </div>
+                                      <table className="w-full text-[11px]">
+                                        <thead>
+                                          <tr className="text-muted-foreground">
+                                            <th className="text-left font-medium py-0.5 pr-2">Drug</th>
+                                            <th className="text-left font-medium py-0.5 pr-2">Dose</th>
+                                            <th className="text-left font-medium py-0.5 pr-2">Freq</th>
+                                            <th className="text-left font-medium py-0.5">Duration</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {(rx.items as DrugItem[]).map((item, idx) => (
+                                            <tr key={idx} className="border-t border-border/50">
+                                              <td className="py-0.5 pr-2 font-medium">{item.drugName}</td>
+                                              <td className="py-0.5 pr-2 text-muted-foreground">{item.dosage}</td>
+                                              <td className="py-0.5 pr-2 text-muted-foreground">{item.frequency}</td>
+                                              <td className="py-0.5 text-muted-foreground">{item.duration}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Vitals snapshot */}
+                              {visit.vitals && Object.keys(visit.vitals as object).length > 0 && (
+                                <div>
+                                  <p className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Vitals</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {Object.entries(visit.vitals as Record<string, string | number>)
+                                      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+                                      .map(([k, v]) => (
+                                        <span key={k} className="rounded border border-border bg-muted/30 px-2 py-0.5 text-[11px]">
+                                          <span className="text-muted-foreground capitalize">{k.replace(/([A-Z])/g, " $1").trim()}: </span>
+                                          {String(v)}
+                                        </span>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </TabsContent>
           </Tabs>
         </div>
