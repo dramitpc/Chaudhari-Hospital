@@ -2714,6 +2714,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RevenueChartPoint"
+        byChargeType:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChargeTypeBreakdownRow"
+        byCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChargeTypeBreakdownRow"
+
+    ChargeTypeBreakdownRow:
+      type: object
+      required: [name, total, count]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        total:
+          type: number
+        count:
+          type: integer
 
     DoctorProductivityReport:
       type: object

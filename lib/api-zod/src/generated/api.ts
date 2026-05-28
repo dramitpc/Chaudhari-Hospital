@@ -1707,6 +1707,18 @@ export const GetRevenueReportResponse = zod.object({
   "date": zod.string(),
   "revenue": zod.number(),
   "count": zod.number()
+})).optional(),
+  "byChargeType": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string().optional(),
+  "total": zod.number(),
+  "count": zod.number()
+})).optional(),
+  "byCategory": zod.array(zod.object({
+  "name": zod.string(),
+  "category": zod.string().optional(),
+  "total": zod.number(),
+  "count": zod.number()
 })).optional()
 })
 

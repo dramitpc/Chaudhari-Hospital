@@ -945,6 +945,13 @@ export interface DailyOpdReport {
   byPaymentMode?: PaymentModeSummary[];
 }
 
+export interface ChargeTypeBreakdownRow {
+  name: string;
+  category?: string;
+  total: number;
+  count: number;
+}
+
 export interface RevenueReport {
   startDate: string;
   endDate: string;
@@ -953,6 +960,8 @@ export interface RevenueReport {
   collected: number;
   pending: number;
   daily?: RevenueChartPoint[];
+  byChargeType?: ChargeTypeBreakdownRow[];
+  byCategory?: ChargeTypeBreakdownRow[];
 }
 
 export interface DoctorProductivityRow {

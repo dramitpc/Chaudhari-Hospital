@@ -157,6 +157,91 @@ export default function ReportsPage() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+
+              {/* Charge-type breakdown */}
+              {(revenueReport.byChargeType ?? []).length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Category pie */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <h3 className="font-semibold text-sm mb-3">Revenue by Category</h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={revenueReport.byCategory ?? []}
+                          dataKey="total"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }: { name: string; percent: number }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {(revenueReport.byCategory ?? []).map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Charge-type bar chart */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <h3 className="font-semibold text-sm mb-3">Top Charge Types</h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart
+                        data={(revenueReport.byChargeType ?? []).slice(0, 8)}
+                        layout="vertical"
+                        margin={{ left: 8, right: 16 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `₹${v}`} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
+                        <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} />
+                        <Bar dataKey="total" name="Revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Detailed table */}
+                  <div className="md:col-span-2 rounded-lg border border-border bg-card overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border">
+                      <h3 className="font-semibold text-sm">Charge Type-wise Breakdown</h3>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/40">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Charge Type</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Category</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Line Items</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Total</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">% of Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(revenueReport.byChargeType ?? []).map((row, i) => (
+                          <tr key={i} className="border-t border-border">
+                            <td className="px-4 py-2 font-medium">{row.name}</td>
+                            <td className="px-4 py-2">
+                              <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-muted capitalize">
+                                {row.category ?? "—"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-right text-muted-foreground">{row.count}</td>
+                            <td className="px-4 py-2 text-right font-medium">₹{row.total.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right text-muted-foreground">
+                              {revenueReport.totalRevenue > 0
+                                ? `${((row.total / revenueReport.totalRevenue) * 100).toFixed(1)}%`
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </TabsContent>

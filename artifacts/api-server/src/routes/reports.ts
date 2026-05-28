@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, sql } from "drizzle-orm";
-import { db, patientsTable, queueTokensTable, invoicesTable, consultationsTable, prescriptionsTable, certificatesTable, usersTable } from "@workspace/db";
+import { db, patientsTable, queueTokensTable, invoicesTable, consultationsTable, prescriptionsTable, certificatesTable, usersTable, chargeTypesTable } from "@workspace/db";
 import { authenticate, requireRole } from "../middlewares/authenticate";
 
 const router = Router();
@@ -74,7 +74,37 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   }
   const daily = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date, ...v }));
 
-  res.json({ startDate, endDate, totalRevenue, totalInvoices: invoices.length, collected, pending, daily });
+  // Charge-type breakdown — parse JSONB items from each invoice
+  const allChargeTypes = await db.select().from(chargeTypesTable);
+  const ctMap: Record<string, { name: string; category: string }> = {};
+  for (const ct of allChargeTypes) ctMap[ct.id] = { name: ct.name, category: ct.category };
+
+  type BreakRow = { name: string; category: string; total: number; count: number };
+  const byTypeMap: Record<string, BreakRow> = {};
+  const byCatMap: Record<string, BreakRow> = {};
+
+  for (const inv of invoices) {
+    const items = (inv.items as unknown as { chargeTypeId?: string; description?: string; total?: number }[]) ?? [];
+    for (const item of items) {
+      const lineTotal = item.total ?? 0;
+      const ct = item.chargeTypeId ? ctMap[item.chargeTypeId] : null;
+      const typeName = ct?.name ?? item.description ?? "Other";
+      const catName  = ct?.category ?? "other";
+
+      if (!byTypeMap[typeName]) byTypeMap[typeName] = { name: typeName, category: catName, total: 0, count: 0 };
+      byTypeMap[typeName].total += lineTotal;
+      byTypeMap[typeName].count += 1;
+
+      if (!byCatMap[catName]) byCatMap[catName] = { name: catName, category: catName, total: 0, count: 0 };
+      byCatMap[catName].total += lineTotal;
+      byCatMap[catName].count += 1;
+    }
+  }
+
+  const byChargeType = Object.values(byTypeMap).sort((a, b) => b.total - a.total);
+  const byCategory   = Object.values(byCatMap).sort((a, b) => b.total - a.total);
+
+  res.json({ startDate, endDate, totalRevenue, totalInvoices: invoices.length, collected, pending, daily, byChargeType, byCategory });
 });
 
 router.get("/reports/doctor-productivity", authenticate, async (req, res): Promise<void> => {

@@ -5,6 +5,7 @@
  * Hospital Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { ChargeTypeBreakdownRow } from './chargeTypeBreakdownRow';
 import type { RevenueChartPoint } from './revenueChartPoint';
 
 export interface RevenueReport {
@@ -15,4 +16,6 @@ export interface RevenueReport {
   collected: number;
   pending: number;
   daily?: RevenueChartPoint[];
+  byChargeType?: ChargeTypeBreakdownRow[];
+  byCategory?: ChargeTypeBreakdownRow[];
 }

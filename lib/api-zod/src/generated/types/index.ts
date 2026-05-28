@@ -24,6 +24,7 @@ export * from './certificateListResponse';
 export * from './certificateType';
 export * from './changePasswordInput';
 export * from './chargeType';
+export * from './chargeTypeBreakdownRow';
 export * from './chargeTypeCategory';
 export * from './chargeTypeInput';
 export * from './chargeTypeInputCategory';
