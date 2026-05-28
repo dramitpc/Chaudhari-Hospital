@@ -210,9 +210,6 @@ export default function QueuePage() {
                   <>
                     <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
                     <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
-                      <Receipt className="h-3.5 w-3.5 mr-1" />New Invoice
-                    </Button>
                   </>
                 )}
                 {(token.status === "called") && (
@@ -227,6 +224,9 @@ export default function QueuePage() {
                 {token.status === "in_consultation" && (
                   <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "completed")}>Complete</Button>
                 )}
+                <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
+                  <Receipt className="h-3.5 w-3.5 mr-1" />New Invoice
+                </Button>
               </div>
             </div>
           ))}
