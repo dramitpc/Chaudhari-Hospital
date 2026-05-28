@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PlusCircle, ChevronRight, RefreshCw } from "lucide-react";
+import { PlusCircle, ChevronRight, RefreshCw, Receipt } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   waiting: "border-amber-400 bg-amber-50 dark:bg-amber-900/20",
@@ -210,6 +210,9 @@ export default function QueuePage() {
                   <>
                     <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
                     <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
+                      <Receipt className="h-3.5 w-3.5 mr-1" />New Invoice
+                    </Button>
                   </>
                 )}
                 {(token.status === "called") && (
