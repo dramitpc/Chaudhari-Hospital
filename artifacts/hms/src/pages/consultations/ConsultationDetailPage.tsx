@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
-  useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey
+  useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -63,6 +63,10 @@ export default function ConsultationDetailPage() {
   const { data: patientHistory } = useGetPatientHistory(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientHistoryQueryKey(patientId) }
   });
+  const { data: invoicesData } = useListInvoices(
+    { patientId: patientId || undefined, limit: 100 },
+    { query: { enabled: !!patientId, queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) } }
+  );
 
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
@@ -473,6 +477,17 @@ export default function ConsultationDetailPage() {
                   const cnt = (patientHistory?.consultations ?? []).filter(c => c.id !== id).length;
                   return cnt > 0 ? (
                     <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-[10px] font-semibold px-1.5 min-w-[18px] h-[18px]">
+                      {cnt}
+                    </span>
+                  ) : null;
+                })()}
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="flex-1 relative">
+                Invoices
+                {(() => {
+                  const cnt = (invoicesData?.data ?? []).length;
+                  return cnt > 0 ? (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-[10px] font-semibold px-1.5 min-w-[18px] h-[18px]">
                       {cnt}
                     </span>
                   ) : null;
@@ -890,6 +905,120 @@ export default function ConsultationDetailPage() {
                         </div>
                       );
                     })}
+                  </div>
+                );
+              })()}
+            </TabsContent>
+
+            {/* ── Invoices tab ─────────────────────────────────────────────── */}
+            <TabsContent value="invoices" className="mt-4">
+              {(() => {
+                const allInvoices = (invoicesData?.data ?? [])
+                  .slice()
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                if (!invoicesData) {
+                  return (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                    </div>
+                  );
+                }
+
+                if (allInvoices.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                      <FileText className="h-10 w-10 mb-3 opacity-30" />
+                      <p className="text-sm font-medium">No invoices yet</p>
+                      <p className="text-xs mt-1">Invoices generated for this patient will appear here.</p>
+                    </div>
+                  );
+                }
+
+                const statusColor: Record<string, string> = {
+                  paid:      "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                  partial:   "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+                  pending:   "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+                  draft:     "bg-muted text-muted-foreground",
+                  cancelled: "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400",
+                  refunded:  "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+                };
+
+                return (
+                  <div className="rounded-lg border border-border bg-card overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/40 border-b border-border">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Invoice #</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Date</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Total</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Paid</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Balance</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allInvoices.map(inv => {
+                          const isThisConsultation = inv.consultationId === id;
+                          return (
+                            <tr
+                              key={inv.id}
+                              className={`border-t border-border ${isThisConsultation ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
+                            >
+                              <td className="px-4 py-2.5 font-medium font-mono text-xs">
+                                {inv.invoiceNumber}
+                                {isThisConsultation && (
+                                  <span className="ml-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-sans">(this visit)</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                                {new Date(inv.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${statusColor[inv.status] ?? "bg-muted text-muted-foreground"}`}>
+                                  {inv.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5 text-right text-xs font-medium">₹{inv.total.toFixed(2)}</td>
+                              <td className="px-4 py-2.5 text-right text-xs text-green-700 dark:text-green-400">₹{(inv.amountPaid ?? 0).toFixed(2)}</td>
+                              <td className="px-4 py-2.5 text-right text-xs text-orange-600 dark:text-orange-400">
+                                {(inv.balance ?? 0) > 0 ? `₹${(inv.balance ?? 0).toFixed(2)}` : "—"}
+                              </td>
+                              <td className="px-4 py-2.5 text-center">
+                                <Link
+                                  href={`/billing/${inv.id}`}
+                                  className="text-[11px] text-blue-600 hover:underline whitespace-nowrap"
+                                >
+                                  View →
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      {allInvoices.length > 1 && (
+                        <tfoot className="border-t border-border bg-muted/30">
+                          <tr>
+                            <td colSpan={3} className="px-4 py-2 text-xs font-medium text-muted-foreground">
+                              {allInvoices.length} invoices
+                            </td>
+                            <td className="px-4 py-2 text-right text-xs font-semibold">
+                              ₹{allInvoices.reduce((s, i) => s + i.total, 0).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-2 text-right text-xs font-semibold text-green-700 dark:text-green-400">
+                              ₹{allInvoices.reduce((s, i) => s + (i.amountPaid ?? 0), 0).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-2 text-right text-xs font-semibold text-orange-600 dark:text-orange-400">
+                              {allInvoices.reduce((s, i) => s + (i.balance ?? 0), 0) > 0
+                                ? `₹${allInvoices.reduce((s, i) => s + (i.balance ?? 0), 0).toFixed(2)}`
+                                : "—"}
+                            </td>
+                            <td />
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
                   </div>
                 );
               })()}
