@@ -6,7 +6,7 @@ import { patientsTable } from "./patients";
 import { consultationsTable } from "./consultations";
 
 export const certificateTypeEnum = pgEnum("certificate_type", [
-  "sick_leave", "fitness", "medical", "procedure", "vaccination"
+  "sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"
 ]);
 
 export const certificatesTable = pgTable("certificates", {

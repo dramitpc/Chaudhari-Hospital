@@ -30,7 +30,10 @@ export default function EditPatientPage() {
   }, [patient, reset]);
 
   const onSubmit = (data: Record<string, unknown>) => {
-    mutation.mutate({ id, data }, {
+    const payload = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== null && v !== undefined)
+    );
+    mutation.mutate({ id, data: payload }, {
       onSuccess: () => {
         toast({ title: "Patient updated" });
         queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
