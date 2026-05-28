@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
-  useGetInvoice, useRecordPayment,
-  getGetInvoiceQueryKey, getListInvoicesQueryKey
+  useGetInvoice, useRecordPayment, useGetPatient, useGetClinicSettings,
+  getGetInvoiceQueryKey, getListInvoicesQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Share2 } from "lucide-react";
+import ShareDialog from "@/components/ShareDialog";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -40,10 +41,16 @@ export default function InvoiceDetailPage() {
   const { data: invoice, isLoading } = useGetInvoice(id, {
     query: { enabled: !!id, queryKey: getGetInvoiceQueryKey(id) }
   });
+  const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
+  const patientId = invoice?.patientId ?? "";
+  const { data: patient } = useGetPatient(patientId, {
+    query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
+  });
 
   const paymentMutation = useRecordPayment();
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("cash");
+  const [showShare, setShowShare] = useState(false);
 
   const handlePayment = () => {
     const amount = parseFloat(payAmount);
@@ -67,6 +74,33 @@ export default function InvoiceDetailPage() {
 
   const items = (invoice.items ?? []) as InvoiceItem[];
 
+  const invoiceShareMessage = (() => {
+    const clinic = settings?.clinicName ?? "ClinicOS";
+    const lines: string[] = [];
+    lines.push(`*Invoice — ${clinic}*`);
+    if (settings?.phone) lines.push(settings.phone);
+    lines.push("");
+    lines.push(`Invoice No: ${invoice.invoiceNumber}`);
+    lines.push(`Date: ${new Date(invoice.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`);
+    lines.push(`Patient: ${invoice.patientName}`);
+    if (invoice.doctorName) lines.push(`Doctor: Dr. ${invoice.doctorName}`);
+    lines.push("");
+    lines.push("*Items:*");
+    items.forEach(item => {
+      lines.push(`• ${item.description} — Qty ${item.quantity} × ₹${item.unitPrice.toFixed(2)} = ₹${item.total.toFixed(2)}`);
+    });
+    lines.push("");
+    lines.push(`Subtotal: ₹${invoice.subtotal.toFixed(2)}`);
+    if ((invoice.discount ?? 0) > 0) lines.push(`Discount: -₹${(invoice.discount ?? 0).toFixed(2)}`);
+    if ((invoice.tax ?? 0) > 0) lines.push(`Tax: ₹${(invoice.tax ?? 0).toFixed(2)}`);
+    lines.push(`*Total: ₹${invoice.total.toFixed(2)}*`);
+    lines.push(`Paid: ₹${(invoice.amountPaid ?? 0).toFixed(2)}`);
+    if ((invoice.balance ?? 0) > 0) lines.push(`*Balance Due: ₹${(invoice.balance ?? 0).toFixed(2)}*`);
+    lines.push("");
+    lines.push(`Thank you for visiting ${clinic}!`);
+    return lines.join("\n");
+  })();
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 print:hidden">
@@ -84,9 +118,14 @@ export default function InvoiceDetailPage() {
             <p className="text-sm text-muted-foreground">{new Date(invoice.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" /> Print
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowShare(true)}>
+            <Share2 className="mr-1.5 h-4 w-4" /> Share
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -224,6 +263,16 @@ export default function InvoiceDetailPage() {
           nav, aside { display: none !important; }
         }
       `}</style>
+
+      <ShareDialog
+        open={showShare}
+        onOpenChange={setShowShare}
+        patientName={invoice.patientName ?? "Patient"}
+        patientPhone={patient?.phone}
+        patientEmail={patient?.email}
+        message={invoiceShareMessage}
+        emailSubject={`Invoice ${invoice.invoiceNumber} — ${settings?.clinicName ?? "ClinicOS"}`}
+      />
     </div>
   );
 }

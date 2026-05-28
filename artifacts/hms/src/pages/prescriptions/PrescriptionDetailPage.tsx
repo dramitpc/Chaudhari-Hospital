@@ -1,6 +1,6 @@
 import { useRoute, useLocation, useSearch } from "wouter";
 import { useEffect, useState } from "react";
-import { useGetPrescription, useGetClinicSettings, getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey } from "@workspace/api-client-react";
+import { useGetPrescription, useGetClinicSettings, useGetPatient, getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Printer, Settings2 } from "lucide-react";
+import { ArrowLeft, Printer, Settings2, Share2 } from "lucide-react";
+import ShareDialog from "@/components/ShareDialog";
 
 type PrescriptionItem = {
   drugName: string;
@@ -80,8 +81,13 @@ export default function PrescriptionDetailPage() {
     query: { enabled: !!id, queryKey: getGetPrescriptionQueryKey(id) }
   });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
+  const patientId = prescription?.patientId ?? "";
+  const { data: patient } = useGetPatient(patientId, {
+    query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
+  });
 
   const [fmt, setFmt] = useState<RxFormat>(loadFormat);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(fmt));
@@ -104,6 +110,33 @@ export default function PrescriptionDetailPage() {
   const items = (prescription.items ?? []) as PrescriptionItem[];
   const textAlign = fmt.headerAlign === "center" ? "text-center" : "text-left";
 
+  const rxShareMessage = (() => {
+    const clinic = settings?.clinicName ?? "ClinicOS";
+    const lines: string[] = [];
+    lines.push(`*Prescription — ${clinic}*`);
+    if (settings?.phone) lines.push(settings.phone);
+    if (settings?.address) lines.push(settings.address);
+    lines.push("");
+    lines.push(`Patient: ${prescription.patientName}`);
+    lines.push(`Date: ${new Date(prescription.visitDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`);
+    lines.push(`Doctor: Dr. ${prescription.doctorName}`);
+    if (prescription.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${prescription.diagnosis}`); }
+    lines.push("");
+    lines.push("*Medicines:*");
+    items.forEach((item, i) => {
+      let drug = `${i + 1}. ${item.drugName}`;
+      if (item.genericName) drug += ` (${item.genericName})`;
+      drug += ` — ${item.dosage}, ${item.frequency}, ${item.duration}`;
+      if (item.instructions) drug += `\n   ${item.instructions}`;
+      lines.push(drug);
+    });
+    if (prescription.advice) { lines.push(""); lines.push(`Advice: ${prescription.advice}`); }
+    if (prescription.followUpDate) { lines.push(""); lines.push(`Follow-up: ${new Date(prescription.followUpDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`); }
+    lines.push("");
+    lines.push(`Thank you for visiting ${clinic}!`);
+    return lines.join("\n");
+  })();
+
   return (
     <div>
       {/* Toolbar */}
@@ -112,6 +145,10 @@ export default function PrescriptionDetailPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowShare(true)}>
+            <Share2 className="h-4 w-4 mr-1.5" />
+            Share
+          </Button>
           {/* Format popover */}
           <Popover>
             <PopoverTrigger asChild>
@@ -357,6 +394,16 @@ export default function PrescriptionDetailPage() {
           nav, aside, header { display: none !important; }
         }
       `}</style>
+
+      <ShareDialog
+        open={showShare}
+        onOpenChange={setShowShare}
+        patientName={prescription.patientName ?? "Patient"}
+        patientPhone={patient?.phone}
+        patientEmail={patient?.email}
+        message={rxShareMessage}
+        emailSubject={`Prescription — ${settings?.clinicName ?? "ClinicOS"}`}
+      />
     </div>
   );
 }
