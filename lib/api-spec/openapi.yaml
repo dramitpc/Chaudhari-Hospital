@@ -1576,6 +1576,10 @@ components:
           type: ["string", "null"]
         currentMedications:
           type: ["string", "null"]
+        referringDoctorName:
+          type: ["string", "null"]
+        referringDoctorPhone:
+          type: ["string", "null"]
         isActive:
           type: boolean
         createdAt:
@@ -1618,6 +1622,10 @@ components:
           type: string
         currentMedications:
           type: string
+        referringDoctorName:
+          type: string
+        referringDoctorPhone:
+          type: string
 
     PatientUpdate:
       type: object
@@ -1649,6 +1657,10 @@ components:
         familyHistory:
           type: string
         currentMedications:
+          type: string
+        referringDoctorName:
+          type: string
+        referringDoctorPhone:
           type: string
 
     PatientListResponse:
@@ -2485,7 +2497,7 @@ components:
           type: ["string", "null"]
         type:
           type: string
-          enum: [sick_leave, fitness, medical, procedure, vaccination]
+          enum: [sick_leave, fitness, medical, procedure, vaccination, referral_thank_you]
         issuedDate:
           type: string
         fromDate:
@@ -2513,7 +2525,7 @@ components:
           type: string
         type:
           type: string
-          enum: [sick_leave, fitness, medical, procedure, vaccination]
+          enum: [sick_leave, fitness, medical, procedure, vaccination, referral_thank_you]
         issuedDate:
           type: string
         fromDate:

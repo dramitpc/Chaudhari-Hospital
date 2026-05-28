@@ -15,4 +15,5 @@ export const CertificateType = {
   medical: 'medical',
   procedure: 'procedure',
   vaccination: 'vaccination',
+  referral_thank_you: 'referral_thank_you',
 } as const;

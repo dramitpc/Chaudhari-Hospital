@@ -17,7 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { FilePlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination"];
+const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"];
 
 const typeColors: Record<string, string> = {
   sick_leave: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
@@ -25,6 +25,7 @@ const typeColors: Record<string, string> = {
   medical: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
   procedure: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
   vaccination: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
+  referral_thank_you: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
 };
 
 export default function CertificatesPage() {

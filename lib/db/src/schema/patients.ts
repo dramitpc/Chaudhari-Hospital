@@ -22,6 +22,8 @@ export const patientsTable = pgTable("patients", {
   surgicalHistory: text("surgical_history"),
   familyHistory: text("family_history"),
   currentMedications: text("current_medications"),
+  referringDoctorName: text("referring_doctor_name"),
+  referringDoctorPhone: text("referring_doctor_phone"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

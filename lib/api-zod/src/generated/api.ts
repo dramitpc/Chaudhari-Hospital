@@ -256,6 +256,8 @@ export const ListPatientsResponse = zod.object({
   "surgicalHistory": zod.string().nullish(),
   "familyHistory": zod.string().nullish(),
   "currentMedications": zod.string().nullish(),
+  "referringDoctorName": zod.string().nullish(),
+  "referringDoctorPhone": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -284,7 +286,9 @@ export const RegisterPatientBody = zod.object({
   "medicalHistory": zod.string().optional(),
   "surgicalHistory": zod.string().optional(),
   "familyHistory": zod.string().optional(),
-  "currentMedications": zod.string().optional()
+  "currentMedications": zod.string().optional(),
+  "referringDoctorName": zod.string().optional(),
+  "referringDoctorPhone": zod.string().optional()
 })
 
 
@@ -313,6 +317,8 @@ export const GetPatientResponse = zod.object({
   "surgicalHistory": zod.string().nullish(),
   "familyHistory": zod.string().nullish(),
   "currentMedications": zod.string().nullish(),
+  "referringDoctorName": zod.string().nullish(),
+  "referringDoctorPhone": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -340,7 +346,9 @@ export const UpdatePatientBody = zod.object({
   "medicalHistory": zod.string().optional(),
   "surgicalHistory": zod.string().optional(),
   "familyHistory": zod.string().optional(),
-  "currentMedications": zod.string().optional()
+  "currentMedications": zod.string().optional(),
+  "referringDoctorName": zod.string().optional(),
+  "referringDoctorPhone": zod.string().optional()
 })
 
 export const UpdatePatientResponse = zod.object({
@@ -361,6 +369,8 @@ export const UpdatePatientResponse = zod.object({
   "surgicalHistory": zod.string().nullish(),
   "familyHistory": zod.string().nullish(),
   "currentMedications": zod.string().nullish(),
+  "referringDoctorName": zod.string().nullish(),
+  "referringDoctorPhone": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -393,6 +403,8 @@ export const GetPatientHistoryResponse = zod.object({
   "surgicalHistory": zod.string().nullish(),
   "familyHistory": zod.string().nullish(),
   "currentMedications": zod.string().nullish(),
+  "referringDoctorName": zod.string().nullish(),
+  "referringDoctorPhone": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -478,7 +490,7 @@ export const GetPatientHistoryResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "consultationId": zod.string().nullish(),
-  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination']),
+  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination', 'referral_thank_you']),
   "issuedDate": zod.string(),
   "fromDate": zod.string().nullish(),
   "toDate": zod.string().nullish(),
@@ -1511,7 +1523,7 @@ export const ListCertificatesResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "consultationId": zod.string().nullish(),
-  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination']),
+  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination', 'referral_thank_you']),
   "issuedDate": zod.string(),
   "fromDate": zod.string().nullish(),
   "toDate": zod.string().nullish(),
@@ -1533,7 +1545,7 @@ export const CreateCertificateBody = zod.object({
   "patientId": zod.string(),
   "doctorId": zod.string(),
   "consultationId": zod.string().optional(),
-  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination']),
+  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination', 'referral_thank_you']),
   "issuedDate": zod.string(),
   "fromDate": zod.string().optional(),
   "toDate": zod.string().optional(),
@@ -1556,7 +1568,7 @@ export const GetCertificateResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "consultationId": zod.string().nullish(),
-  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination']),
+  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination', 'referral_thank_you']),
   "issuedDate": zod.string(),
   "fromDate": zod.string().nullish(),
   "toDate": zod.string().nullish(),

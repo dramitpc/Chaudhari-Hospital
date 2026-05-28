@@ -37,6 +37,8 @@ function formatPatient(p: typeof patientsTable.$inferSelect) {
     surgicalHistory: p.surgicalHistory ?? null,
     familyHistory: p.familyHistory ?? null,
     currentMedications: p.currentMedications ?? null,
+    referringDoctorName: p.referringDoctorName ?? null,
+    referringDoctorPhone: p.referringDoctorPhone ?? null,
     isActive: p.isActive,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),

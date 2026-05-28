@@ -38,6 +38,10 @@ export interface Patient {
   familyHistory?: string | null;
   /** @nullable */
   currentMedications?: string | null;
+  /** @nullable */
+  referringDoctorName?: string | null;
+  /** @nullable */
+  referringDoctorPhone?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;

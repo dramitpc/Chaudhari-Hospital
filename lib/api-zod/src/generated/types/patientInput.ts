@@ -23,4 +23,6 @@ export interface PatientInput {
   surgicalHistory?: string;
   familyHistory?: string;
   currentMedications?: string;
+  referringDoctorName?: string;
+  referringDoctorPhone?: string;
 }

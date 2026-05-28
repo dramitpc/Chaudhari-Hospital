@@ -145,6 +145,10 @@ export interface Patient {
   familyHistory?: string | null;
   /** @nullable */
   currentMedications?: string | null;
+  /** @nullable */
+  referringDoctorName?: string | null;
+  /** @nullable */
+  referringDoctorPhone?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -175,6 +179,8 @@ export interface PatientInput {
   surgicalHistory?: string;
   familyHistory?: string;
   currentMedications?: string;
+  referringDoctorName?: string;
+  referringDoctorPhone?: string;
 }
 
 export interface PatientUpdate {
@@ -192,6 +198,8 @@ export interface PatientUpdate {
   surgicalHistory?: string;
   familyHistory?: string;
   currentMedications?: string;
+  referringDoctorName?: string;
+  referringDoctorPhone?: string;
 }
 
 export interface PatientListResponse {
@@ -346,6 +354,7 @@ export const CertificateType = {
   medical: 'medical',
   procedure: 'procedure',
   vaccination: 'vaccination',
+  referral_thank_you: 'referral_thank_you',
 } as const;
 
 export interface Certificate {
@@ -841,6 +850,7 @@ export const CertificateInputType = {
   medical: 'medical',
   procedure: 'procedure',
   vaccination: 'vaccination',
+  referral_thank_you: 'referral_thank_you',
 } as const;
 
 export interface CertificateInput {
