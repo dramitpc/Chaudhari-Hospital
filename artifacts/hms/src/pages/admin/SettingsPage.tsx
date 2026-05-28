@@ -16,6 +16,8 @@ const TIMEZONES = ["Asia/Kolkata", "Asia/Singapore", "America/New_York", "Americ
 // ── Prescription format ───────────────────────────────────────────────────────
 type RxFormat = {
   showDiagnosis: boolean;
+  showSoap: boolean;
+  showInvestigations: boolean;
   showAdvice: boolean;
   showFollowUp: boolean;
   showGenericName: boolean;
@@ -30,6 +32,8 @@ const RX_LS_KEY = "clinicos_rx_format";
 
 const DEFAULT_FORMAT: RxFormat = {
   showDiagnosis: true,
+  showSoap: false,
+  showInvestigations: false,
   showAdvice: true,
   showFollowUp: true,
   showGenericName: true,
@@ -173,11 +177,13 @@ export default function SettingsPage() {
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Visible sections</p>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             {([
-              { key: "showDiagnosis",    label: "Diagnosis"           },
-              { key: "showGenericName",  label: "Generic drug name"   },
-              { key: "showInstructions", label: "Instructions column" },
-              { key: "showAdvice",       label: "Advice"              },
-              { key: "showFollowUp",     label: "Follow-up date"      },
+              { key: "showDiagnosis",       label: "Diagnosis"           },
+              { key: "showSoap",           label: "SOAP notes"          },
+              { key: "showInvestigations", label: "Investigations"       },
+              { key: "showGenericName",    label: "Generic drug name"   },
+              { key: "showInstructions",   label: "Instructions column" },
+              { key: "showAdvice",         label: "Advice"              },
+              { key: "showFollowUp",       label: "Follow-up date"      },
             ] as { key: keyof RxFormat; label: string }[]).map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between gap-3">
                 <Label htmlFor={`rxfmt-${key}`} className="text-sm font-normal cursor-pointer">{label}</Label>

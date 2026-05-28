@@ -447,6 +447,12 @@ export const GetPatientHistoryResponse = zod.object({
   "quantity": zod.number().nullish()
 })),
   "notes": zod.string().nullish(),
+  "chiefComplaint": zod.string().nullish(),
+  "soapSubjective": zod.string().nullish(),
+  "soapObjective": zod.string().nullish(),
+  "soapAssessment": zod.string().nullish(),
+  "soapPlan": zod.string().nullish(),
+  "investigationOrders": zod.string().nullish(),
   "createdAt": zod.string()
 })),
   "vitals": zod.array(zod.object({
@@ -950,6 +956,12 @@ export const ListPrescriptionsResponse = zod.object({
   "quantity": zod.number().nullish()
 })),
   "notes": zod.string().nullish(),
+  "chiefComplaint": zod.string().nullish(),
+  "soapSubjective": zod.string().nullish(),
+  "soapObjective": zod.string().nullish(),
+  "soapAssessment": zod.string().nullish(),
+  "soapPlan": zod.string().nullish(),
+  "investigationOrders": zod.string().nullish(),
   "createdAt": zod.string()
 })),
   "total": zod.number(),
@@ -1012,6 +1024,12 @@ export const GetPrescriptionResponse = zod.object({
   "quantity": zod.number().nullish()
 })),
   "notes": zod.string().nullish(),
+  "chiefComplaint": zod.string().nullish(),
+  "soapSubjective": zod.string().nullish(),
+  "soapObjective": zod.string().nullish(),
+  "soapAssessment": zod.string().nullish(),
+  "soapPlan": zod.string().nullish(),
+  "investigationOrders": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -1063,6 +1081,12 @@ export const UpdatePrescriptionResponse = zod.object({
   "quantity": zod.number().nullish()
 })),
   "notes": zod.string().nullish(),
+  "chiefComplaint": zod.string().nullish(),
+  "soapSubjective": zod.string().nullish(),
+  "soapObjective": zod.string().nullish(),
+  "soapAssessment": zod.string().nullish(),
+  "soapPlan": zod.string().nullish(),
+  "investigationOrders": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

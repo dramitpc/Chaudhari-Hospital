@@ -22,6 +22,8 @@ type PrescriptionItem = {
 
 type RxFormat = {
   showDiagnosis: boolean;
+  showSoap: boolean;
+  showInvestigations: boolean;
   showAdvice: boolean;
   showFollowUp: boolean;
   showGenericName: boolean;
@@ -34,6 +36,8 @@ type RxFormat = {
 
 const DEFAULT_FORMAT: RxFormat = {
   showDiagnosis: true,
+  showSoap: false,
+  showInvestigations: false,
   showAdvice: true,
   showFollowUp: true,
   showGenericName: true,
@@ -124,11 +128,13 @@ export default function PrescriptionDetailPage() {
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sections</p>
                 {([
-                  { key: "showDiagnosis",    label: "Diagnosis"          },
-                  { key: "showGenericName",  label: "Generic drug name"  },
-                  { key: "showInstructions", label: "Instructions column" },
-                  { key: "showAdvice",       label: "Advice"             },
-                  { key: "showFollowUp",     label: "Follow-up date"     },
+                  { key: "showDiagnosis",       label: "Diagnosis"           },
+                  { key: "showSoap",           label: "SOAP notes"          },
+                  { key: "showInvestigations", label: "Investigations"       },
+                  { key: "showGenericName",    label: "Generic drug name"   },
+                  { key: "showInstructions",   label: "Instructions column" },
+                  { key: "showAdvice",         label: "Advice"              },
+                  { key: "showFollowUp",       label: "Follow-up date"      },
                 ] as { key: keyof RxFormat; label: string }[]).map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between">
                     <Label className="text-sm font-normal cursor-pointer" htmlFor={`fmt-${key}`}>{label}</Label>
@@ -234,6 +240,34 @@ export default function PrescriptionDetailPage() {
           <div className="mb-4">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
             <p className="text-sm">{prescription.diagnosis}</p>
+          </div>
+        )}
+
+        {fmt.showSoap && (prescription.soapSubjective || prescription.soapObjective || prescription.soapAssessment || prescription.soapPlan) && (
+          <div className="mb-4 space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">SOAP Notes</p>
+            {prescription.chiefComplaint && (
+              <p className="text-sm"><span className="font-medium">CC: </span>{prescription.chiefComplaint}</p>
+            )}
+            {prescription.soapSubjective && (
+              <p className="text-sm"><span className="font-medium">S: </span>{prescription.soapSubjective}</p>
+            )}
+            {prescription.soapObjective && (
+              <p className="text-sm"><span className="font-medium">O: </span>{prescription.soapObjective}</p>
+            )}
+            {prescription.soapAssessment && (
+              <p className="text-sm"><span className="font-medium">A: </span>{prescription.soapAssessment}</p>
+            )}
+            {prescription.soapPlan && (
+              <p className="text-sm"><span className="font-medium">P: </span>{prescription.soapPlan}</p>
+            )}
+          </div>
+        )}
+
+        {fmt.showInvestigations && prescription.investigationOrders && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Investigations</p>
+            <p className="text-sm whitespace-pre-wrap">{prescription.investigationOrders}</p>
           </div>
         )}
 

@@ -2104,6 +2104,18 @@ components:
             $ref: "#/components/schemas/PrescriptionItem"
         notes:
           type: ["string", "null"]
+        chiefComplaint:
+          type: ["string", "null"]
+        soapSubjective:
+          type: ["string", "null"]
+        soapObjective:
+          type: ["string", "null"]
+        soapAssessment:
+          type: ["string", "null"]
+        soapPlan:
+          type: ["string", "null"]
+        investigationOrders:
+          type: ["string", "null"]
         createdAt:
           type: string
 

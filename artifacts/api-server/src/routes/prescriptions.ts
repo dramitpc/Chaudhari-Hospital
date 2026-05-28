@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, prescriptionsTable, prescriptionTemplatesTable, patientsTable, usersTable } from "@workspace/db";
+import { db, prescriptionsTable, prescriptionTemplatesTable, patientsTable, usersTable, consultationsTable } from "@workspace/db";
 import {
   ListPrescriptionsQueryParams,
   CreatePrescriptionBody,
@@ -18,6 +18,16 @@ const router = Router();
 async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
   const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, p.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName, registrationNumber: usersTable.registrationNumber }).from(usersTable).where(eq(usersTable.id, p.doctorId));
+  const consultation = p.consultationId
+    ? (await db.select({
+        chiefComplaint:    consultationsTable.chiefComplaint,
+        soapSubjective:    consultationsTable.soapSubjective,
+        soapObjective:     consultationsTable.soapObjective,
+        soapAssessment:    consultationsTable.soapAssessment,
+        soapPlan:          consultationsTable.soapPlan,
+        investigationOrders: consultationsTable.investigationOrders,
+      }).from(consultationsTable).where(eq(consultationsTable.id, p.consultationId)))[0]
+    : null;
   return {
     id: p.id,
     patientId: p.patientId,
@@ -32,6 +42,12 @@ async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
     followUpDate: p.followUpDate ?? null,
     items: (p.items as unknown[]) ?? [],
     notes: p.notes ?? null,
+    chiefComplaint:     consultation?.chiefComplaint     ?? null,
+    soapSubjective:     consultation?.soapSubjective     ?? null,
+    soapObjective:      consultation?.soapObjective      ?? null,
+    soapAssessment:     consultation?.soapAssessment     ?? null,
+    soapPlan:           consultation?.soapPlan           ?? null,
+    investigationOrders: consultation?.investigationOrders ?? null,
     createdAt: p.createdAt.toISOString(),
   };
 }

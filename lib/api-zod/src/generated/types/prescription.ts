@@ -27,5 +27,17 @@ export interface Prescription {
   items: PrescriptionItem[];
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  chiefComplaint?: string | null;
+  /** @nullable */
+  soapSubjective?: string | null;
+  /** @nullable */
+  soapObjective?: string | null;
+  /** @nullable */
+  soapAssessment?: string | null;
+  /** @nullable */
+  soapPlan?: string | null;
+  /** @nullable */
+  investigationOrders?: string | null;
   createdAt: string;
 }
