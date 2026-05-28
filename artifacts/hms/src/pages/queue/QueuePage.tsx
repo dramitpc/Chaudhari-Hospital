@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useGetQueue, useCallNextPatient, useUpdateTokenStatus, useGenerateToken,
-  useCreateConsultation, useListUsers, useListPatients,
-  getGetQueueQueryKey, getListUsersQueryKey, getListPatientsQueryKey
+  useCreateConsultation, useListDoctors, useListPatients,
+  getGetQueueQueryKey, getListDoctorsQueryKey, getListPatientsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,8 +43,8 @@ export default function QueuePage() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenPatientId, setTokenPatientId] = useState("");
 
-  const { data: users } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
-  const doctors = users?.data ?? [];
+  const { data: doctorsData } = useListDoctors({ query: { queryKey: getListDoctorsQueryKey() } });
+  const doctors = doctorsData?.data ?? [];
 
   useEffect(() => {
     if (!selectedDoctorId && doctors.length > 0) {
