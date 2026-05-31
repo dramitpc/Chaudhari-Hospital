@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Clock, ScanLine, AlertCircle, Filter, Paperclip, X, ImageIcon } from "lucide-react";
+import { CheckCircle, Clock, ScanLine, AlertCircle, Filter, Paperclip, X, ImageIcon, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -43,6 +43,20 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function isPdf(dataUrl: string) {
+  return dataUrl.startsWith("data:application/pdf");
+}
+
+function openInNewTab(dataUrl: string) {
+  const win = window.open();
+  if (win) {
+    win.document.write(
+      `<iframe src="${dataUrl}" style="width:100%;height:100%;border:none;margin:0;padding:0" />`
+    );
+    win.document.close();
+  }
 }
 
 export default function InvestigationsPage() {
@@ -124,14 +138,16 @@ export default function InvestigationsPage() {
     const file = e.target.files?.[0];
     if (!file || !attachingId) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Please select an image file", variant: "destructive" });
+    const isImage = file.type.startsWith("image/");
+    const isPdfFile = file.type === "application/pdf";
+    if (!isImage && !isPdfFile) {
+      toast({ title: "Please select an image or PDF file", variant: "destructive" });
       e.target.value = "";
       return;
     }
 
-    if (file.size > 4 * 1024 * 1024) {
-      toast({ title: "Image must be under 4 MB", variant: "destructive" });
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "File must be under 8 MB", variant: "destructive" });
       e.target.value = "";
       return;
     }
@@ -143,7 +159,7 @@ export default function InvestigationsPage() {
         id: attachingId,
         data: { imageAttachment: base64 },
       });
-      toast({ title: "Image attached" });
+      toast({ title: isPdfFile ? "PDF attached" : "Image attached" });
       queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey(params) });
     } catch {
       toast({ title: "Failed to attach image", variant: "destructive" });
@@ -177,7 +193,7 @@ export default function InvestigationsPage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         className="hidden"
         onChange={handleFileChange}
       />
@@ -261,7 +277,7 @@ export default function InvestigationsPage() {
                   {!isRadiographer && (
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ordered By</th>
                   )}
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Image</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Attachment</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Time</th>
                   {isRadiographer && (
@@ -299,26 +315,37 @@ export default function InvestigationsPage() {
                       <td className="px-4 py-3 text-muted-foreground">{inv.requestedByName ?? "—"}</td>
                     )}
 
-                    {/* Image cell */}
+                    {/* Attachment cell */}
                     <td className="px-4 py-3">
                       {inv.imageAttachment ? (
                         <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setImagePreview({ open: true, src: inv.imageAttachment!, label: `${inv.type}${inv.bodyPart ? ` — ${inv.bodyPart}` : ""}` })}
-                            className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition shrink-0"
-                            title="Click to view full image"
-                          >
-                            <img
-                              src={inv.imageAttachment}
-                              alt="Scan"
-                              className="h-10 w-10 object-cover"
-                            />
-                          </button>
+                          {isPdf(inv.imageAttachment) ? (
+                            <button
+                              onClick={() => openInNewTab(inv.imageAttachment!)}
+                              className="flex items-center gap-1 rounded border border-border bg-red-50 dark:bg-red-950/30 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
+                              title="Open PDF"
+                            >
+                              <FileText className="h-3.5 w-3.5 shrink-0" />
+                              PDF
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setImagePreview({ open: true, src: inv.imageAttachment!, label: `${inv.type}${inv.bodyPart ? ` — ${inv.bodyPart}` : ""}` })}
+                              className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition shrink-0"
+                              title="Click to view full image"
+                            >
+                              <img
+                                src={inv.imageAttachment}
+                                alt="Scan"
+                                className="h-10 w-10 object-cover"
+                              />
+                            </button>
+                          )}
                           {isRadiographer && inv.status !== "completed" && (
                             <button
                               onClick={() => handleRemoveImage(inv)}
                               className="text-muted-foreground hover:text-destructive transition"
-                              title="Remove image"
+                              title="Remove attachment"
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
@@ -375,7 +402,7 @@ export default function InvestigationsPage() {
                                 ) : (
                                   <>
                                     <Paperclip className="h-3 w-3" />
-                                    {inv.imageAttachment ? "Replace" : "Attach Image"}
+                                    {inv.imageAttachment ? "Replace" : "Attach File"}
                                   </>
                                 )}
                               </Button>
@@ -430,27 +457,40 @@ export default function InvestigationsPage() {
               </div>
             )}
 
-            {/* Attached image preview inside complete dialog */}
+            {/* Attached file preview inside complete dialog */}
             {completeDialog.inv?.imageAttachment && (
               <div className="space-y-1.5">
                 <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <ImageIcon className="h-3.5 w-3.5" /> Attached Scan Image
+                  {isPdf(completeDialog.inv.imageAttachment)
+                    ? <><FileText className="h-3.5 w-3.5" /> Attached PDF Report</>
+                    : <><ImageIcon className="h-3.5 w-3.5" /> Attached Scan Image</>
+                  }
                 </Label>
-                <button
-                  onClick={() => setImagePreview({
-                    open: true,
-                    src: completeDialog.inv!.imageAttachment!,
-                    label: `${completeDialog.inv!.type}${completeDialog.inv!.bodyPart ? ` — ${completeDialog.inv!.bodyPart}` : ""}`
-                  })}
-                  className="block rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition w-full"
-                  title="Click to view full image"
-                >
-                  <img
-                    src={completeDialog.inv.imageAttachment}
-                    alt="Attached scan"
-                    className="w-full max-h-48 object-contain bg-black/5"
-                  />
-                </button>
+                {isPdf(completeDialog.inv.imageAttachment) ? (
+                  <button
+                    onClick={() => openInNewTab(completeDialog.inv!.imageAttachment!)}
+                    className="flex items-center gap-2 w-full rounded-lg border border-border bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
+                  >
+                    <FileText className="h-5 w-5 shrink-0" />
+                    Open PDF in new tab
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setImagePreview({
+                      open: true,
+                      src: completeDialog.inv!.imageAttachment!,
+                      label: `${completeDialog.inv!.type}${completeDialog.inv!.bodyPart ? ` — ${completeDialog.inv!.bodyPart}` : ""}`
+                    })}
+                    className="block rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition w-full"
+                    title="Click to view full image"
+                  >
+                    <img
+                      src={completeDialog.inv.imageAttachment}
+                      alt="Attached scan"
+                      className="w-full max-h-48 object-contain bg-black/5"
+                    />
+                  </button>
+                )}
               </div>
             )}
 
