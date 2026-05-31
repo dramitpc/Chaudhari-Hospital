@@ -33,7 +33,7 @@ export default function PatientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Patients</h1>
           <p className="text-sm text-muted-foreground mt-1">{total} total patients</p>
@@ -57,7 +57,7 @@ export default function PatientsPage() {
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b border-border">
             <tr>

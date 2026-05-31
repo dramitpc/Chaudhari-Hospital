@@ -145,7 +145,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">User Management</h1>
           <p className="text-sm text-muted-foreground">{users.length} users</p>
@@ -165,7 +165,7 @@ export default function UsersPage() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b border-border">
             <tr>
@@ -248,8 +248,8 @@ export default function UsersPage() {
           </DialogHeader>
           {editForm && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5 col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5 col-span-1 sm:col-span-2">
                   <Label>Full Name</Label>
                   <Input
                     value={editForm.fullName}
@@ -312,7 +312,7 @@ export default function UsersPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Create User</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Full Name</Label>
                 <Input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} />

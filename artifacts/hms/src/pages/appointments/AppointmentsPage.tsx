@@ -75,7 +75,7 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Appointments</h1>
           <p className="text-sm text-muted-foreground">{appointments.length} appointments</p>
@@ -86,15 +86,15 @@ export default function AppointmentsPage() {
         </Button>
       </div>
 
-      <div className="flex gap-3 items-end">
+      <div className="flex flex-wrap gap-3 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Date</Label>
-          <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-44" />
+          <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full sm:w-44" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Doctor</Label>
           <Select onValueChange={v => setDoctorId(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All doctors" />
             </SelectTrigger>
             <SelectContent>
@@ -105,7 +105,7 @@ export default function AppointmentsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b border-border">
             <tr>

@@ -66,7 +66,7 @@ export default function DrugsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Drug Master Database</h1>
           <p className="text-sm text-muted-foreground">{data?.total ?? 0} drugs</p>
@@ -78,7 +78,7 @@ export default function DrugsPage() {
 
       <Input placeholder="Search drugs..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="max-w-sm" />
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b border-border">
             <tr>

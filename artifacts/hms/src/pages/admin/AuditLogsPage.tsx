@@ -56,7 +56,7 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-muted/40 border-b border-border">
             <tr>

@@ -33,7 +33,7 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Billing</h1>
           <p className="text-sm text-muted-foreground">{total} invoices</p>
@@ -46,7 +46,7 @@ export default function BillingPage() {
         </Link>
       </div>
 
-      <div className="flex gap-1 bg-muted/30 rounded-lg p-1 w-fit">
+      <div className="flex flex-wrap gap-1 bg-muted/30 rounded-lg p-1">
         {statusList.map(s => (
           <button
             key={s}
@@ -59,7 +59,7 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 border-b border-border">
             <tr>
