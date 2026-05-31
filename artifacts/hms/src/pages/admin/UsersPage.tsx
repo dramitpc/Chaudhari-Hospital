@@ -15,9 +15,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserPlus, KeyRound, Trash2 } from "lucide-react";
 
 const roleColors: Record<string, string> = {
-  admin: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  doctor: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  staff: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  admin:         "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  doctor:        "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  staff:         "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  radiographer:  "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
 };
 
 export default function UsersPage() {
@@ -102,7 +103,7 @@ export default function UsersPage() {
       </div>
 
       <div className="flex gap-2">
-        {["", "admin", "doctor", "staff"].map(role => (
+        {["", "admin", "doctor", "staff", "radiographer"].map(role => (
           <button key={role} onClick={() => setRoleFilter(role)}
             className={`px-3 py-1.5 rounded text-sm font-medium capitalize transition-colors ${roleFilter === role ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
             {role || "All"}
@@ -194,6 +195,7 @@ export default function UsersPage() {
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="doctor">Doctor</SelectItem>
                     <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="radiographer">Radiographer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
