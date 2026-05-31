@@ -72,6 +72,20 @@ async function seed() {
     console.log("Created staff user: staff.jane / Staff@123");
   }
 
+  // Radiographer user
+  const [existingRadiographer] = await db.select().from(usersTable).where(eq(usersTable.username, "rad.kumar"));
+  if (!existingRadiographer) {
+    await db.insert(usersTable).values({
+      username: "rad.kumar",
+      passwordHash: hashPassword("Radiology@123"),
+      role: "radiographer",
+      fullName: "Raj Kumar",
+      email: "raj.kumar@citygeneralhospital.com",
+      phone: "+1-555-0103",
+    });
+    console.log("Created radiographer user: rad.kumar / Radiology@123");
+  }
+
   // Charge types
   const existingCharges = await db.select().from(chargeTypesTable).limit(1);
   if (existingCharges.length === 0) {

@@ -25,6 +25,7 @@ export const UserRole = {
   admin: 'admin',
   doctor: 'doctor',
   staff: 'staff',
+  radiographer: 'radiographer',
 } as const;
 
 export interface User {
@@ -66,6 +67,7 @@ export const UserInputRole = {
   admin: 'admin',
   doctor: 'doctor',
   staff: 'staff',
+  radiographer: 'radiographer',
 } as const;
 
 export interface UserInput {
@@ -86,6 +88,7 @@ export const UserUpdateRole = {
   admin: 'admin',
   doctor: 'doctor',
   staff: 'staff',
+  radiographer: 'radiographer',
 } as const;
 
 export interface UserUpdate {
@@ -1030,6 +1033,70 @@ export interface ClinicSettingsUpdate {
   defaultConsultationFee?: number;
 }
 
+export type InvestigationStatus = typeof InvestigationStatus[keyof typeof InvestigationStatus];
+
+
+export const InvestigationStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface Investigation {
+  id: string;
+  patientId: string;
+  /** @nullable */
+  patientName?: string | null;
+  /** @nullable */
+  consultationId?: string | null;
+  requestedById: string;
+  /** @nullable */
+  requestedByName?: string | null;
+  type: string;
+  /** @nullable */
+  bodyPart?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  status: InvestigationStatus;
+  /** @nullable */
+  resultNotes?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface InvestigationInput {
+  patientId: string;
+  patientName?: string;
+  consultationId?: string;
+  requestedById: string;
+  requestedByName?: string;
+  type: string;
+  bodyPart?: string;
+  notes?: string;
+}
+
+export type InvestigationUpdateStatus = typeof InvestigationUpdateStatus[keyof typeof InvestigationUpdateStatus];
+
+
+export const InvestigationUpdateStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface InvestigationUpdate {
+  status?: InvestigationUpdateStatus;
+  resultNotes?: string;
+}
+
+export interface InvestigationListResponse {
+  data: Investigation[];
+}
+
 export type ListDoctors200 = {
   data: User[];
 };
@@ -1133,4 +1200,20 @@ startDate?: string;
 endDate?: string;
 doctorId?: string;
 };
+
+export type ListInvestigationsParams = {
+status?: ListInvestigationsStatus;
+patientId?: string;
+consultationId?: string;
+};
+
+export type ListInvestigationsStatus = typeof ListInvestigationsStatus[keyof typeof ListInvestigationsStatus];
+
+
+export const ListInvestigationsStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
 

@@ -34,6 +34,7 @@ import CertificatesPage from "@/pages/certificates/CertificatesPage";
 import CertificateDetailPage from "@/pages/certificates/CertificateDetailPage";
 
 import ReportsPage from "@/pages/reports/ReportsPage";
+import InvestigationsPage from "@/pages/investigations/InvestigationsPage";
 
 import UsersPage from "@/pages/admin/UsersPage";
 import DrugsPage from "@/pages/admin/DrugsPage";
@@ -47,7 +48,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function Protected({ children, roles }: { children: React.ReactNode; roles?: ("admin" | "doctor" | "staff")[] }) {
+function Protected({ children, roles }: { children: React.ReactNode; roles?: ("admin" | "doctor" | "staff" | "radiographer")[] }) {
   return (
     <ProtectedRoute allowedRoles={roles}>
       <Layout>{children}</Layout>
@@ -124,6 +125,11 @@ function Router() {
       </Route>
       <Route path="/certificates">
         <Protected roles={["admin", "doctor"]}><CertificatesPage /></Protected>
+      </Route>
+
+      {/* Investigations */}
+      <Route path="/investigations">
+        <Protected roles={["admin", "doctor", "radiographer"]}><InvestigationsPage /></Protected>
       </Route>
 
       {/* Reports */}

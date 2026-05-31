@@ -26,11 +26,12 @@ A cloud-based, HIPAA-aligned Hospital Management System with role-based access, 
 
 ## Login Credentials (after seed)
 
-| Role   | Username    | Password    |
-|--------|-------------|-------------|
-| Admin  | admin       | Admin@123   |
-| Doctor | dr.smith    | Doctor@123  |
-| Staff  | staff.jane  | Staff@123   |
+| Role          | Username    | Password       |
+|---------------|-------------|----------------|
+| Admin         | admin       | Admin@123      |
+| Doctor        | dr.smith    | Doctor@123     |
+| Staff         | staff.jane  | Staff@123      |
+| Radiographer  | rad.kumar   | Radiology@123  |
 
 ## Where things live
 
@@ -103,6 +104,6 @@ scripts/src/seed.ts  — Database seed script
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
 - OpenAPI spec: `lib/api-spec/openapi.yaml`
-- DB schema source of truth: `lib/db/src/schema/`
+- DB schema source of truth: `lib/db/src/schema/` (includes `investigations.ts` for radiology job queue)
 - Generated hooks: `lib/api-client-react/src/generated/api.ts`
 - Generated Zod schemas: `lib/api-zod/src/generated/api.ts`

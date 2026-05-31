@@ -30,7 +30,7 @@ export const LoginResponse = zod.object({
   "user": zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -55,7 +55,7 @@ export const RefreshTokenResponse = zod.object({
   "user": zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -73,7 +73,7 @@ export const RefreshTokenResponse = zod.object({
 export const GetMeResponse = zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -100,7 +100,7 @@ export const ListDoctorsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -126,7 +126,7 @@ export const ListUsersResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -147,7 +147,7 @@ export const ListUsersResponse = zod.object({
 export const CreateUserBody = zod.object({
   "username": zod.string(),
   "password": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().optional(),
   "phone": zod.string().optional(),
@@ -166,7 +166,7 @@ export const GetUserParams = zod.object({
 export const GetUserResponse = zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -190,14 +190,14 @@ export const UpdateUserBody = zod.object({
   "phone": zod.string().optional(),
   "registrationNumber": zod.string().optional(),
   "specialization": zod.string().optional(),
-  "role": zod.enum(['admin', 'doctor', 'staff']).optional(),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']).optional(),
   "isActive": zod.boolean().optional()
 })
 
 export const UpdateUserResponse = zod.object({
   "id": zod.string(),
   "username": zod.string(),
-  "role": zod.enum(['admin', 'doctor', 'staff']),
+  "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']),
   "fullName": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -1812,6 +1812,80 @@ export const UpdateClinicSettingsResponse = zod.object({
   "sessionTimeoutMinutes": zod.number().optional(),
   "defaultConsultationFee": zod.number().nullish(),
   "logoUrl": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary List investigations
+ */
+export const ListInvestigationsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
+  "patientId": zod.coerce.string().optional(),
+  "consultationId": zod.coerce.string().optional()
+})
+
+export const ListInvestigationsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "patientName": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
+  "requestedById": zod.string(),
+  "requestedByName": zod.string().nullish(),
+  "type": zod.string(),
+  "bodyPart": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+  "resultNotes": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Order a new investigation
+ */
+export const CreateInvestigationBody = zod.object({
+  "patientId": zod.string(),
+  "patientName": zod.string().optional(),
+  "consultationId": zod.string().optional(),
+  "requestedById": zod.string(),
+  "requestedByName": zod.string().optional(),
+  "type": zod.string(),
+  "bodyPart": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Update investigation status or results
+ */
+export const UpdateInvestigationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateInvestigationBody = zod.object({
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
+  "resultNotes": zod.string().optional()
+})
+
+export const UpdateInvestigationResponse = zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "patientName": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
+  "requestedById": zod.string(),
+  "requestedByName": zod.string().nullish(),
+  "type": zod.string(),
+  "bodyPart": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+  "resultNotes": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })

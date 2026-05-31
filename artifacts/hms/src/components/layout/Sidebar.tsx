@@ -16,7 +16,8 @@ import {
   BadgeDollarSign,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  ScanLine
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -33,15 +34,17 @@ export function Sidebar() {
   const isAdmin = role === "admin";
   const isDoctor = role === "doctor" || isAdmin;
   const isStaff = role === "staff" || isAdmin;
+  const isRadiographer = role === "radiographer" || isAdmin;
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, show: true },
-    { name: "Patients", href: "/patients", icon: Users, show: true },
-    { name: "Appointments", href: "/appointments", icon: Calendar, show: isStaff },
-    { name: "Queue", href: "/queue", icon: ListOrdered, show: true },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, show: !isRadiographer || isAdmin },
+    { name: "Patients", href: "/patients", icon: Users, show: !isRadiographer || isAdmin },
+    { name: "Appointments", href: "/appointments", icon: Calendar, show: isStaff && !isRadiographer },
+    { name: "Queue", href: "/queue", icon: ListOrdered, show: !isRadiographer || isAdmin },
     { name: "Consultations", href: "/consultations", icon: Stethoscope, show: isDoctor },
     { name: "Prescriptions", href: "/prescriptions", icon: Pill, show: isDoctor },
-    { name: "Billing", href: "/billing", icon: Receipt, show: isStaff },
+    { name: "Investigations", href: "/investigations", icon: ScanLine, show: isRadiographer || isDoctor },
+    { name: "Billing", href: "/billing", icon: Receipt, show: isStaff && !isRadiographer },
     { name: "Certificates", href: "/certificates", icon: FileText, show: isDoctor },
     { name: "Reports", href: "/reports", icon: BarChart, show: isDoctor },
     

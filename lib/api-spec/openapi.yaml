@@ -22,6 +22,7 @@ tags:
   - name: dashboard
   - name: reports
   - name: settings
+  - name: investigations
 
 paths:
   /healthz:
@@ -1400,6 +1401,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/ClinicSettings"
 
+  /investigations:
+    get:
+      operationId: listInvestigations
+      tags: [investigations]
+      summary: List investigations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+        - name: patientId
+          in: query
+          schema:
+            type: string
+        - name: consultationId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Investigation list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvestigationListResponse"
+    post:
+      operationId: createInvestigation
+      tags: [investigations]
+      summary: Order a new investigation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvestigationInput"
+      responses:
+        "201":
+          description: Created investigation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Investigation"
+
+  /investigations/{id}:
+    patch:
+      operationId: updateInvestigation
+      tags: [investigations]
+      summary: Update investigation status or results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvestigationUpdate"
+      responses:
+        "200":
+          description: Updated investigation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Investigation"
+
 components:
   schemas:
     HealthStatus:
@@ -1464,7 +1534,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, doctor, staff]
+          enum: [admin, doctor, staff, radiographer]
         fullName:
           type: string
         email:
@@ -1490,7 +1560,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, doctor, staff]
+          enum: [admin, doctor, staff, radiographer]
         fullName:
           type: string
         email:
@@ -1517,7 +1587,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, doctor, staff]
+          enum: [admin, doctor, staff, radiographer]
         isActive:
           type: boolean
 
@@ -2841,3 +2911,78 @@ components:
           type: integer
         defaultConsultationFee:
           type: number
+
+    # ── INVESTIGATION SCHEMAS ──────────────────────────────────────────────────
+
+    Investigation:
+      type: object
+      required: [id, patientId, requestedById, type, status, createdAt]
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        patientName:
+          type: ["string", "null"]
+        consultationId:
+          type: ["string", "null"]
+        requestedById:
+          type: string
+        requestedByName:
+          type: ["string", "null"]
+        type:
+          type: string
+        bodyPart:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        resultNotes:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    InvestigationInput:
+      type: object
+      required: [patientId, requestedById, type]
+      properties:
+        patientId:
+          type: string
+        patientName:
+          type: string
+        consultationId:
+          type: string
+        requestedById:
+          type: string
+        requestedByName:
+          type: string
+        type:
+          type: string
+        bodyPart:
+          type: string
+        notes:
+          type: string
+
+    InvestigationUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        resultNotes:
+          type: string
+
+    InvestigationListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Investigation"

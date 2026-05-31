@@ -13,4 +13,5 @@ export const UserUpdateRole = {
   admin: 'admin',
   doctor: 'doctor',
   staff: 'staff',
+  radiographer: 'radiographer',
 } as const;

@@ -13,4 +13,5 @@ export const UserInputRole = {
   admin: 'admin',
   doctor: 'doctor',
   staff: 'staff',
+  radiographer: 'radiographer',
 } as const;

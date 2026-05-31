@@ -56,6 +56,10 @@ import type {
   GetRevenueChartParams,
   GetRevenueReportParams,
   HealthStatus,
+  Investigation,
+  InvestigationInput,
+  InvestigationListResponse,
+  InvestigationUpdate,
   Invoice,
   InvoiceInput,
   InvoiceListResponse,
@@ -66,6 +70,7 @@ import type {
   ListConsultationsParams,
   ListDoctors200,
   ListDrugsParams,
+  ListInvestigationsParams,
   ListInvoicesParams,
   ListPatientsParams,
   ListPrescriptionTemplatesParams,
@@ -5109,5 +5114,232 @@ export const useUpdateClinicSettings = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateClinicSettingsMutationOptions(options));
+    }
+
+export const getListInvestigationsUrl = (params?: ListInvestigationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/investigations?${stringifiedParams}` : `/api/investigations`
+}
+
+/**
+ * @summary List investigations
+ */
+export const listInvestigations = async (params?: ListInvestigationsParams, options?: RequestInit): Promise<InvestigationListResponse> => {
+
+  return customFetch<InvestigationListResponse>(getListInvestigationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInvestigationsQueryKey = (params?: ListInvestigationsParams,) => {
+    return [
+    `/api/investigations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInvestigationsQueryOptions = <TData = Awaited<ReturnType<typeof listInvestigations>>, TError = ErrorType<unknown>>(params?: ListInvestigationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvestigations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvestigationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvestigations>>> = ({ signal }) => listInvestigations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvestigations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInvestigationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInvestigations>>>
+export type ListInvestigationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List investigations
+ */
+
+export function useListInvestigations<TData = Awaited<ReturnType<typeof listInvestigations>>, TError = ErrorType<unknown>>(
+ params?: ListInvestigationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvestigations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInvestigationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateInvestigationUrl = () => {
+
+
+
+
+  return `/api/investigations`
+}
+
+/**
+ * @summary Order a new investigation
+ */
+export const createInvestigation = async (investigationInput: InvestigationInput, options?: RequestInit): Promise<Investigation> => {
+
+  return customFetch<Investigation>(getCreateInvestigationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      investigationInput,)
+  }
+);}
+
+
+
+
+export const getCreateInvestigationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvestigation>>, TError,{data: BodyType<InvestigationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInvestigation>>, TError,{data: BodyType<InvestigationInput>}, TContext> => {
+
+const mutationKey = ['createInvestigation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInvestigation>>, {data: BodyType<InvestigationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInvestigation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInvestigationMutationResult = NonNullable<Awaited<ReturnType<typeof createInvestigation>>>
+    export type CreateInvestigationMutationBody = BodyType<InvestigationInput>
+    export type CreateInvestigationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Order a new investigation
+ */
+export const useCreateInvestigation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvestigation>>, TError,{data: BodyType<InvestigationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInvestigation>>,
+        TError,
+        {data: BodyType<InvestigationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateInvestigationMutationOptions(options));
+    }
+
+export const getUpdateInvestigationUrl = (id: string,) => {
+
+
+
+
+  return `/api/investigations/${id}`
+}
+
+/**
+ * @summary Update investigation status or results
+ */
+export const updateInvestigation = async (id: string,
+    investigationUpdate: InvestigationUpdate, options?: RequestInit): Promise<Investigation> => {
+
+  return customFetch<Investigation>(getUpdateInvestigationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      investigationUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateInvestigationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInvestigation>>, TError,{id: string;data: BodyType<InvestigationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInvestigation>>, TError,{id: string;data: BodyType<InvestigationUpdate>}, TContext> => {
+
+const mutationKey = ['updateInvestigation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInvestigation>>, {id: string;data: BodyType<InvestigationUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInvestigation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInvestigationMutationResult = NonNullable<Awaited<ReturnType<typeof updateInvestigation>>>
+    export type UpdateInvestigationMutationBody = BodyType<InvestigationUpdate>
+    export type UpdateInvestigationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update investigation status or results
+ */
+export const useUpdateInvestigation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInvestigation>>, TError,{id: string;data: BodyType<InvestigationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInvestigation>>,
+        TError,
+        {id: string;data: BodyType<InvestigationUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateInvestigationMutationOptions(options));
     }
 

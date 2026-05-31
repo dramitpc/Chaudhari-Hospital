@@ -10,3 +10,4 @@ export * from "./certificates";
 export * from "./vitals";
 export * from "./audit";
 export * from "./settings";
+export * from "./investigations";

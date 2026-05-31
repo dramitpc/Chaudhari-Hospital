@@ -4,7 +4,8 @@ import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey
+  useCreateInvestigation, useListInvestigations,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,11 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 
@@ -54,6 +55,7 @@ export default function ConsultationDetailPage() {
   const completeMutation = useCompleteConsultation();
   const createPrescriptionMutation = useCreatePrescription();
   const updatePatientMutation = useUpdatePatient();
+  const createInvestigationMutation = useCreateInvestigation();
 
   const patientId = consultation?.patientId ?? "";
   const { data: patient } = useGetPatient(patientId, {
@@ -228,6 +230,47 @@ export default function ConsultationDetailPage() {
   const deleteFieldFav    = (f: SoapField, id: string) => persistFieldFav(f,    getFieldFavs(f).filter(e => e.id !== id));
   const deleteFieldRecent = (f: SoapField, id: string) => persistFieldRecent(f, getFieldRecent(f).filter(e => e.id !== id));
   const entryLabel = (e: SoapEntry) => e.name || (e.value.slice(0, 50) + (e.value.length > 50 ? "…" : ""));
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Order Investigation state ──────────────────────────────────────────────
+  const [showInvestigationModal, setShowInvestigationModal] = useState(false);
+  const [invType, setInvType] = useState("");
+  const [invBodyPart, setInvBodyPart] = useState("");
+  const [invNotes, setInvNotes] = useState("");
+
+  const { data: existingInvestigations } = useListInvestigations(
+    { consultationId: id },
+    { query: { enabled: !!id, queryKey: getListInvestigationsQueryKey({ consultationId: id }) } }
+  );
+
+  const handleOrderInvestigation = () => {
+    if (!consultation || !invType.trim()) return;
+    createInvestigationMutation.mutate(
+      {
+        data: {
+          patientId: consultation.patientId,
+          patientName: consultation.patientName ?? undefined,
+          consultationId: id,
+          requestedById: consultation.doctorId,
+          requestedByName: consultation.doctorName ?? undefined,
+          type: invType,
+          bodyPart: invBodyPart || undefined,
+          notes: invNotes || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Investigation ordered" });
+          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
+          setShowInvestigationModal(false);
+          setInvType("");
+          setInvBodyPart("");
+          setInvNotes("");
+        },
+        onError: () => toast({ title: "Failed to order investigation", variant: "destructive" }),
+      }
+    );
+  };
   // ─────────────────────────────────────────────────────────────────────────
 
   const [showThankingLetter, setShowThankingLetter] = useState(false);
@@ -450,6 +493,18 @@ export default function ConsultationDetailPage() {
 
           <div className="rounded-lg border border-border bg-card p-4 space-y-2">
             <h3 className="font-semibold text-sm">Quick Actions</h3>
+            <Button
+              size="sm" variant="outline" className="w-full justify-start relative"
+              onClick={() => setShowInvestigationModal(true)}
+              data-testid="btn-order-investigation"
+            >
+              <ScanLine className="mr-2 h-3 w-3" /> Order Investigation
+              {(existingInvestigations?.data?.length ?? 0) > 0 && (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {existingInvestigations!.data!.length} ordered
+                </span>
+              )}
+            </Button>
             <Link href={`/certificates`}>
               <Button size="sm" variant="outline" className="w-full justify-start">
                 <FileText className="mr-2 h-3 w-3" /> Generate Certificate
@@ -1026,6 +1081,60 @@ export default function ConsultationDetailPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Order Investigation Dialog */}
+      <Dialog open={showInvestigationModal} onOpenChange={setShowInvestigationModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScanLine className="h-5 w-5 text-primary" />
+              Order Investigation
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label>Investigation Type <span className="text-destructive">*</span></Label>
+              <Select value={invType} onValueChange={setInvType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {["X-Ray", "CT Scan", "MRI", "Ultrasound", "ECG", "Echocardiography", "Mammography", "Bone Density Scan", "Blood Test", "Biopsy", "Other"].map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Body Part / Region <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                value={invBodyPart}
+                onChange={e => setInvBodyPart(e.target.value)}
+                placeholder="e.g. Chest, Abdomen, Left knee..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Clinical Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Textarea
+                value={invNotes}
+                onChange={e => setInvNotes(e.target.value)}
+                placeholder="Reason for investigation, clinical suspicion..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowInvestigationModal(false)}>Cancel</Button>
+            <Button
+              onClick={handleOrderInvestigation}
+              disabled={!invType.trim() || createInvestigationMutation.isPending}
+            >
+              <ScanLine className="mr-2 h-4 w-4" />
+              Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showPrescriptionModal} onOpenChange={setShowPrescriptionModal}>
         <DialogContent className="max-w-3xl">

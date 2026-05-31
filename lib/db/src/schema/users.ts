@@ -2,7 +2,7 @@ import { pgTable, text, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "doctor", "staff"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "doctor", "staff", "radiographer"]);
 
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
