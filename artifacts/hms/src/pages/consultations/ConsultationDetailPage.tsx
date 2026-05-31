@@ -455,6 +455,22 @@ export default function ConsultationDetailPage() {
         setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
         if (andPrint) navigate(`/prescriptions/${rx.id}?print=1`);
       },
+      onError: (err: unknown) => {
+        const status = (err as { status?: number })?.status;
+        if (status === 401) {
+          toast({
+            title: "Session expired",
+            description: "Your session expired. Please log in again — your prescription data is preserved on this page.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Failed to save prescription",
+            description: (err as Error)?.message ?? "An unexpected error occurred. Please try again.",
+            variant: "destructive",
+          });
+        }
+      },
     });
   };
 

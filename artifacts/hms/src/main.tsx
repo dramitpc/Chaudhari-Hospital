@@ -5,7 +5,7 @@ import { setAuthTokenGetter, setTokenRefresher } from "@workspace/api-client-rea
 
 setAuthTokenGetter(() => localStorage.getItem("accessToken"));
 
-setTokenRefresher(async () => {
+async function doRefresh(): Promise<string | null> {
   const refreshToken = localStorage.getItem("refreshToken");
   if (!refreshToken) return null;
 
@@ -33,6 +33,21 @@ setTokenRefresher(async () => {
     window.location.href = "/login";
     return null;
   }
-});
+}
+
+setTokenRefresher(doRefresh);
+
+// Proactively refresh the access token every 12 minutes so that clinical
+// workflows (writing consultations, filling prescriptions) never hit a 401
+// mid-save due to token expiry.  The access token TTL is 15 minutes, so
+// refreshing at 12 min keeps a comfortable 3-minute buffer.
+const PROACTIVE_REFRESH_INTERVAL = 12 * 60 * 1000;
+
+setInterval(async () => {
+  const accessToken = localStorage.getItem("accessToken");
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!accessToken || !refreshToken) return;
+  await doRefresh();
+}, PROACTIVE_REFRESH_INTERVAL);
 
 createRoot(document.getElementById("root")!).render(<App />);
