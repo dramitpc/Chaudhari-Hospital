@@ -21,6 +21,7 @@ export const investigationsTable = pgTable("investigations", {
   notes: text("notes"),
   status: investigationStatusEnum("status").notNull().default("pending"),
   resultNotes: text("result_notes"),
+  imageAttachment: text("image_attachment"),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

@@ -2941,6 +2941,8 @@ components:
           enum: [pending, in_progress, completed, cancelled]
         resultNotes:
           type: ["string", "null"]
+        imageAttachment:
+          type: ["string", "null"]
         completedAt:
           type: ["string", "null"]
         createdAt:
@@ -2976,6 +2978,8 @@ components:
           type: string
           enum: [pending, in_progress, completed, cancelled]
         resultNotes:
+          type: string
+        imageAttachment:
           type: string
 
     InvestigationListResponse:

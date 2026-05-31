@@ -1062,6 +1062,8 @@ export interface Investigation {
   /** @nullable */
   resultNotes?: string | null;
   /** @nullable */
+  imageAttachment?: string | null;
+  /** @nullable */
   completedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -1091,6 +1093,7 @@ export const InvestigationUpdateStatus = {
 export interface InvestigationUpdate {
   status?: InvestigationUpdateStatus;
   resultNotes?: string;
+  imageAttachment?: string;
 }
 
 export interface InvestigationListResponse {

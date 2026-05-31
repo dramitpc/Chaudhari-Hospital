@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   useListInvestigations,
   useUpdateInvestigation,
@@ -8,10 +8,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -20,15 +18,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Clock, ScanLine, AlertCircle, Filter } from "lucide-react";
+import { CheckCircle, Clock, ScanLine, AlertCircle, Filter, Paperclip, X, ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -45,6 +36,15 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function InvestigationsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -60,6 +60,7 @@ export default function InvestigationsPage() {
 
   const updateMutation = useUpdateInvestigation();
 
+  // ── Complete dialog ───────────────────────────────────────────────────────
   const [completeDialog, setCompleteDialog] = useState<{ open: boolean; inv: Investigation | null }>({
     open: false,
     inv: null,
@@ -76,7 +77,10 @@ export default function InvestigationsPage() {
     updateMutation.mutate(
       {
         id: completeDialog.inv.id,
-        data: { status: "completed", resultNotes: resultNotes || undefined },
+        data: {
+          status: "completed",
+          resultNotes: resultNotes || undefined,
+        },
       },
       {
         onSuccess: () => {
@@ -102,13 +106,82 @@ export default function InvestigationsPage() {
     );
   };
 
-  const investigations = data?.data ?? [];
+  // ── Image attachment ──────────────────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachingId, setAttachingId] = useState<string | null>(null);
+  const [attachingLoading, setAttachingLoading] = useState(false);
 
+  const [imagePreview, setImagePreview] = useState<{ open: boolean; src: string; label: string }>({
+    open: false, src: "", label: ""
+  });
+
+  const triggerAttach = (inv: Investigation) => {
+    setAttachingId(inv.id);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !attachingId) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      toast({ title: "Image must be under 4 MB", variant: "destructive" });
+      e.target.value = "";
+      return;
+    }
+
+    setAttachingLoading(true);
+    try {
+      const base64 = await fileToBase64(file);
+      await updateMutation.mutateAsync({
+        id: attachingId,
+        data: { imageAttachment: base64 },
+      });
+      toast({ title: "Image attached" });
+      queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey(params) });
+    } catch {
+      toast({ title: "Failed to attach image", variant: "destructive" });
+    } finally {
+      setAttachingLoading(false);
+      setAttachingId(null);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveImage = (inv: Investigation) => {
+    updateMutation.mutate(
+      { id: inv.id, data: { imageAttachment: "" } },
+      {
+        onSuccess: () => {
+          toast({ title: "Image removed" });
+          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey(params) });
+        },
+      }
+    );
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const investigations = data?.data ?? [];
   const pendingCount = investigations.filter(i => i.status === "pending").length;
   const inProgressCount = investigations.filter(i => i.status === "in_progress").length;
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input — shared, triggered imperatively */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -117,13 +190,13 @@ export default function InvestigationsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isRadiographer
-              ? "Radiography job queue — mark scans as complete when done"
+              ? "Radiography job queue — attach scan images and mark jobs complete"
               : "Investigation orders for your patients"}
           </p>
         </div>
       </div>
 
-      {/* Summary cards for radiographer */}
+      {/* Summary cards */}
       {isRadiographer && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
@@ -170,7 +243,9 @@ export default function InvestigationsPage() {
         <div className="rounded-lg border border-border bg-card p-12 text-center">
           <ScanLine className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
           <p className="text-muted-foreground">
-            {statusFilter === "all" ? "No investigations yet" : `No ${STATUS_LABELS[statusFilter]?.toLowerCase()} investigations`}
+            {statusFilter === "all"
+              ? "No investigations yet"
+              : `No ${STATUS_LABELS[statusFilter]?.toLowerCase()} investigations`}
           </p>
         </div>
       ) : (
@@ -186,6 +261,7 @@ export default function InvestigationsPage() {
                   {!isRadiographer && (
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ordered By</th>
                   )}
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Image</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Time</th>
                   {isRadiographer && (
@@ -216,18 +292,49 @@ export default function InvestigationsPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{inv.type}</td>
                     <td className="px-4 py-3 text-muted-foreground">{inv.bodyPart ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-48">
+                    <td className="px-4 py-3 text-muted-foreground max-w-40">
                       <p className="truncate" title={inv.notes ?? undefined}>{inv.notes ?? "—"}</p>
                     </td>
                     {!isRadiographer && (
                       <td className="px-4 py-3 text-muted-foreground">{inv.requestedByName ?? "—"}</td>
                     )}
+
+                    {/* Image cell */}
+                    <td className="px-4 py-3">
+                      {inv.imageAttachment ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setImagePreview({ open: true, src: inv.imageAttachment!, label: `${inv.type}${inv.bodyPart ? ` — ${inv.bodyPart}` : ""}` })}
+                            className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition shrink-0"
+                            title="Click to view full image"
+                          >
+                            <img
+                              src={inv.imageAttachment}
+                              alt="Scan"
+                              className="h-10 w-10 object-cover"
+                            />
+                          </button>
+                          {isRadiographer && inv.status !== "completed" && (
+                            <button
+                              onClick={() => handleRemoveImage(inv)}
+                              className="text-muted-foreground hover:text-destructive transition"
+                              title="Remove image"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}>
                         {STATUS_LABELS[inv.status]}
                       </span>
                       {inv.resultNotes && (
-                        <p className="text-xs text-muted-foreground mt-1 max-w-48 truncate" title={inv.resultNotes}>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-40 truncate" title={inv.resultNotes}>
                           {inv.resultNotes}
                         </p>
                       )}
@@ -237,9 +344,11 @@ export default function InvestigationsPage() {
                         day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
                       })}
                     </td>
+
+                    {/* Actions — radiographer only */}
                     {isRadiographer && (
                       <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end items-center gap-1">
                           {inv.status === "pending" && (
                             <Button
                               size="sm"
@@ -252,15 +361,34 @@ export default function InvestigationsPage() {
                             </Button>
                           )}
                           {(inv.status === "pending" || inv.status === "in_progress") && (
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => openComplete(inv)}
-                              disabled={updateMutation.isPending}
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Complete
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => triggerAttach(inv)}
+                                disabled={attachingLoading && attachingId === inv.id}
+                                title="Attach scan image"
+                              >
+                                {attachingLoading && attachingId === inv.id ? (
+                                  <span className="animate-pulse">Uploading…</span>
+                                ) : (
+                                  <>
+                                    <Paperclip className="h-3 w-3" />
+                                    {inv.imageAttachment ? "Replace" : "Attach Image"}
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => openComplete(inv)}
+                                disabled={updateMutation.isPending}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Complete
+                              </Button>
+                            </>
                           )}
                           {inv.status === "completed" && (
                             <span className="text-xs text-green-600 dark:text-green-400 font-medium">Done</span>
@@ -292,7 +420,8 @@ export default function InvestigationsPage() {
             {completeDialog.inv && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm space-y-1">
                 <p><span className="font-medium">Patient:</span> {completeDialog.inv.patientName}</p>
-                <p><span className="font-medium">Type:</span> {completeDialog.inv.type}
+                <p>
+                  <span className="font-medium">Type:</span> {completeDialog.inv.type}
                   {completeDialog.inv.bodyPart ? ` — ${completeDialog.inv.bodyPart}` : ""}
                 </p>
                 {completeDialog.inv.notes && (
@@ -300,6 +429,31 @@ export default function InvestigationsPage() {
                 )}
               </div>
             )}
+
+            {/* Attached image preview inside complete dialog */}
+            {completeDialog.inv?.imageAttachment && (
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ImageIcon className="h-3.5 w-3.5" /> Attached Scan Image
+                </Label>
+                <button
+                  onClick={() => setImagePreview({
+                    open: true,
+                    src: completeDialog.inv!.imageAttachment!,
+                    label: `${completeDialog.inv!.type}${completeDialog.inv!.bodyPart ? ` — ${completeDialog.inv!.bodyPart}` : ""}`
+                  })}
+                  className="block rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition w-full"
+                  title="Click to view full image"
+                >
+                  <img
+                    src={completeDialog.inv.imageAttachment}
+                    alt="Attached scan"
+                    className="w-full max-h-48 object-contain bg-black/5"
+                  />
+                </button>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label>Result Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Textarea
@@ -307,7 +461,7 @@ export default function InvestigationsPage() {
                 onChange={e => setResultNotes(e.target.value)}
                 placeholder="Describe findings, attach report reference, or leave blank..."
                 rows={4}
-                autoFocus
+                autoFocus={!completeDialog.inv?.imageAttachment}
               />
             </div>
           </div>
@@ -320,6 +474,25 @@ export default function InvestigationsPage() {
               Mark Complete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full-size image preview dialog */}
+      <Dialog open={imagePreview.open} onOpenChange={open => setImagePreview(p => ({ ...p, open }))}>
+        <DialogContent className="max-w-3xl p-2">
+          <DialogHeader className="px-3 pt-2 pb-0">
+            <DialogTitle className="flex items-center gap-2 text-sm font-medium">
+              <ImageIcon className="h-4 w-4" />
+              {imagePreview.label}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 rounded-lg overflow-hidden bg-black/10 dark:bg-black/40">
+            <img
+              src={imagePreview.src}
+              alt={imagePreview.label}
+              className="w-full max-h-[75vh] object-contain"
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

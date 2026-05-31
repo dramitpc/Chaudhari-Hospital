@@ -26,6 +26,8 @@ export interface Investigation {
   /** @nullable */
   resultNotes?: string | null;
   /** @nullable */
+  imageAttachment?: string | null;
+  /** @nullable */
   completedAt?: string | null;
   createdAt: string;
   updatedAt?: string;

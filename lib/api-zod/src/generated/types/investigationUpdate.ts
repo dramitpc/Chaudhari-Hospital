@@ -10,4 +10,5 @@ import type { InvestigationUpdateStatus } from './investigationUpdateStatus';
 export interface InvestigationUpdate {
   status?: InvestigationUpdateStatus;
   resultNotes?: string;
+  imageAttachment?: string;
 }

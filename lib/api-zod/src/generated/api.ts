@@ -1839,6 +1839,7 @@ export const ListInvestigationsResponse = zod.object({
   "notes": zod.string().nullish(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']),
   "resultNotes": zod.string().nullish(),
+  "imageAttachment": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -1870,7 +1871,8 @@ export const UpdateInvestigationParams = zod.object({
 
 export const UpdateInvestigationBody = zod.object({
   "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
-  "resultNotes": zod.string().optional()
+  "resultNotes": zod.string().optional(),
+  "imageAttachment": zod.string().optional()
 })
 
 export const UpdateInvestigationResponse = zod.object({
@@ -1885,6 +1887,7 @@ export const UpdateInvestigationResponse = zod.object({
   "notes": zod.string().nullish(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']),
   "resultNotes": zod.string().nullish(),
+  "imageAttachment": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
