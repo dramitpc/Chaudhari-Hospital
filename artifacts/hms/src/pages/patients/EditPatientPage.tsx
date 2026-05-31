@@ -1,15 +1,28 @@
 import { useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetPatient, useUpdatePatient, getGetPatientQueryKey } from "@workspace/api-client-react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "hi", label: "हिन्दी (Hindi)" },
+  { code: "mr", label: "मराठी (Marathi)" },
+  { code: "gu", label: "ગુજરાતી (Gujarati)" },
+  { code: "ta", label: "தமிழ் (Tamil)" },
+  { code: "te", label: "తెలుగు (Telugu)" },
+  { code: "kn", label: "ಕನ್ನಡ (Kannada)" },
+  { code: "pa", label: "ਪੰਜਾਬੀ (Punjabi)" },
+  { code: "bn", label: "বাংলা (Bengali)" },
+];
 
 export default function EditPatientPage() {
   const [, params] = useRoute("/patients/:id/edit");
@@ -22,7 +35,7 @@ export default function EditPatientPage() {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
   });
 
-  const { register, handleSubmit, reset } = useForm();
+  const { register, handleSubmit, reset, control } = useForm();
   const mutation = useUpdatePatient();
 
   useEffect(() => {
@@ -85,7 +98,7 @@ export default function EditPatientPage() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <h2 className="font-semibold border-b border-border pb-2">Referring Doctor</h2>
+          <h2 className="font-semibold border-b border-border pb-2">Referring Doctor &amp; Preferences</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Referring Doctor Name</Label>
@@ -94,6 +107,26 @@ export default function EditPatientPage() {
             <div className="space-y-1.5">
               <Label>Referring Doctor Mobile</Label>
               <Input {...register("referringDoctorPhone")} placeholder="Mobile number" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Preferred Prescription Language</Label>
+              <Controller
+                name="preferredLanguage"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value ?? "en"} onValueChange={field.onChange}>
+                    <SelectTrigger data-testid="select-preferred-language">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map(l => (
+                        <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-xs text-muted-foreground">Auto-selected when generating prescriptions</p>
             </div>
           </div>
         </div>

@@ -9,11 +9,19 @@ import {
   UpdatePrescriptionBody,
   ListPrescriptionTemplatesQueryParams,
   CreatePrescriptionTemplateBody,
+  TranslatePrescriptionParams,
+  TranslatePrescriptionBody,
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English", hi: "Hindi", mr: "Marathi", gu: "Gujarati",
+  ta: "Tamil", te: "Telugu", kn: "Kannada", pa: "Punjabi", bn: "Bengali",
+};
 
 async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
   const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, p.patientId));
@@ -48,6 +56,8 @@ async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
     soapAssessment:     consultation?.soapAssessment     ?? null,
     soapPlan:           consultation?.soapPlan           ?? null,
     investigationOrders: consultation?.investigationOrders ?? null,
+    patientLanguage: p.patientLanguage ?? "en",
+    translations: (p.translations ?? null) as Record<string, unknown> | null,
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -112,6 +122,88 @@ router.post("/prescriptions", authenticate, async (req, res): Promise<void> => {
   const [p] = await db.insert(prescriptionsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_PRESCRIPTION", "prescriptions", p.id);
   res.status(201).json(await formatPrescription(p));
+});
+
+router.post("/prescriptions/:id/translate", authenticate, async (req, res): Promise<void> => {
+  const params = TranslatePrescriptionParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
+  const parsed = TranslatePrescriptionBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [p] = await db.select().from(prescriptionsTable).where(eq(prescriptionsTable.id, params.data.id));
+  if (!p) { res.status(404).json({ error: "Prescription not found" }); return; }
+
+  const targetLang = parsed.data.language;
+  const langName = LANGUAGE_NAMES[targetLang] ?? targetLang;
+
+  // Build item dosage instructions to translate
+  type PrescriptionItem = { drugName: string; genericName?: string | null; dosage: string; frequency: string; duration: string; instructions?: string | null; quantity?: number | null; };
+  const items = (p.items as PrescriptionItem[]) ?? [];
+
+  const fieldsToTranslate: Record<string, string> = {};
+  if (p.diagnosis) fieldsToTranslate.diagnosis = p.diagnosis;
+  if (p.advice) fieldsToTranslate.advice = p.advice;
+  if (p.notes) fieldsToTranslate.notes = p.notes;
+  items.forEach((item, i) => {
+    if (item.dosage) fieldsToTranslate[`item_${i}_dosage`] = item.dosage;
+    if (item.frequency) fieldsToTranslate[`item_${i}_frequency`] = item.frequency;
+    if (item.duration) fieldsToTranslate[`item_${i}_duration`] = item.duration;
+    if (item.instructions) fieldsToTranslate[`item_${i}_instructions`] = item.instructions;
+  });
+
+  const systemPrompt = `You are a medical prescription translator. Translate the given medical text from English to ${langName}.
+Rules:
+- Keep medicine/drug names exactly as written (do NOT translate brand or generic drug names)
+- Translate dosage instructions, frequency, duration, and advice into natural patient-friendly ${langName}
+- Use proper medical terminology appropriate for patient communication
+- For Indic scripts, use native numerals where appropriate (e.g. ५ for 5 in Marathi/Hindi)
+- Return ONLY a valid JSON object with the same keys, values translated. No commentary.`;
+
+  const userPrompt = `Translate these prescription fields to ${langName}:\n${JSON.stringify(fieldsToTranslate, null, 2)}`;
+
+  let translated: Record<string, string> = {};
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      max_completion_tokens: 2048,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const jsonStr = raw.replace(/^```json\n?|\n?```$/g, "").trim();
+    translated = JSON.parse(jsonStr) as Record<string, string>;
+  } catch {
+    res.status(502).json({ error: "Translation failed. Please try again." });
+    return;
+  }
+
+  // Rebuild translated items (keep drug names, translate instructions)
+  const translatedItems = items.map((item, i) => ({
+    ...item,
+    dosage: translated[`item_${i}_dosage`] ?? item.dosage,
+    frequency: translated[`item_${i}_frequency`] ?? item.frequency,
+    duration: translated[`item_${i}_duration`] ?? item.duration,
+    instructions: translated[`item_${i}_instructions`] ?? item.instructions,
+  }));
+
+  const translations = {
+    language: targetLang,
+    languageName: langName,
+    diagnosis: translated.diagnosis ?? null,
+    advice: translated.advice ?? null,
+    notes: translated.notes ?? null,
+    items: translatedItems,
+  };
+
+  const [updated] = await db.update(prescriptionsTable)
+    .set({ patientLanguage: targetLang, translations })
+    .where(eq(prescriptionsTable.id, params.data.id))
+    .returning();
+
+  await logAudit(req, req.user!.id, "TRANSLATE_PRESCRIPTION", "prescriptions", params.data.id);
+  res.json(await formatPrescription(updated));
 });
 
 router.get("/prescriptions/:id", authenticate, async (req, res): Promise<void> => {

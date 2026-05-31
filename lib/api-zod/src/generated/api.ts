@@ -258,6 +258,7 @@ export const ListPatientsResponse = zod.object({
   "currentMedications": zod.string().nullish(),
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
+  "preferredLanguage": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -288,7 +289,8 @@ export const RegisterPatientBody = zod.object({
   "familyHistory": zod.string().optional(),
   "currentMedications": zod.string().optional(),
   "referringDoctorName": zod.string().optional(),
-  "referringDoctorPhone": zod.string().optional()
+  "referringDoctorPhone": zod.string().optional(),
+  "preferredLanguage": zod.string().optional()
 })
 
 
@@ -319,6 +321,7 @@ export const GetPatientResponse = zod.object({
   "currentMedications": zod.string().nullish(),
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
+  "preferredLanguage": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -371,6 +374,7 @@ export const UpdatePatientResponse = zod.object({
   "currentMedications": zod.string().nullish(),
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
+  "preferredLanguage": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -405,6 +409,7 @@ export const GetPatientHistoryResponse = zod.object({
   "currentMedications": zod.string().nullish(),
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
+  "preferredLanguage": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -466,6 +471,10 @@ export const GetPatientHistoryResponse = zod.object({
   "soapAssessment": zod.string().nullish(),
   "soapPlan": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "patientLanguage": zod.string().nullish(),
+  "translations": zod.object({
+
+}).passthrough().nullish().describe('Translated content keyed by field name'),
   "createdAt": zod.string()
 })),
   "vitals": zod.array(zod.object({
@@ -985,6 +994,10 @@ export const ListPrescriptionsResponse = zod.object({
   "soapAssessment": zod.string().nullish(),
   "soapPlan": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "patientLanguage": zod.string().nullish(),
+  "translations": zod.object({
+
+}).passthrough().nullish().describe('Translated content keyed by field name'),
   "createdAt": zod.string()
 })),
   "total": zod.number(),
@@ -1053,6 +1066,10 @@ export const GetPrescriptionResponse = zod.object({
   "soapAssessment": zod.string().nullish(),
   "soapPlan": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "patientLanguage": zod.string().nullish(),
+  "translations": zod.object({
+
+}).passthrough().nullish().describe('Translated content keyed by field name'),
   "createdAt": zod.string()
 })
 
@@ -1110,6 +1127,61 @@ export const UpdatePrescriptionResponse = zod.object({
   "soapAssessment": zod.string().nullish(),
   "soapPlan": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "patientLanguage": zod.string().nullish(),
+  "translations": zod.object({
+
+}).passthrough().nullish().describe('Translated content keyed by field name'),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Translate prescription fields using AI
+ */
+export const TranslatePrescriptionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const translatePrescriptionBodyDisplayModeDefault = `bilingual`;
+
+export const TranslatePrescriptionBody = zod.object({
+  "language": zod.string().describe('BCP-47 language code (e.g. hi, mr, gu, en)'),
+  "displayMode": zod.enum(['translated', 'bilingual', 'english']).default(translatePrescriptionBodyDisplayModeDefault)
+})
+
+export const TranslatePrescriptionResponse = zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "patientName": zod.string().optional(),
+  "doctorId": zod.string(),
+  "doctorName": zod.string().optional(),
+  "doctorRegistrationNumber": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
+  "visitDate": zod.string(),
+  "diagnosis": zod.string().nullish(),
+  "advice": zod.string().nullish(),
+  "followUpDate": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "drugId": zod.string().nullish(),
+  "drugName": zod.string(),
+  "genericName": zod.string().nullish(),
+  "dosage": zod.string(),
+  "frequency": zod.string(),
+  "duration": zod.string(),
+  "instructions": zod.string().nullish(),
+  "quantity": zod.number().nullish()
+})),
+  "notes": zod.string().nullish(),
+  "chiefComplaint": zod.string().nullish(),
+  "soapSubjective": zod.string().nullish(),
+  "soapObjective": zod.string().nullish(),
+  "soapAssessment": zod.string().nullish(),
+  "soapPlan": zod.string().nullish(),
+  "investigationOrders": zod.string().nullish(),
+  "patientLanguage": zod.string().nullish(),
+  "translations": zod.object({
+
+}).passthrough().nullish().describe('Translated content keyed by field name'),
   "createdAt": zod.string()
 })
 

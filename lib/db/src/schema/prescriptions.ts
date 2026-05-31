@@ -16,6 +16,8 @@ export const prescriptionsTable = pgTable("prescriptions", {
   followUpDate: text("follow_up_date"),
   items: jsonb("items").notNull().default([]),
   notes: text("notes"),
+  patientLanguage: text("patient_language").default("en"),
+  translations: jsonb("translations"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

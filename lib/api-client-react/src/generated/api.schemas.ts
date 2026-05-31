@@ -152,6 +152,8 @@ export interface Patient {
   referringDoctorName?: string | null;
   /** @nullable */
   referringDoctorPhone?: string | null;
+  /** @nullable */
+  preferredLanguage?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -184,6 +186,7 @@ export interface PatientInput {
   currentMedications?: string;
   referringDoctorName?: string;
   referringDoctorPhone?: string;
+  preferredLanguage?: string;
 }
 
 export interface PatientUpdate {
@@ -287,6 +290,12 @@ export interface PrescriptionItem {
   quantity?: number | null;
 }
 
+/**
+ * Translated content keyed by field name
+ * @nullable
+ */
+export type PrescriptionTranslations = { [key: string]: unknown } | null;
+
 export interface Prescription {
   id: string;
   patientId: string;
@@ -319,6 +328,13 @@ export interface Prescription {
   soapPlan?: string | null;
   /** @nullable */
   investigationOrders?: string | null;
+  /** @nullable */
+  patientLanguage?: string | null;
+  /**
+     * Translated content keyed by field name
+     * @nullable
+     */
+  translations?: PrescriptionTranslations;
   createdAt: string;
 }
 
@@ -622,6 +638,21 @@ export interface ConsultationListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+export type PrescriptionTranslateInputDisplayMode = typeof PrescriptionTranslateInputDisplayMode[keyof typeof PrescriptionTranslateInputDisplayMode];
+
+
+export const PrescriptionTranslateInputDisplayMode = {
+  translated: 'translated',
+  bilingual: 'bilingual',
+  english: 'english',
+} as const;
+
+export interface PrescriptionTranslateInput {
+  /** BCP-47 language code (e.g. hi, mr, gu, en) */
+  language: string;
+  displayMode?: PrescriptionTranslateInputDisplayMode;
 }
 
 export interface PrescriptionInput {

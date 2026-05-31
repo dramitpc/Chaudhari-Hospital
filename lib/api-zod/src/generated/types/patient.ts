@@ -42,6 +42,8 @@ export interface Patient {
   referringDoctorName?: string | null;
   /** @nullable */
   referringDoctorPhone?: string | null;
+  /** @nullable */
+  preferredLanguage?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;

@@ -25,4 +25,5 @@ export interface PatientInput {
   currentMedications?: string;
   referringDoctorName?: string;
   referringDoctorPhone?: string;
+  preferredLanguage?: string;
 }

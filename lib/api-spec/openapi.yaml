@@ -817,6 +817,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Prescription"
 
+  /prescriptions/{id}/translate:
+    post:
+      operationId: translatePrescription
+      tags: [prescriptions]
+      summary: Translate prescription fields using AI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionTranslateInput"
+      responses:
+        "200":
+          description: Translated prescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+
   /prescriptions/templates:
     get:
       operationId: listPrescriptionTemplates
@@ -1655,6 +1680,8 @@ components:
           type: ["string", "null"]
         referringDoctorPhone:
           type: ["string", "null"]
+        preferredLanguage:
+          type: ["string", "null"]
         isActive:
           type: boolean
         createdAt:
@@ -1700,6 +1727,8 @@ components:
         referringDoctorName:
           type: string
         referringDoctorPhone:
+          type: string
+        preferredLanguage:
           type: string
 
     PatientUpdate:
@@ -2213,8 +2242,25 @@ components:
           type: ["string", "null"]
         investigationOrders:
           type: ["string", "null"]
+        patientLanguage:
+          type: ["string", "null"]
+        translations:
+          type: ["object", "null"]
+          description: Translated content keyed by field name
         createdAt:
           type: string
+
+    PrescriptionTranslateInput:
+      type: object
+      required: [language]
+      properties:
+        language:
+          type: string
+          description: BCP-47 language code (e.g. hi, mr, gu, en)
+        displayMode:
+          type: string
+          enum: [translated, bilingual, english]
+          default: bilingual
 
     PrescriptionInput:
       type: object

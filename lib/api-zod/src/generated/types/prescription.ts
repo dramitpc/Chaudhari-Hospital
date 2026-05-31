@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PrescriptionItem } from './prescriptionItem';
+import type { PrescriptionTranslations } from './prescriptionTranslations';
 
 export interface Prescription {
   id: string;
@@ -39,5 +40,12 @@ export interface Prescription {
   soapPlan?: string | null;
   /** @nullable */
   investigationOrders?: string | null;
+  /** @nullable */
+  patientLanguage?: string | null;
+  /**
+     * Translated content keyed by field name
+     * @nullable
+     */
+  translations?: PrescriptionTranslations;
   createdAt: string;
 }

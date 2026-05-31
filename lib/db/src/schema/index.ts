@@ -11,3 +11,5 @@ export * from "./vitals";
 export * from "./audit";
 export * from "./settings";
 export * from "./investigations";
+export * from "./conversations";
+export * from "./messages";
