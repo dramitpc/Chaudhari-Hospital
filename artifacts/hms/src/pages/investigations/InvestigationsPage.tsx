@@ -19,30 +19,43 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Clock, ScanLine, AlertCircle, Filter, Paperclip, X, ImageIcon, FileText } from "lucide-react";
+import {
+  CheckCircle, Clock, ScanLine, AlertCircle, Filter,
+  Paperclip, X, ImageIcon, FileText,
+} from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  completed: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  completed:   "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  cancelled:   "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
+  pending:     "Pending",
   in_progress: "In Progress",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  completed:   "Completed",
+  cancelled:   "Cancelled",
 };
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+// ── Attachment helpers ────────────────────────────────────────────────────────
+
+type Attachment = { name: string; data: string };
+
+/** Parse whatever is in the DB — handles the old single-base64 format too */
+function parseAttachments(raw: string | null | undefined): Attachment[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as Attachment[];
+  } catch {}
+  // backward-compat: plain base64 data-URL stored as a bare string
+  return [{ name: "attachment", data: raw }];
+}
+
+function serializeAttachments(list: Attachment[]): string {
+  return JSON.stringify(list);
 }
 
 function isPdf(dataUrl: string) {
@@ -53,11 +66,74 @@ function openInNewTab(dataUrl: string) {
   const win = window.open();
   if (win) {
     win.document.write(
-      `<iframe src="${dataUrl}" style="width:100%;height:100%;border:none;margin:0;padding:0" />`
+      `<iframe src="${dataUrl}" style="width:100%;height:100%;border:none;margin:0;padding:0"/>`
     );
     win.document.close();
   }
 }
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Small components ──────────────────────────────────────────────────────────
+
+function AttachmentChip({
+  att,
+  onRemove,
+  onPreview,
+}: {
+  att: Attachment;
+  onRemove?: () => void;
+  onPreview: () => void;
+}) {
+  if (isPdf(att.data)) {
+    return (
+      <div className="flex items-center gap-1 rounded border border-border bg-red-50 dark:bg-red-950/30 pl-1.5 pr-1 py-0.5">
+        <button
+          onClick={() => openInNewTab(att.data)}
+          className="flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400 hover:underline"
+          title="Open PDF"
+        >
+          <FileText className="h-3 w-3 shrink-0" />
+          {att.name.length > 16 ? att.name.slice(0, 14) + "…" : att.name}
+        </button>
+        {onRemove && (
+          <button onClick={onRemove} className="text-muted-foreground hover:text-destructive ml-0.5" title="Remove">
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="relative group shrink-0">
+      <button
+        onClick={onPreview}
+        className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
+        title={att.name}
+      >
+        <img src={att.data} alt={att.name} className="h-10 w-10 object-cover" />
+      </button>
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center h-4 w-4 rounded-full bg-destructive text-white shadow"
+          title="Remove"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function InvestigationsPage() {
   const { user } = useAuth();
@@ -76,8 +152,7 @@ export default function InvestigationsPage() {
 
   // ── Complete dialog ───────────────────────────────────────────────────────
   const [completeDialog, setCompleteDialog] = useState<{ open: boolean; inv: Investigation | null }>({
-    open: false,
-    inv: null,
+    open: false, inv: null,
   });
   const [resultNotes, setResultNotes] = useState("");
 
@@ -89,13 +164,7 @@ export default function InvestigationsPage() {
   const handleMarkComplete = () => {
     if (!completeDialog.inv) return;
     updateMutation.mutate(
-      {
-        id: completeDialog.inv.id,
-        data: {
-          status: "completed",
-          resultNotes: resultNotes || undefined,
-        },
-      },
+      { id: completeDialog.inv.id, data: { status: "completed", resultNotes: resultNotes || undefined } },
       {
         onSuccess: () => {
           toast({ title: "Investigation marked as complete" });
@@ -120,13 +189,13 @@ export default function InvestigationsPage() {
     );
   };
 
-  // ── Image attachment ──────────────────────────────────────────────────────
+  // ── Attachment upload ─────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachingId, setAttachingId] = useState<string | null>(null);
   const [attachingLoading, setAttachingLoading] = useState(false);
 
   const [imagePreview, setImagePreview] = useState<{ open: boolean; src: string; label: string }>({
-    open: false, src: "", label: ""
+    open: false, src: "", label: "",
   });
 
   const triggerAttach = (inv: Investigation) => {
@@ -135,34 +204,42 @@ export default function InvestigationsPage() {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !attachingId) return;
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !attachingId) return;
 
-    const isImage = file.type.startsWith("image/");
-    const isPdfFile = file.type === "application/pdf";
-    if (!isImage && !isPdfFile) {
-      toast({ title: "Please select an image or PDF file", variant: "destructive" });
+    const invalid = files.find(f => !f.type.startsWith("image/") && f.type !== "application/pdf");
+    if (invalid) {
+      toast({ title: "Only images and PDFs are allowed", variant: "destructive" });
       e.target.value = "";
       return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-      toast({ title: "File must be under 8 MB", variant: "destructive" });
+    const tooBig = files.find(f => f.size > 8 * 1024 * 1024);
+    if (tooBig) {
+      toast({ title: `${tooBig.name} exceeds the 8 MB limit`, variant: "destructive" });
       e.target.value = "";
       return;
     }
 
     setAttachingLoading(true);
     try {
-      const base64 = await fileToBase64(file);
+      // Find the current investigation to append to existing attachments
+      const currentInv = investigations.find(i => i.id === attachingId);
+      const existing = parseAttachments(currentInv?.imageAttachment);
+
+      const newEntries: Attachment[] = await Promise.all(
+        files.map(async f => ({ name: f.name, data: await fileToBase64(f) }))
+      );
+
+      const merged = [...existing, ...newEntries];
       await updateMutation.mutateAsync({
         id: attachingId,
-        data: { imageAttachment: base64 },
+        data: { imageAttachment: serializeAttachments(merged) },
       });
-      toast({ title: isPdfFile ? "PDF attached" : "Image attached" });
+      toast({ title: `${newEntries.length} file${newEntries.length > 1 ? "s" : ""} attached` });
       queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey(params) });
     } catch {
-      toast({ title: "Failed to attach image", variant: "destructive" });
+      toast({ title: "Failed to attach files", variant: "destructive" });
     } finally {
       setAttachingLoading(false);
       setAttachingId(null);
@@ -170,12 +247,14 @@ export default function InvestigationsPage() {
     }
   };
 
-  const handleRemoveImage = (inv: Investigation) => {
+  const handleRemoveAttachment = (inv: Investigation, idx: number) => {
+    const list = parseAttachments(inv.imageAttachment);
+    const updated = list.filter((_, i) => i !== idx);
     updateMutation.mutate(
-      { id: inv.id, data: { imageAttachment: "" } },
+      { id: inv.id, data: { imageAttachment: updated.length ? serializeAttachments(updated) : "" } },
       {
         onSuccess: () => {
-          toast({ title: "Image removed" });
+          toast({ title: "Attachment removed" });
           queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey(params) });
         },
       }
@@ -184,16 +263,17 @@ export default function InvestigationsPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   const investigations = data?.data ?? [];
-  const pendingCount = investigations.filter(i => i.status === "pending").length;
+  const pendingCount   = investigations.filter(i => i.status === "pending").length;
   const inProgressCount = investigations.filter(i => i.status === "in_progress").length;
 
   return (
     <div className="space-y-6">
-      {/* Hidden file input — shared, triggered imperatively */}
+      {/* Hidden file input — multiple files */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*,application/pdf"
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />
@@ -206,7 +286,7 @@ export default function InvestigationsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isRadiographer
-              ? "Radiography job queue — attach scan images and mark jobs complete"
+              ? "Radiography job queue — attach scan files and mark jobs complete"
               : "Investigation orders for your patients"}
           </p>
         </div>
@@ -216,8 +296,8 @@ export default function InvestigationsPage() {
       {isRadiographer && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Pending", value: pendingCount, icon: Clock, color: "text-amber-600" },
-            { label: "In Progress", value: inProgressCount, icon: AlertCircle, color: "text-blue-600" },
+            { label: "Pending",     value: pendingCount,    icon: Clock,        color: "text-amber-600" },
+            { label: "In Progress", value: inProgressCount, icon: AlertCircle,  color: "text-blue-600"  },
           ].map(card => (
             <div key={card.label} className="rounded-lg border border-border bg-card p-4 flex items-center gap-3">
               <card.icon className={`h-8 w-8 ${card.color}`} />
@@ -277,7 +357,7 @@ export default function InvestigationsPage() {
                   {!isRadiographer && (
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ordered By</th>
                   )}
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Attachment</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Attachments</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Time</th>
                   {isRadiographer && (
@@ -286,145 +366,133 @@ export default function InvestigationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {investigations.map(inv => (
-                  <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      {inv.patientId ? (
-                        <Link href={`/patients/${inv.patientId}`}>
-                          <span className="font-medium text-primary hover:underline cursor-pointer">
-                            {inv.patientName ?? inv.patientId}
-                          </span>
-                        </Link>
-                      ) : (
-                        <span className="font-medium">{inv.patientName ?? "—"}</span>
+                {investigations.map(inv => {
+                  const attachments = parseAttachments(inv.imageAttachment);
+                  const canEdit = isRadiographer && inv.status !== "completed";
+                  return (
+                    <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        {inv.patientId ? (
+                          <Link href={`/patients/${inv.patientId}`}>
+                            <span className="font-medium text-primary hover:underline cursor-pointer">
+                              {inv.patientName ?? inv.patientId}
+                            </span>
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{inv.patientName ?? "—"}</span>
+                        )}
+                        {inv.consultationId && (
+                          <Link href={`/consultations/${inv.consultationId}`}>
+                            <span className="block text-xs text-muted-foreground hover:underline cursor-pointer">
+                              View consultation →
+                            </span>
+                          </Link>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{inv.type}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{inv.bodyPart ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-40">
+                        <p className="truncate" title={inv.notes ?? undefined}>{inv.notes ?? "—"}</p>
+                      </td>
+                      {!isRadiographer && (
+                        <td className="px-4 py-3 text-muted-foreground">{inv.requestedByName ?? "—"}</td>
                       )}
-                      {inv.consultationId && (
-                        <Link href={`/consultations/${inv.consultationId}`}>
-                          <span className="block text-xs text-muted-foreground hover:underline cursor-pointer">
-                            View consultation →
-                          </span>
-                        </Link>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{inv.type}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{inv.bodyPart ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-40">
-                      <p className="truncate" title={inv.notes ?? undefined}>{inv.notes ?? "—"}</p>
-                    </td>
-                    {!isRadiographer && (
-                      <td className="px-4 py-3 text-muted-foreground">{inv.requestedByName ?? "—"}</td>
-                    )}
 
-                    {/* Attachment cell */}
-                    <td className="px-4 py-3">
-                      {inv.imageAttachment ? (
-                        <div className="flex items-center gap-1.5">
-                          {isPdf(inv.imageAttachment) ? (
-                            <button
-                              onClick={() => openInNewTab(inv.imageAttachment!)}
-                              className="flex items-center gap-1 rounded border border-border bg-red-50 dark:bg-red-950/30 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
-                              title="Open PDF"
-                            >
-                              <FileText className="h-3.5 w-3.5 shrink-0" />
-                              PDF
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setImagePreview({ open: true, src: inv.imageAttachment!, label: `${inv.type}${inv.bodyPart ? ` — ${inv.bodyPart}` : ""}` })}
-                              className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition shrink-0"
-                              title="Click to view full image"
-                            >
-                              <img
-                                src={inv.imageAttachment}
-                                alt="Scan"
-                                className="h-10 w-10 object-cover"
+                      {/* Attachments cell */}
+                      <td className="px-4 py-3">
+                        {attachments.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1 items-start max-w-44">
+                            {attachments.map((att, idx) => (
+                              <AttachmentChip
+                                key={idx}
+                                att={att}
+                                onRemove={canEdit ? () => handleRemoveAttachment(inv, idx) : undefined}
+                                onPreview={() =>
+                                  !isPdf(att.data) &&
+                                  setImagePreview({
+                                    open: true,
+                                    src: att.data,
+                                    label: att.name,
+                                  })
+                                }
                               />
-                            </button>
-                          )}
-                          {isRadiographer && inv.status !== "completed" && (
-                            <button
-                              onClick={() => handleRemoveImage(inv)}
-                              className="text-muted-foreground hover:text-destructive transition"
-                              title="Remove attachment"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
+                            ))}
+                          </div>
+                        )}
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}>
-                        {STATUS_LABELS[inv.status]}
-                      </span>
-                      {inv.resultNotes && (
-                        <p className="text-xs text-muted-foreground mt-1 max-w-40 truncate" title={inv.resultNotes}>
-                          {inv.resultNotes}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(inv.createdAt).toLocaleString("en-IN", {
-                        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
-                      })}
-                    </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}>
+                          {STATUS_LABELS[inv.status]}
+                        </span>
+                        {inv.resultNotes && (
+                          <p className="text-xs text-muted-foreground mt-1 max-w-40 truncate" title={inv.resultNotes}>
+                            {inv.resultNotes}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(inv.createdAt).toLocaleString("en-IN", {
+                          day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </td>
 
-                    {/* Actions — radiographer only */}
-                    {isRadiographer && (
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end items-center gap-1">
-                          {inv.status === "pending" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              onClick={() => handleMarkInProgress(inv)}
-                              disabled={updateMutation.isPending}
-                            >
-                              Start
-                            </Button>
-                          )}
-                          {(inv.status === "pending" || inv.status === "in_progress") && (
-                            <>
+                      {/* Actions — radiographer only */}
+                      {isRadiographer && (
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end items-center gap-1">
+                            {inv.status === "pending" && (
                               <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs gap-1"
-                                onClick={() => triggerAttach(inv)}
-                                disabled={attachingLoading && attachingId === inv.id}
-                                title="Attach scan image"
-                              >
-                                {attachingLoading && attachingId === inv.id ? (
-                                  <span className="animate-pulse">Uploading…</span>
-                                ) : (
-                                  <>
-                                    <Paperclip className="h-3 w-3" />
-                                    {inv.imageAttachment ? "Replace" : "Attach File"}
-                                  </>
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => openComplete(inv)}
+                                size="sm" variant="outline" className="h-7 text-xs"
+                                onClick={() => handleMarkInProgress(inv)}
                                 disabled={updateMutation.isPending}
                               >
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Complete
+                                Start
                               </Button>
-                            </>
-                          )}
-                          {inv.status === "completed" && (
-                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Done</span>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                            )}
+                            {canEdit && (
+                              <>
+                                <Button
+                                  size="sm" variant="outline" className="h-7 text-xs gap-1"
+                                  onClick={() => triggerAttach(inv)}
+                                  disabled={attachingLoading && attachingId === inv.id}
+                                  title="Attach images or PDFs"
+                                >
+                                  {attachingLoading && attachingId === inv.id ? (
+                                    <span className="animate-pulse">Uploading…</span>
+                                  ) : (
+                                    <>
+                                      <Paperclip className="h-3 w-3" />
+                                      Attach
+                                      {attachments.length > 0 && (
+                                        <span className="ml-0.5 rounded-full bg-primary/20 text-primary px-1 text-[10px] font-semibold">
+                                          {attachments.length}
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm" className="h-7 text-xs"
+                                  onClick={() => openComplete(inv)}
+                                  disabled={updateMutation.isPending}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Complete
+                                </Button>
+                              </>
+                            )}
+                            {inv.status === "completed" && (
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Done</span>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -432,10 +500,7 @@ export default function InvestigationsPage() {
       )}
 
       {/* Complete dialog */}
-      <Dialog
-        open={completeDialog.open}
-        onOpenChange={open => setCompleteDialog(prev => ({ ...prev, open }))}
-      >
+      <Dialog open={completeDialog.open} onOpenChange={open => setCompleteDialog(prev => ({ ...prev, open }))}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -457,42 +522,42 @@ export default function InvestigationsPage() {
               </div>
             )}
 
-            {/* Attached file preview inside complete dialog */}
-            {completeDialog.inv?.imageAttachment && (
-              <div className="space-y-1.5">
-                <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {isPdf(completeDialog.inv.imageAttachment)
-                    ? <><FileText className="h-3.5 w-3.5" /> Attached PDF Report</>
-                    : <><ImageIcon className="h-3.5 w-3.5" /> Attached Scan Image</>
-                  }
-                </Label>
-                {isPdf(completeDialog.inv.imageAttachment) ? (
-                  <button
-                    onClick={() => openInNewTab(completeDialog.inv!.imageAttachment!)}
-                    className="flex items-center gap-2 w-full rounded-lg border border-border bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
-                  >
-                    <FileText className="h-5 w-5 shrink-0" />
-                    Open PDF in new tab
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setImagePreview({
-                      open: true,
-                      src: completeDialog.inv!.imageAttachment!,
-                      label: `${completeDialog.inv!.type}${completeDialog.inv!.bodyPart ? ` — ${completeDialog.inv!.bodyPart}` : ""}`
-                    })}
-                    className="block rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition w-full"
-                    title="Click to view full image"
-                  >
-                    <img
-                      src={completeDialog.inv.imageAttachment}
-                      alt="Attached scan"
-                      className="w-full max-h-48 object-contain bg-black/5"
-                    />
-                  </button>
-                )}
-              </div>
-            )}
+            {/* Attachments preview inside complete dialog */}
+            {(() => {
+              const atts = parseAttachments(completeDialog.inv?.imageAttachment);
+              if (!atts.length) return null;
+              return (
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {atts.length} attachment{atts.length > 1 ? "s" : ""}
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {atts.map((att, idx) => (
+                      <div key={idx}>
+                        {isPdf(att.data) ? (
+                          <button
+                            onClick={() => openInNewTab(att.data)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
+                          >
+                            <FileText className="h-4 w-4 shrink-0" />
+                            {att.name.length > 20 ? att.name.slice(0, 18) + "…" : att.name}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setImagePreview({ open: true, src: att.data, label: att.name })}
+                            className="block rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
+                            title={att.name}
+                          >
+                            <img src={att.data} alt={att.name} className="h-20 w-20 object-cover" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="space-y-1.5">
               <Label>Result Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
@@ -501,7 +566,6 @@ export default function InvestigationsPage() {
                 onChange={e => setResultNotes(e.target.value)}
                 placeholder="Describe findings, attach report reference, or leave blank..."
                 rows={4}
-                autoFocus={!completeDialog.inv?.imageAttachment}
               />
             </div>
           </div>
