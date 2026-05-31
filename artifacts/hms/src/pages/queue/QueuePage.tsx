@@ -34,6 +34,26 @@ const statusBadgeColors: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
 };
 
+function formatExpectedTime(estimatedWaitMinutes: number): string {
+  const d = new Date(Date.now() + estimatedWaitMinutes * 60 * 1000);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+function WaitInfo({ estimatedWaitMinutes }: { estimatedWaitMinutes: number | null | undefined }) {
+  if (estimatedWaitMinutes == null) return null;
+  const isNext = estimatedWaitMinutes === 0;
+  return (
+    <div className="mt-1 space-y-0.5">
+      <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+        {isNext ? "Next in Queue" : `Estimated Wait: ${estimatedWaitMinutes} mins`}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Expected Consultation: {formatExpectedTime(estimatedWaitMinutes)}
+      </p>
+    </div>
+  );
+}
+
 function VisitTypeBadge({ visitType }: { visitType?: string | null }) {
   if (visitType === "followup") {
     return (
@@ -265,10 +285,10 @@ export default function QueuePage() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {token.patientPhone ?? "No phone"}
-                  {token.estimatedWaitMinutes != null && token.status === "waiting" && (
-                    <span className="ml-2">• Est. wait: {token.estimatedWaitMinutes} min</span>
-                  )}
                 </p>
+                {token.status === "waiting" && (
+                  <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
+                )}
               </div>
               <div className="flex flex-wrap gap-2 flex-shrink-0">
                 {token.status === "waiting" && (

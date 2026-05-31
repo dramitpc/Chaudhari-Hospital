@@ -35,6 +35,9 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
   };
 }
 
+const VISIT_DURATION: Record<string, number> = { new: 10, followup: 5 };
+const ACTIVE_STATUSES = new Set(["waiting", "called", "in_consultation"]);
+
 router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const params = GetQueueQueryParams.safeParse(req.query);
   const today = new Date().toISOString().split("T")[0];
@@ -42,26 +45,42 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const doctorId = params.success ? params.data.doctorId : undefined;
   const visitType = params.success ? (params.data as Record<string, unknown>).visitType as string | undefined : undefined;
 
+  // Fetch ALL tokens (no visitType filter at DB level) so cumulative wait math is correct
   let query = db.select().from(queueTokensTable).where(eq(queueTokensTable.queueDate, date)).$dynamic();
   if (doctorId) query = query.where(eq(queueTokensTable.doctorId, doctorId));
-  if (visitType === "new" || visitType === "followup") query = query.where(eq(queueTokensTable.visitType, visitType));
 
   const tokens = await query.orderBy(queueTokensTable.tokenNumber);
-  const formatted = await Promise.all(tokens.map(async (t, i) => {
-    const f = await formatToken(t);
-    const waitingAhead = tokens.filter((x, j) => j < i && x.status === "waiting").length;
-    f.estimatedWaitMinutes = waitingAhead * 15;
-    return f;
-  }));
+  const formatted = await Promise.all(tokens.map(t => formatToken(t)));
 
+  // Cumulative wait: for each "waiting" token, sum durations of all active tokens ahead
+  formatted.forEach((token, i) => {
+    if (token.status !== "waiting") {
+      token.estimatedWaitMinutes = null;
+      return;
+    }
+    let cumulativeWait = 0;
+    for (let j = 0; j < i; j++) {
+      const ahead = formatted[j];
+      if (ACTIVE_STATUSES.has(ahead.status)) {
+        cumulativeWait += VISIT_DURATION[ahead.visitType ?? "new"] ?? 10;
+      }
+    }
+    token.estimatedWaitMinutes = cumulativeWait;
+  });
+
+  // Apply visitType filter after computing waits
+  const result = visitType ? formatted.filter(t => t.visitType === visitType) : formatted;
   const waiting = formatted.filter(t => t.status === "waiting");
-  const inProgress = formatted.find(t => t.status === "in_consultation");
+  const inProgress = formatted.find(t => t.status === "in_consultation" || t.status === "called");
+
+  const totalWaitMins = waiting.reduce((sum, t) => sum + (t.estimatedWaitMinutes ?? 0), 0);
+  const avgWait = waiting.length > 0 ? Math.round(totalWaitMins / waiting.length) : 0;
 
   res.json({
-    tokens: formatted,
+    tokens: result,
     totalWaiting: waiting.length,
     currentlyServing: inProgress?.tokenNumber ?? null,
-    averageWaitMinutes: 15,
+    averageWaitMinutes: avgWait,
   });
 });
 
