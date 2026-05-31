@@ -509,6 +509,14 @@ export const QueueTokenStatus = {
   cancelled: 'cancelled',
 } as const;
 
+export type QueueTokenVisitType = typeof QueueTokenVisitType[keyof typeof QueueTokenVisitType];
+
+
+export const QueueTokenVisitType = {
+  new: 'new',
+  followup: 'followup',
+} as const;
+
 export interface QueueToken {
   id: string;
   tokenNumber: number;
@@ -526,15 +534,25 @@ export interface QueueToken {
   estimatedWaitMinutes?: number | null;
   queueDate?: string;
   createdAt: string;
+  visitType?: QueueTokenVisitType;
   /** @nullable */
   consultationStartedAt?: string | null;
   /** @nullable */
   consultationEndedAt?: string | null;
 }
 
+export type TokenInputVisitType = typeof TokenInputVisitType[keyof typeof TokenInputVisitType];
+
+
+export const TokenInputVisitType = {
+  new: 'new',
+  followup: 'followup',
+} as const;
+
 export interface TokenInput {
   patientId: string;
   doctorId: string;
+  visitType: TokenInputVisitType;
   appointmentId?: string;
   priority?: number;
 }
@@ -1131,7 +1149,16 @@ limit?: number;
 export type GetQueueParams = {
 doctorId?: string;
 date?: string;
+visitType?: GetQueueVisitType;
 };
+
+export type GetQueueVisitType = typeof GetQueueVisitType[keyof typeof GetQueueVisitType];
+
+
+export const GetQueueVisitType = {
+  new: 'new',
+  followup: 'followup',
+} as const;
 
 export type ListConsultationsParams = {
 patientId?: string;

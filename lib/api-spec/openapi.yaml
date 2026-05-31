@@ -532,6 +532,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: visitType
+          in: query
+          schema:
+            type: string
+            enum: [new, followup]
       responses:
         "200":
           description: Queue tokens
@@ -1956,6 +1961,9 @@ components:
           type: string
         createdAt:
           type: string
+        visitType:
+          type: string
+          enum: [new, followup]
         consultationStartedAt:
           type: ["string", "null"]
         consultationEndedAt:
@@ -1963,12 +1971,15 @@ components:
 
     TokenInput:
       type: object
-      required: [patientId, doctorId]
+      required: [patientId, doctorId, visitType]
       properties:
         patientId:
           type: string
         doctorId:
           type: string
+        visitType:
+          type: string
+          enum: [new, followup]
         appointmentId:
           type: string
         priority:

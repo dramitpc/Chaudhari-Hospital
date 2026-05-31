@@ -45,6 +45,7 @@ export default function RegisterPatientPage() {
   const addToQueueRef = useRef(false);
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+  const [visitType, setVisitType] = useState<"new" | "followup">("new");
 
   const { data: doctorsData } = useListDoctors();
   const doctors = doctorsData?.data ?? [];
@@ -81,7 +82,7 @@ export default function RegisterPatientPage() {
       onSuccess: (patient) => {
         if (wantsQueue) {
           tokenMutation.mutate(
-            { data: { patientId: patient.id, doctorId: selectedDoctorId } },
+            { data: { patientId: patient.id, doctorId: selectedDoctorId, visitType } },
             {
               onSuccess: (token) => {
                 toast({
@@ -222,20 +223,34 @@ export default function RegisterPatientPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-3">
           <h2 className="font-semibold text-foreground border-b border-border pb-2">Add to OPD Queue <span className="text-muted-foreground font-normal text-sm">(optional)</span></h2>
           <p className="text-sm text-muted-foreground">Select a doctor below and use "Register &amp; Add to Queue" to immediately assign a token.</p>
-          <div className="space-y-1.5">
-            <Label>Consulting Doctor</Label>
-            <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
-              <SelectTrigger data-testid="select-doctor">
-                <SelectValue placeholder="Select doctor" />
-              </SelectTrigger>
-              <SelectContent>
-                {doctors.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.fullName}{d.specialization ? ` — ${d.specialization}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Consulting Doctor</Label>
+              <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+                <SelectTrigger data-testid="select-doctor">
+                  <SelectValue placeholder="Select doctor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.fullName}{d.specialization ? ` — ${d.specialization}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Visit Type <span className="text-destructive">*</span></Label>
+              <Select value={visitType} onValueChange={(v) => setVisitType(v as "new" | "followup")}>
+                <SelectTrigger data-testid="select-visit-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">🆕 New Visit</SelectItem>
+                  <SelectItem value="followup">🔄 Follow-up</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 

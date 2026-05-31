@@ -5,10 +5,12 @@
  * Hospital Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { TokenInputVisitType } from './tokenInputVisitType';
 
 export interface TokenInput {
   patientId: string;
   doctorId: string;
+  visitType: TokenInputVisitType;
   appointmentId?: string;
   priority?: number;
 }

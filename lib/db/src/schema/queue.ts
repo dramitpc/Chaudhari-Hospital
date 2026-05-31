@@ -9,6 +9,8 @@ export const queueStatusEnum = pgEnum("queue_status", [
   "waiting", "called", "in_consultation", "completed", "skipped", "cancelled"
 ]);
 
+export const visitTypeEnum = pgEnum("visit_type", ["new", "followup"]);
+
 export const queueTokensTable = pgTable("queue_tokens", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   tokenNumber: integer("token_number").notNull(),
@@ -16,6 +18,7 @@ export const queueTokensTable = pgTable("queue_tokens", {
   doctorId: text("doctor_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   appointmentId: text("appointment_id").references(() => appointmentsTable.id),
   status: queueStatusEnum("status").notNull().default("waiting"),
+  visitType: visitTypeEnum("visit_type").notNull().default("new"),
   priority: integer("priority").notNull().default(0),
   queueDate: text("queue_date").notNull(),
   consultationStartedAt: timestamp("consultation_started_at", { withTimezone: true }),

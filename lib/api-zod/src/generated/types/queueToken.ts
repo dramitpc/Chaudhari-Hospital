@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { QueueTokenStatus } from './queueTokenStatus';
+import type { QueueTokenVisitType } from './queueTokenVisitType';
 
 export interface QueueToken {
   id: string;
@@ -24,6 +25,7 @@ export interface QueueToken {
   estimatedWaitMinutes?: number | null;
   queueDate?: string;
   createdAt: string;
+  visitType?: QueueTokenVisitType;
   /** @nullable */
   consultationStartedAt?: string | null;
   /** @nullable */

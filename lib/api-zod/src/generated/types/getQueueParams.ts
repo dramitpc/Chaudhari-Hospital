@@ -5,8 +5,10 @@
  * Hospital Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { GetQueueVisitType } from './getQueueVisitType';
 
 export type GetQueueParams = {
 doctorId?: string;
 date?: string;
+visitType?: GetQueueVisitType;
 };

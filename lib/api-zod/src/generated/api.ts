@@ -654,7 +654,8 @@ export const CancelAppointmentParams = zod.object({
  */
 export const GetQueueQueryParams = zod.object({
   "doctorId": zod.coerce.string().optional(),
-  "date": zod.coerce.string().optional()
+  "date": zod.coerce.string().optional(),
+  "visitType": zod.enum(['new', 'followup']).optional()
 })
 
 export const GetQueueResponse = zod.object({
@@ -672,6 +673,7 @@ export const GetQueueResponse = zod.object({
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
   "createdAt": zod.string(),
+  "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish()
 })),
@@ -687,6 +689,7 @@ export const GetQueueResponse = zod.object({
 export const GenerateTokenBody = zod.object({
   "patientId": zod.string(),
   "doctorId": zod.string(),
+  "visitType": zod.enum(['new', 'followup']),
   "appointmentId": zod.string().optional(),
   "priority": zod.number().optional()
 })
@@ -717,6 +720,7 @@ export const UpdateTokenStatusResponse = zod.object({
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
   "createdAt": zod.string(),
+  "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish()
 })
@@ -743,6 +747,7 @@ export const CallNextPatientResponse = zod.object({
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
   "createdAt": zod.string(),
+  "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish()
 })
