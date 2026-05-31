@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 
@@ -32,6 +32,44 @@ type DrugItem = {
   instructions?: string | null;
   quantity?: number | null;
 };
+
+// ── Attachment helpers (shared with InvestigationsPage logic) ─────────────────
+type Attachment = { name: string; data: string };
+
+function parseAttachments(raw: string | null | undefined): Attachment[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as Attachment[];
+  } catch {}
+  return [{ name: "attachment", data: raw }];
+}
+
+function isPdfData(dataUrl: string) {
+  return dataUrl.startsWith("data:application/pdf");
+}
+
+function openInNewTab(dataUrl: string) {
+  const win = window.open();
+  if (win) {
+    win.document.write(
+      `<iframe src="${dataUrl}" style="width:100%;height:100%;border:none;margin:0;padding:0"/>`
+    );
+    win.document.close();
+  }
+}
+
+const INV_STATUS_COLORS: Record<string, string> = {
+  pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  completed:   "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  cancelled:   "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+};
+
+const INV_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending", in_progress: "In Progress", completed: "Completed", cancelled: "Cancelled",
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ConsultationDetailPage() {
   const [, params] = useRoute("/consultations/:id");
@@ -116,6 +154,9 @@ export default function ConsultationDetailPage() {
   });
   const [investigationValue, setInvestigationValue] = useState("");
   const [clinicalInit, setClinicalInit] = useState(false);
+  const [invImagePreview, setInvImagePreview] = useState<{ open: boolean; src: string; label: string }>({
+    open: false, src: "", label: "",
+  });
 
   useEffect(() => {
     if (consultation && !clinicalInit) {
@@ -735,7 +776,8 @@ export default function ConsultationDetailPage() {
               ))}
             </TabsContent>
 
-            <TabsContent value="investigation" className="mt-4 space-y-3">
+            <TabsContent value="investigation" className="mt-4 space-y-4">
+              {/* Free-text notes */}
               <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
                 <Label className="text-xs">Investigation Orders</Label>
                 <FieldFavPanel
@@ -748,10 +790,96 @@ export default function ConsultationDetailPage() {
                   value={investigationValue}
                   onChange={e => setInvestigationValue(e.target.value)}
                   onBlur={e => { handleBlur("investigationOrders", e.target.value); trackFieldRecent("clinicos_invest", e.target.value); }}
-                  rows={10}
+                  rows={6}
                   placeholder="Blood tests, imaging, referrals..."
                 />
               </div>
+
+              {/* Radiology job results */}
+              {(() => {
+                const jobs = existingInvestigations?.data ?? [];
+                if (jobs.length === 0) return null;
+                return (
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-1.5">
+                      <ScanLine className="h-3.5 w-3.5" /> Radiology Jobs ({jobs.length})
+                    </Label>
+                    <div className="space-y-2">
+                      {jobs.map(inv => {
+                        const atts = parseAttachments(inv.imageAttachment);
+                        return (
+                          <div
+                            key={inv.id}
+                            className="rounded-lg border border-border bg-card p-3 space-y-2"
+                          >
+                            {/* Header row */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {inv.type}
+                                  {inv.bodyPart ? <span className="text-muted-foreground font-normal"> — {inv.bodyPart}</span> : ""}
+                                </p>
+                                {inv.notes && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">{inv.notes}</p>
+                                )}
+                              </div>
+                              <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${INV_STATUS_COLORS[inv.status]}`}>
+                                {INV_STATUS_LABELS[inv.status]}
+                              </span>
+                            </div>
+
+                            {/* Completed results */}
+                            {inv.status === "completed" && (
+                              <div className="space-y-2 pt-1 border-t border-border">
+                                {inv.resultNotes && (
+                                  <div className="space-y-0.5">
+                                    <p className="text-xs font-medium text-muted-foreground">Result Notes</p>
+                                    <p className="text-sm whitespace-pre-wrap">{inv.resultNotes}</p>
+                                  </div>
+                                )}
+                                {atts.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                      <Paperclip className="h-3 w-3" />
+                                      {atts.length} attachment{atts.length > 1 ? "s" : ""}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {atts.map((att, idx) => (
+                                        isPdfData(att.data) ? (
+                                          <button
+                                            key={idx}
+                                            onClick={() => openInNewTab(att.data)}
+                                            className="flex items-center gap-1.5 rounded border border-border bg-red-50 dark:bg-red-950/30 px-2.5 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
+                                          >
+                                            <FileText className="h-3.5 w-3.5 shrink-0" />
+                                            {att.name.length > 20 ? att.name.slice(0, 18) + "…" : att.name}
+                                          </button>
+                                        ) : (
+                                          <button
+                                            key={idx}
+                                            onClick={() => setInvImagePreview({ open: true, src: att.data, label: att.name })}
+                                            className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
+                                            title={att.name}
+                                          >
+                                            <img src={att.data} alt={att.name} className="h-16 w-16 object-cover" />
+                                          </button>
+                                        )
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {!inv.resultNotes && atts.length === 0 && (
+                                  <p className="text-xs text-muted-foreground italic">No result notes or attachments added by radiographer.</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </TabsContent>
 
             {/* ── EMR History tab ─────────────────────────────────────────── */}
@@ -1081,6 +1209,25 @@ export default function ConsultationDetailPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Investigation attachment image preview */}
+      <Dialog open={invImagePreview.open} onOpenChange={open => setInvImagePreview(p => ({ ...p, open }))}>
+        <DialogContent className="max-w-3xl p-2">
+          <DialogHeader className="px-3 pt-2 pb-0">
+            <DialogTitle className="flex items-center gap-2 text-sm font-medium">
+              <ImageIcon className="h-4 w-4" />
+              {invImagePreview.label}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 rounded-lg overflow-hidden bg-black/10 dark:bg-black/40">
+            <img
+              src={invImagePreview.src}
+              alt={invImagePreview.label}
+              className="w-full max-h-[75vh] object-contain"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Order Investigation Dialog */}
       <Dialog open={showInvestigationModal} onOpenChange={setShowInvestigationModal}>
