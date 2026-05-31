@@ -432,6 +432,7 @@ export const GetPatientHistoryResponse = zod.object({
   "followUpDate": zod.string().nullish(),
   "followUpNotes": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -782,6 +783,7 @@ export const ListConsultationsResponse = zod.object({
   "followUpDate": zod.string().nullish(),
   "followUpNotes": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -834,6 +836,7 @@ export const GetConsultationResponse = zod.object({
   "followUpDate": zod.string().nullish(),
   "followUpNotes": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -860,7 +863,8 @@ export const UpdateConsultationBody = zod.object({
   "advice": zod.string().optional(),
   "followUpDate": zod.string().optional(),
   "followUpNotes": zod.string().optional(),
-  "investigationOrders": zod.string().optional()
+  "investigationOrders": zod.string().optional(),
+  "clinicalAttachments": zod.string().optional()
 })
 
 export const UpdateConsultationResponse = zod.object({
@@ -886,6 +890,7 @@ export const UpdateConsultationResponse = zod.object({
   "followUpDate": zod.string().nullish(),
   "followUpNotes": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -928,6 +933,7 @@ export const CompleteConsultationResponse = zod.object({
   "followUpDate": zod.string().nullish(),
   "followUpNotes": zod.string().nullish(),
   "investigationOrders": zod.string().nullish(),
+  "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()

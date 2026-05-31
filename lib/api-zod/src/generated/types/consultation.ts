@@ -47,6 +47,8 @@ export interface Consultation {
   /** @nullable */
   investigationOrders?: string | null;
   /** @nullable */
+  clinicalAttachments?: string | null;
+  /** @nullable */
   vitals?: ConsultationVitals;
   createdAt: string;
   updatedAt?: string;

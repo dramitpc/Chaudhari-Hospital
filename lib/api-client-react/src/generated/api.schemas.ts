@@ -265,6 +265,8 @@ export interface Consultation {
   /** @nullable */
   investigationOrders?: string | null;
   /** @nullable */
+  clinicalAttachments?: string | null;
+  /** @nullable */
   vitals?: ConsultationVitals;
   createdAt: string;
   updatedAt?: string;
@@ -588,6 +590,7 @@ export interface ConsultationUpdate {
   followUpDate?: string;
   followUpNotes?: string;
   investigationOrders?: string;
+  clinicalAttachments?: string;
 }
 
 export interface CompleteConsultationInput {

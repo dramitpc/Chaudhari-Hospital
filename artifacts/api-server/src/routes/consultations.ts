@@ -41,6 +41,7 @@ async function formatConsultation(c: typeof consultationsTable.$inferSelect) {
     followUpDate: c.followUpDate ?? null,
     followUpNotes: c.followUpNotes ?? null,
     investigationOrders: c.investigationOrders ?? null,
+    clinicalAttachments: c.clinicalAttachments ?? null,
     vitals: c.vitals ?? null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),

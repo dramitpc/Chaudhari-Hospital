@@ -31,6 +31,7 @@ export const consultationsTable = pgTable("consultations", {
   followUpDate: text("follow_up_date"),
   followUpNotes: text("follow_up_notes"),
   investigationOrders: text("investigation_orders"),
+  clinicalAttachments: text("clinical_attachments"),
   vitals: jsonb("vitals"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

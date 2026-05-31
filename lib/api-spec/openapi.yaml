@@ -2054,6 +2054,8 @@ components:
           type: ["string", "null"]
         investigationOrders:
           type: ["string", "null"]
+        clinicalAttachments:
+          type: ["string", "null"]
         vitals:
           type: ["object", "null"]
           additionalProperties: true
@@ -2105,6 +2107,8 @@ components:
         followUpNotes:
           type: string
         investigationOrders:
+          type: string
+        clinicalAttachments:
           type: string
 
     CompleteConsultationInput:

@@ -1,5 +1,5 @@
 import { useRoute, useLocation, Link } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
@@ -157,6 +157,72 @@ export default function ConsultationDetailPage() {
   const [invImagePreview, setInvImagePreview] = useState<{ open: boolean; src: string; label: string }>({
     open: false, src: "", label: "",
   });
+
+  // ── Clinical Attachments ──────────────────────────────────────────────────
+  const clinicalAttachRef = useRef<HTMLInputElement>(null);
+  const [clinicalAttachLoading, setClinicalAttachLoading] = useState(false);
+
+  const handleClinicalFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    const invalid = files.find(f => !f.type.startsWith("image/") && f.type !== "application/pdf");
+    if (invalid) {
+      toast({ title: "Only images and PDFs are allowed", variant: "destructive" });
+      e.target.value = "";
+      return;
+    }
+    const tooBig = files.find(f => f.size > 8 * 1024 * 1024);
+    if (tooBig) {
+      toast({ title: `${tooBig.name} exceeds the 8 MB limit`, variant: "destructive" });
+      e.target.value = "";
+      return;
+    }
+
+    setClinicalAttachLoading(true);
+    try {
+      const existing = parseAttachments(consultation?.clinicalAttachments);
+      const newEntries: Attachment[] = await Promise.all(
+        files.map(async f => ({
+          name: f.name,
+          data: await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(f);
+          }),
+        }))
+      );
+      const merged = [...existing, ...newEntries];
+      await updateMutation.mutateAsync({
+        id,
+        data: { clinicalAttachments: JSON.stringify(merged) } as Parameters<typeof updateMutation.mutateAsync>[0]["data"],
+      });
+      toast({ title: `${newEntries.length} file${newEntries.length > 1 ? "s" : ""} attached` });
+      queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+    } catch {
+      toast({ title: "Failed to attach files", variant: "destructive" });
+    } finally {
+      setClinicalAttachLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveClinicalAttachment = async (idx: number) => {
+    const list = parseAttachments(consultation?.clinicalAttachments);
+    const updated = list.filter((_, i) => i !== idx);
+    try {
+      await updateMutation.mutateAsync({
+        id,
+        data: { clinicalAttachments: updated.length ? JSON.stringify(updated) : "" } as Parameters<typeof updateMutation.mutateAsync>[0]["data"],
+      });
+      toast({ title: "Attachment removed" });
+      queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+    } catch {
+      toast({ title: "Failed to remove attachment", variant: "destructive" });
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (consultation && !clinicalInit) {
@@ -777,6 +843,16 @@ export default function ConsultationDetailPage() {
             </TabsContent>
 
             <TabsContent value="investigation" className="mt-4 space-y-4">
+              {/* Hidden file input for clinical attachments */}
+              <input
+                ref={clinicalAttachRef}
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                className="hidden"
+                onChange={handleClinicalFileChange}
+              />
+
               {/* Free-text notes */}
               <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
                 <Label className="text-xs">Investigation Orders</Label>
@@ -794,6 +870,94 @@ export default function ConsultationDetailPage() {
                   placeholder="Blood tests, imaging, referrals..."
                 />
               </div>
+
+              {/* Clinical Attachments */}
+              {(() => {
+                const atts = parseAttachments(consultation?.clinicalAttachments);
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs flex items-center gap-1.5">
+                        <Paperclip className="h-3.5 w-3.5" />
+                        Clinical Attachments
+                        {atts.length > 0 && (
+                          <span className="ml-1 rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold">
+                            {atts.length}
+                          </span>
+                        )}
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => clinicalAttachRef.current?.click()}
+                        disabled={clinicalAttachLoading}
+                      >
+                        {clinicalAttachLoading ? (
+                          <span className="animate-pulse">Uploading…</span>
+                        ) : (
+                          <>
+                            <Paperclip className="h-3 w-3" />
+                            Add Files
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {atts.length === 0 ? (
+                      <button
+                        onClick={() => clinicalAttachRef.current?.click()}
+                        disabled={clinicalAttachLoading}
+                        className="w-full rounded-lg border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/30 transition py-6 flex flex-col items-center gap-1.5 text-muted-foreground text-sm"
+                      >
+                        <Paperclip className="h-5 w-5 opacity-50" />
+                        <span>Click to attach images or PDFs</span>
+                        <span className="text-xs opacity-60">Photos, ECGs, referral letters, consent forms… up to 8 MB each</span>
+                      </button>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {atts.map((att, idx) => (
+                          isPdfData(att.data) ? (
+                            <div key={idx} className="flex items-center gap-1 rounded border border-border bg-red-50 dark:bg-red-950/30 pl-2 pr-1 py-1">
+                              <button
+                                onClick={() => openInNewTab(att.data)}
+                                className="flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400 hover:underline"
+                              >
+                                <FileText className="h-3.5 w-3.5 shrink-0" />
+                                {att.name.length > 22 ? att.name.slice(0, 20) + "…" : att.name}
+                              </button>
+                              <button
+                                onClick={() => handleRemoveClinicalAttachment(idx)}
+                                className="ml-1 text-muted-foreground hover:text-destructive transition"
+                                title="Remove"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div key={idx} className="relative group">
+                              <button
+                                onClick={() => setInvImagePreview({ open: true, src: att.data, label: att.name })}
+                                className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
+                                title={att.name}
+                              >
+                                <img src={att.data} alt={att.name} className="h-16 w-16 object-cover" />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveClinicalAttachment(idx)}
+                                className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center h-4 w-4 rounded-full bg-destructive text-white shadow"
+                                title="Remove"
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Radiology job results */}
               {(() => {

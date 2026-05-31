@@ -20,4 +20,5 @@ export interface ConsultationUpdate {
   followUpDate?: string;
   followUpNotes?: string;
   investigationOrders?: string;
+  clinicalAttachments?: string;
 }
