@@ -378,25 +378,25 @@ export default function PrescriptionDetailPage() {
           <p className="text-sm text-muted-foreground">Date: {prescription.visitDate}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-6 p-3 bg-muted/30 rounded">
-          <div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 p-3 bg-muted/30 rounded divide-x divide-border">
+          <div className="pr-5">
             <p className="text-xs text-muted-foreground">Patient Name</p>
             <p className="text-sm font-medium">{prescription.patientName}</p>
           </div>
-          <div>
+          <div className="pl-5 pr-5">
             <p className="text-xs text-muted-foreground">Patient ID</p>
             <p className="text-sm font-medium">{patient?.patientId ?? "—"}</p>
           </div>
-          <div>
+          <div className="pl-5 pr-5">
             <p className="text-xs text-muted-foreground">Age</p>
             <p className="text-sm font-medium">{patient?.age ?? "—"}</p>
           </div>
-          <div>
+          <div className="pl-5 pr-5">
             <p className="text-xs text-muted-foreground">Sex</p>
             <p className="text-sm font-medium capitalize">{patient?.gender ?? "—"}</p>
           </div>
           {consultation?.visitType && (
-            <div>
+            <div className="pl-5">
               <p className="text-xs text-muted-foreground">Visit Type</p>
               <p className="text-sm font-medium capitalize">{consultation.visitType.replace(/_/g, " ")}</p>
             </div>
