@@ -2099,6 +2099,9 @@ components:
         vitals:
           type: ["object", "null"]
           additionalProperties: true
+        visitType:
+          type: ["string", "null"]
+          enum: [new, followup, null]
         createdAt:
           type: string
         updatedAt:

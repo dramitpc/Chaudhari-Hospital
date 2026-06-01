@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, consultationsTable, patientsTable, usersTable } from "@workspace/db";
+import { db, consultationsTable, patientsTable, usersTable, queueTokensTable } from "@workspace/db";
 import {
   ListConsultationsQueryParams,
   CreateConsultationBody,
@@ -18,6 +18,9 @@ const router = Router();
 async function formatConsultation(c: typeof consultationsTable.$inferSelect) {
   const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, c.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, c.doctorId));
+  const [token] = c.tokenId
+    ? await db.select({ visitType: queueTokensTable.visitType }).from(queueTokensTable).where(eq(queueTokensTable.id, c.tokenId))
+    : [null];
   return {
     id: c.id,
     patientId: c.patientId,
@@ -43,6 +46,7 @@ async function formatConsultation(c: typeof consultationsTable.$inferSelect) {
     investigationOrders: c.investigationOrders ?? null,
     clinicalAttachments: c.clinicalAttachments ?? null,
     vitals: c.vitals ?? null,
+    visitType: token?.visitType ?? null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   };

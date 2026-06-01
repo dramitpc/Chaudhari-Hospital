@@ -227,6 +227,17 @@ export const ConsultationStatus = {
 /**
  * @nullable
  */
+export type ConsultationVisitType = typeof ConsultationVisitType[keyof typeof ConsultationVisitType] | null;
+
+
+export const ConsultationVisitType = {
+  new: 'new',
+  followup: 'followup',
+} as const;
+
+/**
+ * @nullable
+ */
 export type ConsultationVitals = { [key: string]: unknown } | null;
 
 export interface Consultation {
@@ -271,6 +282,8 @@ export interface Consultation {
   clinicalAttachments?: string | null;
   /** @nullable */
   vitals?: ConsultationVitals;
+  /** @nullable */
+  visitType?: ConsultationVisitType;
   createdAt: string;
   updatedAt?: string;
 }

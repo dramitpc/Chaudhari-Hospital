@@ -36,6 +36,7 @@ export * from './consultationInput';
 export * from './consultationListResponse';
 export * from './consultationStatus';
 export * from './consultationUpdate';
+export * from './consultationVisitType';
 export * from './consultationVitals';
 export * from './dailyOpdReport';
 export * from './dashboardSummary';

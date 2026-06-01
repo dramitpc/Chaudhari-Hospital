@@ -439,6 +439,7 @@ export const GetPatientHistoryResponse = zod.object({
   "investigationOrders": zod.string().nullish(),
   "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
+  "visitType": zod.union([zod.literal('new'),zod.literal('followup'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })),
@@ -799,6 +800,7 @@ export const ListConsultationsResponse = zod.object({
   "investigationOrders": zod.string().nullish(),
   "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
+  "visitType": zod.union([zod.literal('new'),zod.literal('followup'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })),
@@ -852,6 +854,7 @@ export const GetConsultationResponse = zod.object({
   "investigationOrders": zod.string().nullish(),
   "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
+  "visitType": zod.union([zod.literal('new'),zod.literal('followup'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -906,6 +909,7 @@ export const UpdateConsultationResponse = zod.object({
   "investigationOrders": zod.string().nullish(),
   "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
+  "visitType": zod.union([zod.literal('new'),zod.literal('followup'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -949,6 +953,7 @@ export const CompleteConsultationResponse = zod.object({
   "investigationOrders": zod.string().nullish(),
   "clinicalAttachments": zod.string().nullish(),
   "vitals": zod.record(zod.string(), zod.unknown()).nullish(),
+  "visitType": zod.union([zod.literal('new'),zod.literal('followup'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })

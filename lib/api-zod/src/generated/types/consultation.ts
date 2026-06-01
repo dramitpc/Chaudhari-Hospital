@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsultationStatus } from './consultationStatus';
+import type { ConsultationVisitType } from './consultationVisitType';
 import type { ConsultationVitals } from './consultationVitals';
 
 export interface Consultation {
@@ -50,6 +51,8 @@ export interface Consultation {
   clinicalAttachments?: string | null;
   /** @nullable */
   vitals?: ConsultationVitals;
+  /** @nullable */
+  visitType?: ConsultationVisitType;
   createdAt: string;
   updatedAt?: string;
 }
