@@ -379,13 +379,6 @@ export default function PrescriptionDetailPage() {
             <p className="text-xs text-muted-foreground">Patient Name</p>
             <p className="text-sm font-medium">{prescription.patientName}</p>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Doctor</p>
-            <p className="text-sm font-medium">Dr. {prescription.doctorName}</p>
-            {prescription.doctorRegistrationNumber && (
-              <p className="text-xs text-muted-foreground">Reg: {prescription.doctorRegistrationNumber}</p>
-            )}
-          </div>
         </div>
 
         {/* Diagnosis */}
