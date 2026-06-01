@@ -379,9 +379,6 @@ export default function PrescriptionDetailPage() {
             {prescription.doctorSpecialization && (
               <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
             )}
-            {prescription.doctorRegistrationNumber && (
-              <p className="text-xs text-muted-foreground">Reg: {prescription.doctorRegistrationNumber}</p>
-            )}
             {prescription.doctorConsultingHours && (
               <p className="text-xs text-muted-foreground mt-0.5">🕐 {prescription.doctorConsultingHours}</p>
             )}
