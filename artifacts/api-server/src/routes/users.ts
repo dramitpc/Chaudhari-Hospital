@@ -26,6 +26,7 @@ function formatUser(u: typeof usersTable.$inferSelect) {
     phone: u.phone ?? null,
     registrationNumber: u.registrationNumber ?? null,
     specialization: u.specialization ?? null,
+    consultingHours: u.consultingHours ?? null,
     isActive: u.isActive,
     createdAt: u.createdAt.toISOString(),
   };

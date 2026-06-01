@@ -31,6 +31,7 @@ type EditForm = {
   phone: string;
   registrationNumber: string;
   specialization: string;
+  consultingHours: string;
 };
 
 function blankEdit(u: User): EditForm {
@@ -41,6 +42,7 @@ function blankEdit(u: User): EditForm {
     phone:              u.phone ?? "",
     registrationNumber: u.registrationNumber ?? "",
     specialization:     u.specialization ?? "",
+    consultingHours:    u.consultingHours ?? "",
   };
 }
 
@@ -58,7 +60,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [form, setForm] = useState({
     username: "", password: "", role: "doctor",
-    fullName: "", email: "", phone: "", registrationNumber: "", specialization: "",
+    fullName: "", email: "", phone: "", registrationNumber: "", specialization: "", consultingHours: "",
   });
 
   const { data, isLoading } = useListUsers(
@@ -78,7 +80,7 @@ export default function UsersPage() {
         toast({ title: "User created" });
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
         setShowCreate(false);
-        setForm({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "" });
+        setForm({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "", consultingHours: "" });
       },
       onError: (err: unknown) => {
         const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -295,6 +297,16 @@ export default function UsersPage() {
                     onChange={e => setEditForm(f => f && ({ ...f, specialization: e.target.value }))}
                   />
                 </div>
+                {editForm.role === "doctor" && (
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label>Consulting Hours</Label>
+                    <Input
+                      placeholder="e.g. Mon–Fri 9am–5pm, Sat 9am–1pm"
+                      value={editForm.consultingHours}
+                      onChange={e => setEditForm(f => f && ({ ...f, consultingHours: e.target.value }))}
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2 pt-1">
                 <Button variant="outline" onClick={() => { setEditTarget(null); setEditForm(null); }}>Cancel</Button>
@@ -352,6 +364,16 @@ export default function UsersPage() {
                 <Label>Specialization</Label>
                 <Input value={form.specialization} onChange={e => setForm(f => ({ ...f, specialization: e.target.value }))} />
               </div>
+              {form.role === "doctor" && (
+                <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                  <Label>Consulting Hours</Label>
+                  <Input
+                    placeholder="e.g. Mon–Fri 9am–5pm, Sat 9am–1pm"
+                    value={form.consultingHours}
+                    onChange={e => setForm(f => ({ ...f, consultingHours: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>

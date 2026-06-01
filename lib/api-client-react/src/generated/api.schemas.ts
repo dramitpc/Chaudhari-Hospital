@@ -41,6 +41,8 @@ export interface User {
   registrationNumber?: string | null;
   /** @nullable */
   specialization?: string | null;
+  /** @nullable */
+  consultingHours?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -79,6 +81,7 @@ export interface UserInput {
   phone?: string;
   registrationNumber?: string;
   specialization?: string;
+  consultingHours?: string;
 }
 
 export type UserUpdateRole = typeof UserUpdateRole[keyof typeof UserUpdateRole];
@@ -97,6 +100,7 @@ export interface UserUpdate {
   phone?: string;
   registrationNumber?: string;
   specialization?: string;
+  consultingHours?: string;
   role?: UserUpdateRole;
   isActive?: boolean;
 }

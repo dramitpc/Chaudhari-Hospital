@@ -20,6 +20,8 @@ export interface User {
   registrationNumber?: string | null;
   /** @nullable */
   specialization?: string | null;
+  /** @nullable */
+  consultingHours?: string | null;
   isActive: boolean;
   createdAt: string;
 }

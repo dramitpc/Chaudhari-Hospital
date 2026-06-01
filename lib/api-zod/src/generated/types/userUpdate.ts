@@ -13,6 +13,7 @@ export interface UserUpdate {
   phone?: string;
   registrationNumber?: string;
   specialization?: string;
+  consultingHours?: string;
   role?: UserUpdateRole;
   isActive?: boolean;
 }
