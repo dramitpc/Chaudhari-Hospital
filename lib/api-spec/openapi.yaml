@@ -3038,6 +3038,8 @@ components:
         status:
           type: string
           enum: [pending, in_progress, completed, cancelled]
+        notes:
+          type: string
         resultNotes:
           type: string
         imageAttachment:

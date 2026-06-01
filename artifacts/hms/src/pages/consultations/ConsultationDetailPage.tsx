@@ -4,7 +4,7 @@ import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
-  useCreateInvestigation, useListInvestigations,
+  useCreateInvestigation, useUpdateInvestigation, useListInvestigations,
   getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -341,15 +341,33 @@ export default function ConsultationDetailPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── Order Investigation state ──────────────────────────────────────────────
+  const updateInvestigationMutation = useUpdateInvestigation();
   const [showInvestigationModal, setShowInvestigationModal] = useState(false);
   const [invType, setInvType] = useState("");
   const [invBodyPart, setInvBodyPart] = useState("");
   const [invNotes, setInvNotes] = useState("");
+  // Inline notes editing per investigation card
+  const [editingInvId, setEditingInvId] = useState<string | null>(null);
+  const [editingInvNotes, setEditingInvNotes] = useState("");
 
   const { data: existingInvestigations } = useListInvestigations(
     { consultationId: id },
     { query: { enabled: !!id, queryKey: getListInvestigationsQueryKey({ consultationId: id }) } }
   );
+
+  const handleSaveInvNotes = (invId: string) => {
+    updateInvestigationMutation.mutate(
+      { id: invId, data: { notes: editingInvNotes } },
+      {
+        onSuccess: () => {
+          toast({ title: "Notes updated" });
+          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
+          setEditingInvId(null);
+        },
+        onError: () => toast({ title: "Failed to save notes", variant: "destructive" }),
+      }
+    );
+  };
 
   const handleOrderInvestigation = () => {
     if (!consultation || !invType.trim()) return;
@@ -1001,14 +1019,46 @@ export default function ConsultationDetailPage() {
                                   {inv.type}
                                   {inv.bodyPart ? <span className="text-muted-foreground font-normal"> — {inv.bodyPart}</span> : ""}
                                 </p>
-                                {inv.notes && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">{inv.notes}</p>
-                                )}
                               </div>
                               <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${INV_STATUS_COLORS[inv.status]}`}>
                                 {INV_STATUS_LABELS[inv.status]}
                               </span>
                             </div>
+
+                            {/* Consultant notes — inline edit */}
+                            {editingInvId === inv.id ? (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium text-muted-foreground">Clinical Notes</p>
+                                <Textarea
+                                  autoFocus
+                                  className="text-sm"
+                                  rows={3}
+                                  value={editingInvNotes}
+                                  onChange={e => setEditingInvNotes(e.target.value)}
+                                  placeholder="Add clinical context, suspicion, urgency..."
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingInvId(null)}>Cancel</Button>
+                                  <Button size="sm" className="h-7 text-xs" onClick={() => handleSaveInvNotes(inv.id)} disabled={updateInvestigationMutation.isPending}>
+                                    Save Notes
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-start gap-2 min-h-[1.25rem]">
+                                <p className="text-xs text-muted-foreground flex-1 whitespace-pre-wrap">
+                                  {inv.notes || <span className="italic">No clinical notes</span>}
+                                </p>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 px-2 text-xs shrink-0 text-muted-foreground hover:text-foreground"
+                                  onClick={() => { setEditingInvId(inv.id); setEditingInvNotes(inv.notes ?? ""); }}
+                                >
+                                  {inv.notes ? "Edit" : "+ Add"} Notes
+                                </Button>
+                              </div>
+                            )}
 
                             {/* Completed results */}
                             {inv.status === "completed" && (

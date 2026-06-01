@@ -1144,6 +1144,7 @@ export const InvestigationUpdateStatus = {
 
 export interface InvestigationUpdate {
   status?: InvestigationUpdateStatus;
+  notes?: string;
   resultNotes?: string;
   imageAttachment?: string;
 }
