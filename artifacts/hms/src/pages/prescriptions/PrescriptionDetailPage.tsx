@@ -403,6 +403,14 @@ export default function PrescriptionDetailPage() {
           )}
         </div>
 
+        {/* Known Allergies */}
+        {patient?.allergies && (
+          <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300">
+            <span className="text-xs font-bold uppercase tracking-wide shrink-0 mt-0.5">⚠ Allergies:</span>
+            <span className="text-xs">{patient.allergies}</span>
+          </div>
+        )}
+
         {/* Diagnosis */}
         {fmt.showDiagnosis && (prescription.diagnosis || translatedData?.diagnosis) && (
           isBilingual ? (
