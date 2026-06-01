@@ -372,6 +372,8 @@ export default function PrescriptionDetailPage() {
             <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
             {settings?.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
             {settings?.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
+            {settings?.email && <p className="text-sm text-muted-foreground">{settings.email}</p>}
+            {settings?.website && <p className="text-sm text-muted-foreground">{settings.website}</p>}
             {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
           </div>
           <div className="flex-1 text-right">
