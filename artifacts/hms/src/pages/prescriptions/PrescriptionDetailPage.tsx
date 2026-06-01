@@ -368,13 +368,13 @@ export default function PrescriptionDetailPage() {
 
         {/* Letterhead */}
         <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
-          <div className={textAlign}>
+          <div className={`flex-1 ${textAlign}`}>
             <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
             {settings?.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
             {settings?.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
             {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
           </div>
-          <div className="text-right shrink-0">
+          <div className="flex-1 text-right">
             <p className="text-base font-semibold text-foreground">Dr. {prescription.doctorName}</p>
             {prescription.doctorSpecialization && (
               <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
