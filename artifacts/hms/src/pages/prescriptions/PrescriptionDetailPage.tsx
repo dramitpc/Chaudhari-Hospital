@@ -2,8 +2,7 @@ import { useRoute, useLocation, useSearch } from "wouter";
 import { useEffect, useState } from "react";
 import {
   useGetPrescription, useGetClinicSettings, useGetPatient, useTranslatePrescription,
-  useListInvestigations,
-  getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey, getListInvestigationsQueryKey,
+  getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -127,12 +126,6 @@ export default function PrescriptionDetailPage() {
   const { data: patient } = useGetPatient(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
-  const consultationId = prescription?.consultationId ?? "";
-  const { data: investigationsData } = useListInvestigations(
-    { consultationId },
-    { query: { enabled: !!consultationId, queryKey: getListInvestigationsQueryKey({ consultationId }) } }
-  );
-
   const [fmt, setFmt] = useState<RxFormat>(loadFormat);
   const [showShare, setShowShare] = useState(false);
   const [selectedLang, setSelectedLang] = useState("en");
@@ -517,50 +510,6 @@ export default function PrescriptionDetailPage() {
             </ol>
           )}
         </div>
-
-        {/* Investigations ordered */}
-        {(() => {
-          const invs = investigationsData?.data ?? [];
-          if (invs.length === 0) return null;
-          const statusColor: Record<string, string> = {
-            pending:     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-            in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-            completed:   "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-            cancelled:   "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-          };
-          const statusLabel: Record<string, string> = {
-            pending: "Pending", in_progress: "In Progress", completed: "Completed", cancelled: "Cancelled",
-          };
-          return (
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Investigations Ordered</p>
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left font-semibold py-1 pr-3 text-xs">Test / Scan</th>
-                    <th className="text-left font-semibold py-1 pr-3 text-xs">Body Part</th>
-                    <th className="text-left font-semibold py-1 pr-3 text-xs">Clinical Notes</th>
-                    <th className="text-left font-semibold py-1 text-xs">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invs.map(inv => (
-                    <tr key={inv.id} className="border-b border-border/50 last:border-0">
-                      <td className="py-1.5 pr-3 align-top font-medium">{inv.type}</td>
-                      <td className="py-1.5 pr-3 align-top text-muted-foreground">{inv.bodyPart ?? "—"}</td>
-                      <td className="py-1.5 pr-3 align-top text-muted-foreground whitespace-pre-wrap">{inv.notes ?? "—"}</td>
-                      <td className="py-1.5 align-top">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColor[inv.status] ?? ""}`}>
-                          {statusLabel[inv.status] ?? inv.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
 
         {/* Advice */}
         {fmt.showAdvice && (prescription.advice || translatedData?.advice) && (
