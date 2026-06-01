@@ -2223,6 +2223,10 @@ components:
           type: string
         doctorRegistrationNumber:
           type: ["string", "null"]
+        doctorSpecialization:
+          type: ["string", "null"]
+        doctorConsultingHours:
+          type: ["string", "null"]
         consultationId:
           type: ["string", "null"]
         visitDate:

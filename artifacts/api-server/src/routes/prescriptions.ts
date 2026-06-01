@@ -25,7 +25,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 
 async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
   const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, p.patientId));
-  const [doctor] = await db.select({ fullName: usersTable.fullName, registrationNumber: usersTable.registrationNumber }).from(usersTable).where(eq(usersTable.id, p.doctorId));
+  const [doctor] = await db.select({ fullName: usersTable.fullName, registrationNumber: usersTable.registrationNumber, specialization: usersTable.specialization, consultingHours: usersTable.consultingHours }).from(usersTable).where(eq(usersTable.id, p.doctorId));
   const consultation = p.consultationId
     ? (await db.select({
         chiefComplaint:    consultationsTable.chiefComplaint,
@@ -43,6 +43,8 @@ async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
     doctorId: p.doctorId,
     doctorName: doctor?.fullName ?? "",
     doctorRegistrationNumber: doctor?.registrationNumber ?? null,
+    doctorSpecialization: doctor?.specialization ?? null,
+    doctorConsultingHours: doctor?.consultingHours ?? null,
     consultationId: p.consultationId ?? null,
     visitDate: p.visitDate,
     diagnosis: p.diagnosis ?? null,

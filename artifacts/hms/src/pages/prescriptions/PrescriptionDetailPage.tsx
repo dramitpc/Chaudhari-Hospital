@@ -367,11 +367,25 @@ export default function PrescriptionDetailPage() {
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
 
         {/* Letterhead */}
-        <div className={`border-b-2 border-primary pb-4 mb-6 ${textAlign}`}>
-          <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
-          {settings?.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
-          {settings?.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
-          {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
+        <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
+          <div className={textAlign}>
+            <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
+            {settings?.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
+            {settings?.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
+            {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-base font-semibold text-foreground">Dr. {prescription.doctorName}</p>
+            {prescription.doctorSpecialization && (
+              <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
+            )}
+            {prescription.doctorRegistrationNumber && (
+              <p className="text-xs text-muted-foreground">Reg: {prescription.doctorRegistrationNumber}</p>
+            )}
+            {prescription.doctorConsultingHours && (
+              <p className="text-xs text-muted-foreground mt-0.5">🕐 {prescription.doctorConsultingHours}</p>
+            )}
+          </div>
         </div>
 
         <div className={`mb-4 ${textAlign}`}>

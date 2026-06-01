@@ -322,6 +322,10 @@ export interface Prescription {
   /** @nullable */
   doctorRegistrationNumber?: string | null;
   /** @nullable */
+  doctorSpecialization?: string | null;
+  /** @nullable */
+  doctorConsultingHours?: string | null;
+  /** @nullable */
   consultationId?: string | null;
   visitDate: string;
   /** @nullable */
