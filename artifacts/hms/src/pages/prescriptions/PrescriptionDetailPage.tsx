@@ -1,5 +1,5 @@
 import { useRoute, useLocation, useSearch } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useGetPrescription, useGetClinicSettings, useGetPatient, useGetConsultation, useTranslatePrescription,
   getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey, getGetConsultationQueryKey,
@@ -148,8 +148,31 @@ export default function PrescriptionDetailPage() {
     }
   }, [prescription?.patientLanguage, patient?.preferredLanguage]);
 
+  const printRef = useRef<HTMLDivElement>(null);
+
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
+
+  // Fit-to-A4: shrink via zoom if content overflows one page
+  useEffect(() => {
+    const A4_PX = 1047; // 297mm − 2×10mm margins at 96 dpi
+    const before = () => {
+      const el = printRef.current;
+      if (!el) return;
+      el.style.zoom = "";
+      const h = el.scrollHeight;
+      if (h > A4_PX) el.style.zoom = String(A4_PX / h);
+    };
+    const after = () => {
+      if (printRef.current) printRef.current.style.zoom = "";
+    };
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoading && prescription && new URLSearchParams(search).get("print") === "1") {
@@ -361,7 +384,7 @@ export default function PrescriptionDetailPage() {
       )}
 
       {/* Prescription body */}
-      <div className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
+      <div ref={printRef} className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-4 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
         {/* Indic font preload */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
@@ -581,9 +604,18 @@ export default function PrescriptionDetailPage() {
       </div>
 
       <style>{`
+        @page {
+          size: A4;
+          margin: 1cm;
+        }
         @media print {
           .print\\:hidden { display: none !important; }
           nav, aside, header { display: none !important; }
+          body { margin: 0 !important; }
+          /* Tighten spacing so short content stays compact */
+          .rx-section { margin-bottom: 0.5rem !important; }
+          .rx-section-title { margin-bottom: 0.25rem !important; font-size: 0.7rem !important; }
+          .rx-item { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
         }
       `}</style>
 
