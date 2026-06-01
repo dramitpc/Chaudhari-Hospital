@@ -1,8 +1,8 @@
 import { useRoute, useLocation, useSearch } from "wouter";
 import { useEffect, useState } from "react";
 import {
-  useGetPrescription, useGetClinicSettings, useGetPatient, useTranslatePrescription,
-  getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey,
+  useGetPrescription, useGetClinicSettings, useGetPatient, useGetConsultation, useTranslatePrescription,
+  getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey, getGetConsultationQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -125,6 +125,10 @@ export default function PrescriptionDetailPage() {
   const patientId = prescription?.patientId ?? "";
   const { data: patient } = useGetPatient(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
+  });
+  const consultationId = prescription?.consultationId ?? "";
+  const { data: consultation } = useGetConsultation(consultationId, {
+    query: { enabled: !!consultationId, queryKey: getGetConsultationQueryKey(consultationId) }
   });
   const [fmt, setFmt] = useState<RxFormat>(loadFormat);
   const [showShare, setShowShare] = useState(false);
@@ -374,11 +378,29 @@ export default function PrescriptionDetailPage() {
           <p className="text-sm text-muted-foreground">Date: {prescription.visitDate}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6 p-3 bg-muted/30 rounded">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-6 p-3 bg-muted/30 rounded">
           <div>
             <p className="text-xs text-muted-foreground">Patient Name</p>
             <p className="text-sm font-medium">{prescription.patientName}</p>
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Patient ID</p>
+            <p className="text-sm font-medium">{patient?.patientId ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Age</p>
+            <p className="text-sm font-medium">{patient?.age ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Sex</p>
+            <p className="text-sm font-medium capitalize">{patient?.gender ?? "—"}</p>
+          </div>
+          {consultation?.visitType && (
+            <div>
+              <p className="text-xs text-muted-foreground">Visit Type</p>
+              <p className="text-sm font-medium capitalize">{consultation.visitType.replace(/_/g, " ")}</p>
+            </div>
+          )}
         </div>
 
         {/* Diagnosis */}
