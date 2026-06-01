@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
+import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
 
 type DrugItem = {
   drugId?: string | null;
@@ -367,6 +368,7 @@ export default function ConsultationDetailPage() {
       },
       {
         onSuccess: () => {
+          trackInvestigationRecent({ type: invType, bodyPart: invBodyPart, notes: invNotes });
           toast({ title: "Investigation ordered" });
           queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
           setShowInvestigationModal(false);
@@ -1419,6 +1421,16 @@ export default function ConsultationDetailPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-1">
+            <InvestigationFavPanel
+              type={invType}
+              bodyPart={invBodyPart}
+              notes={invNotes}
+              onApply={({ type, bodyPart, notes }) => {
+                setInvType(type);
+                setInvBodyPart(bodyPart);
+                setInvNotes(notes);
+              }}
+            />
             <div className="space-y-1.5">
               <Label>Investigation Type <span className="text-destructive">*</span></Label>
               <Select value={invType} onValueChange={setInvType}>
