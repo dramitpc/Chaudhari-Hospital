@@ -595,7 +595,7 @@ export default function ConsultationDetailPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="space-y-4">
+        <div className="space-y-4 lg:order-2">
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <h3 className="font-semibold text-sm">Diagnosis &amp; Advice</h3>
             <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
@@ -695,7 +695,7 @@ export default function ConsultationDetailPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 lg:order-1">
           <Tabs defaultValue="soap">
             <TabsList className="w-full">
               <TabsTrigger value="soap" className="flex-1">SOAP Notes</TabsTrigger>
