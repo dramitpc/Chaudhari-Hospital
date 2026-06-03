@@ -111,6 +111,7 @@ export default function ConsultationDetailPage() {
 
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [showRxPreview, setShowRxPreview] = useState(false);
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
@@ -1525,171 +1526,296 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPrescriptionModal} onOpenChange={setShowPrescriptionModal}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) setShowRxPreview(false); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
-              <DialogTitle>Add Prescription</DialogTitle>
-              <Button
-                type="button" size="sm"
-                variant={showRxTemplatePanel ? "secondary" : "outline"}
-                className="h-7 gap-1.5 text-xs"
-                onClick={() => { setShowRxTemplatePanel(v => !v); setRxFavName(""); }}
-              >
-                <BookMarked className="h-3 w-3" />
-                {(() => { const f = getRxFavs().length; const r = getRxRecent().length; return f > 0 || r > 0 ? `${f} fav · ${r} recent` : "Templates"; })()}
-              </Button>
+              <DialogTitle>{showRxPreview ? "Preview Prescription" : "Add Prescription"}</DialogTitle>
+              {!showRxPreview && (
+                <Button
+                  type="button" size="sm"
+                  variant={showRxTemplatePanel ? "secondary" : "outline"}
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => { setShowRxTemplatePanel(v => !v); setRxFavName(""); }}
+                >
+                  <BookMarked className="h-3 w-3" />
+                  {(() => { const f = getRxFavs().length; const r = getRxRecent().length; return f > 0 || r > 0 ? `${f} fav · ${r} recent` : "Templates"; })()}
+                </Button>
+              )}
             </div>
           </DialogHeader>
 
-          {/* Template panel */}
-          {showRxTemplatePanel && (() => {
-            const favs   = getRxFavs();
-            const recent = getRxRecent();
-            return (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-xs">
-                {favs.length === 0 && recent.length === 0 && (
-                  <p className="text-muted-foreground text-center py-1">
-                    No templates yet — add drugs and save as a template to reuse them.
-                  </p>
-                )}
+          {/* ── PREVIEW MODE ── */}
+          {showRxPreview ? (
+            <div className="space-y-4">
+              {/* Letterhead */}
+              <div className="border-b-2 border-primary pb-3 flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-primary">{clinicSettings?.clinicName ?? "Hospital"}</h2>
+                  {clinicSettings?.address && <p className="text-xs text-muted-foreground">{clinicSettings.address}</p>}
+                  {clinicSettings?.phone && <p className="text-xs text-muted-foreground">Tel: {clinicSettings.phone}</p>}
+                  {clinicSettings?.email && <p className="text-xs text-muted-foreground">{clinicSettings.email}</p>}
+                  {clinicSettings?.website && <p className="text-xs text-muted-foreground">{clinicSettings.website}</p>}
+                  {clinicSettings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {clinicSettings.registrationNumber}</p>}
+                </div>
+                <div className="flex-1 text-right">
+                  <p className="text-sm font-semibold">Dr. {consultation?.doctorName ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                </div>
+              </div>
 
-                {favs.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
-                      <Star className="h-3 w-3" /> Saved Templates
-                    </p>
-                    {favs.map(t => (
-                      <div key={t.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
-                        <span className="truncate flex-1 font-medium">{rxTemplateLabel(t)}</span>
-                        <span className="text-muted-foreground shrink-0">{t.items.filter(i => i.drugName).length} drug(s)</span>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => persistRxFavs(getRxFavs().filter(f => f.id !== t.id))}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+              {/* Patient block */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 p-2.5 bg-muted/30 rounded text-sm divide-x divide-border">
+                <div className="pr-4">
+                  <p className="text-xs text-muted-foreground">Patient</p>
+                  <p className="font-medium">{consultation?.patientName ?? "—"}</p>
+                </div>
+                {patient?.age && (
+                  <div className="pl-4 pr-4">
+                    <p className="text-xs text-muted-foreground">Age</p>
+                    <p className="font-medium">{patient.age}</p>
                   </div>
                 )}
-
-                {recent.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
-                      <Clock className="h-3 w-3" /> Recently Used
-                    </p>
-                    {recent.map(t => (
-                      <div key={t.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
-                        <div className="flex-1 min-w-0">
-                          <span className="truncate block">{rxTemplateLabel(t)}</span>
-                          <span className="text-muted-foreground text-[10px]">
-                            {new Date(t.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {t.items.filter(i => i.drugName).length} drug(s)
-                          </span>
-                        </div>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => persistRxRecent(getRxRecent().filter(r => r.id !== t.id))}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+                {(patient as unknown as Record<string, string> | undefined)?.gender && (
+                  <div className="pl-4 pr-4">
+                    <p className="text-xs text-muted-foreground">Sex</p>
+                    <p className="font-medium capitalize">{(patient as unknown as Record<string, string>).gender}</p>
                   </div>
                 )}
+              </div>
 
-                <div className="flex gap-1.5 pt-1 border-t border-border">
-                  <Input
-                    className="h-7 text-xs flex-1"
-                    value={rxFavName}
-                    onChange={e => setRxFavName(e.target.value)}
-                    placeholder="Name this template…"
-                    onKeyDown={e => e.key === "Enter" && saveRxFav()}
-                  />
-                  <Button type="button" size="sm" className="h-7 px-3 text-xs" onClick={saveRxFav}>
-                    <Star className="h-3 w-3 mr-1" /> Save
+              {/* Allergies */}
+              {(patient as unknown as Record<string, string> | undefined)?.allergies && (
+                <div className="flex items-start gap-2 px-2.5 py-1.5 rounded bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-xs">
+                  <span className="font-bold uppercase tracking-wide shrink-0">⚠ Allergies:</span>
+                  <span>{(patient as unknown as Record<string, string>).allergies}</span>
+                </div>
+              )}
+
+              {/* Diagnosis */}
+              {consultation?.diagnosis && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Diagnosis</p>
+                  <p className="text-sm">{consultation.diagnosis}</p>
+                </div>
+              )}
+
+              {/* Rx drugs */}
+              {drugItems.filter(i => i.drugName).length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Medications</p>
+                  <table className="w-full text-xs border border-border rounded overflow-hidden">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left py-1.5 px-2">Drug</th>
+                        <th className="text-left py-1.5 px-2">Dosage</th>
+                        <th className="text-left py-1.5 px-2">Frequency</th>
+                        <th className="text-left py-1.5 px-2">Duration</th>
+                        <th className="text-left py-1.5 px-2">Instructions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {drugItems.filter(i => i.drugName).map((item, idx) => (
+                        <tr key={idx} className="border-t border-border">
+                          <td className="py-1.5 px-2 font-medium">{item.drugName}</td>
+                          <td className="py-1.5 px-2">{item.dosage || "—"}</td>
+                          <td className="py-1.5 px-2">{item.frequency || "—"}</td>
+                          <td className="py-1.5 px-2">{item.duration || "—"}</td>
+                          <td className="py-1.5 px-2 text-muted-foreground">{item.instructions || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No medications added.</p>
+              )}
+
+              {/* Advice */}
+              {consultation?.advice && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Advice</p>
+                  <p className="text-sm">{consultation.advice}</p>
+                </div>
+              )}
+
+              {/* Follow-up */}
+              {consultation?.followUpDate && (
+                <p className="text-xs text-muted-foreground">Follow-up: {consultation.followUpDate}</p>
+              )}
+
+              {/* Footer actions */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Button variant="outline" onClick={() => setShowRxPreview(false)}>← Back to Edit</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleAddPrescription(true)}
+                  disabled={createPrescriptionMutation.isPending}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Save &amp; Print
+                </Button>
+                <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
+                  {createPrescriptionMutation.isPending ? "Saving…" : "Save Prescription"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Template panel */}
+              {showRxTemplatePanel && (() => {
+                const favs   = getRxFavs();
+                const recent = getRxRecent();
+                return (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-xs">
+                    {favs.length === 0 && recent.length === 0 && (
+                      <p className="text-muted-foreground text-center py-1">
+                        No templates yet — add drugs and save as a template to reuse them.
+                      </p>
+                    )}
+
+                    {favs.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                          <Star className="h-3 w-3" /> Saved Templates
+                        </p>
+                        {favs.map(t => (
+                          <div key={t.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                            <span className="truncate flex-1 font-medium">{rxTemplateLabel(t)}</span>
+                            <span className="text-muted-foreground shrink-0">{t.items.filter(i => i.drugName).length} drug(s)</span>
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => persistRxFavs(getRxFavs().filter(f => f.id !== t.id))}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {recent.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
+                          <Clock className="h-3 w-3" /> Recently Used
+                        </p>
+                        {recent.map(t => (
+                          <div key={t.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                            <div className="flex-1 min-w-0">
+                              <span className="truncate block">{rxTemplateLabel(t)}</span>
+                              <span className="text-muted-foreground text-[10px]">
+                                {new Date(t.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {t.items.filter(i => i.drugName).length} drug(s)
+                              </span>
+                            </div>
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => persistRxRecent(getRxRecent().filter(r => r.id !== t.id))}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-1.5 pt-1 border-t border-border">
+                      <Input
+                        className="h-7 text-xs flex-1"
+                        value={rxFavName}
+                        onChange={e => setRxFavName(e.target.value)}
+                        placeholder="Name this template…"
+                        onKeyDown={e => e.key === "Enter" && saveRxFav()}
+                      />
+                      <Button type="button" size="sm" className="h-7 px-3 text-xs" onClick={saveRxFav}>
+                        <Star className="h-3 w-3 mr-1" /> Save
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="space-y-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-muted-foreground">
+                        <th className="text-left py-1 pr-2 w-44">Drug Name</th>
+                        <th className="text-left py-1 pr-2 w-24">Dosage</th>
+                        <th className="text-left py-1 pr-2 w-28">Frequency</th>
+                        <th className="text-left py-1 pr-2 w-20">Duration</th>
+                        <th className="text-left py-1 pr-2">Instructions</th>
+                        <th className="w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {drugItems.map((item, i) => (
+                        <tr key={i}>
+                          <td className="pr-2 py-1">
+                            <Select onValueChange={v => {
+                              const drug = drugs.find(d => d.id === v);
+                              if (drug) {
+                                updateDrugRow(i, "drugId", drug.id);
+                                updateDrugRow(i, "drugName", drug.name);
+                                updateDrugRow(i, "dosage", drug.defaultDosage ?? "");
+                                updateDrugRow(i, "frequency", drug.defaultFrequency ?? "");
+                                updateDrugRow(i, "duration", drug.defaultDuration ?? "");
+                                updateDrugRow(i, "instructions", drug.defaultInstructions ?? "");
+                              }
+                            }}>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Select drug" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {drugs.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              className="h-7 text-xs mt-1"
+                              value={item.drugName}
+                              onChange={e => updateDrugRow(i, "drugName", e.target.value)}
+                              placeholder="Or type manually"
+                            />
+                          </td>
+                          <td className="pr-2 py-1">
+                            <Input className="h-8 text-xs" value={item.dosage} onChange={e => updateDrugRow(i, "dosage", e.target.value)} placeholder="500mg" />
+                          </td>
+                          <td className="pr-2 py-1">
+                            <Input className="h-8 text-xs" value={item.frequency} onChange={e => updateDrugRow(i, "frequency", e.target.value)} placeholder="TDS" />
+                          </td>
+                          <td className="pr-2 py-1">
+                            <Input className="h-8 text-xs" value={item.duration} onChange={e => updateDrugRow(i, "duration", e.target.value)} placeholder="5 days" />
+                          </td>
+                          <td className="pr-2 py-1">
+                            <Input className="h-8 text-xs" value={item.instructions ?? ""} onChange={e => updateDrugRow(i, "instructions", e.target.value)} placeholder="After food" />
+                          </td>
+                          <td className="py-1">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeDrugRow(i)}>×</Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Button variant="outline" size="sm" onClick={addDrugRow}>
+                  <Plus className="h-3 w-3 mr-1" /> Add Drug
+                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowPrescriptionModal(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setShowRxPreview(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleAddPrescription(true)}
+                    disabled={createPrescriptionMutation.isPending}
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Save &amp; Print
+                  </Button>
+                  <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
+                    Save Prescription
                   </Button>
                 </div>
               </div>
-            );
-          })()}
-
-          <div className="space-y-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-muted-foreground">
-                    <th className="text-left py-1 pr-2 w-44">Drug Name</th>
-                    <th className="text-left py-1 pr-2 w-24">Dosage</th>
-                    <th className="text-left py-1 pr-2 w-28">Frequency</th>
-                    <th className="text-left py-1 pr-2 w-20">Duration</th>
-                    <th className="text-left py-1 pr-2">Instructions</th>
-                    <th className="w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {drugItems.map((item, i) => (
-                    <tr key={i}>
-                      <td className="pr-2 py-1">
-                        <Select onValueChange={v => {
-                          const drug = drugs.find(d => d.id === v);
-                          if (drug) {
-                            updateDrugRow(i, "drugId", drug.id);
-                            updateDrugRow(i, "drugName", drug.name);
-                            updateDrugRow(i, "dosage", drug.defaultDosage ?? "");
-                            updateDrugRow(i, "frequency", drug.defaultFrequency ?? "");
-                            updateDrugRow(i, "duration", drug.defaultDuration ?? "");
-                            updateDrugRow(i, "instructions", drug.defaultInstructions ?? "");
-                          }
-                        }}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Select drug" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {drugs.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          className="h-7 text-xs mt-1"
-                          value={item.drugName}
-                          onChange={e => updateDrugRow(i, "drugName", e.target.value)}
-                          placeholder="Or type manually"
-                        />
-                      </td>
-                      <td className="pr-2 py-1">
-                        <Input className="h-8 text-xs" value={item.dosage} onChange={e => updateDrugRow(i, "dosage", e.target.value)} placeholder="500mg" />
-                      </td>
-                      <td className="pr-2 py-1">
-                        <Input className="h-8 text-xs" value={item.frequency} onChange={e => updateDrugRow(i, "frequency", e.target.value)} placeholder="TDS" />
-                      </td>
-                      <td className="pr-2 py-1">
-                        <Input className="h-8 text-xs" value={item.duration} onChange={e => updateDrugRow(i, "duration", e.target.value)} placeholder="5 days" />
-                      </td>
-                      <td className="pr-2 py-1">
-                        <Input className="h-8 text-xs" value={item.instructions ?? ""} onChange={e => updateDrugRow(i, "instructions", e.target.value)} placeholder="After food" />
-                      </td>
-                      <td className="py-1">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeDrugRow(i)}>×</Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Button variant="outline" size="sm" onClick={addDrugRow}>
-              <Plus className="h-3 w-3 mr-1" /> Add Drug
-            </Button>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowPrescriptionModal(false)}>Cancel</Button>
-              <Button
-                variant="outline"
-                onClick={() => handleAddPrescription(true)}
-                disabled={createPrescriptionMutation.isPending}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Save &amp; Print
-              </Button>
-              <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
-                Save Prescription
-              </Button>
-            </div>
-          </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
