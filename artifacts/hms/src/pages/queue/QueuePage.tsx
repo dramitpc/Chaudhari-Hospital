@@ -93,9 +93,12 @@ export default function QueuePage() {
     }
   }, [doctors, user, selectedDoctorId]);
 
+  // Use the browser's local date so UTC offset (e.g. IST +5:30) doesn't shift the day
+  const localToday = new Date().toLocaleDateString("en-CA"); // → "YYYY-MM-DD" in local tz
+
   const { data: queueData, isLoading, refetch } = useGetQueue(
-    { doctorId: selectedDoctorId || undefined },
-    { query: { enabled: !!selectedDoctorId, queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined }) } }
+    { doctorId: selectedDoctorId || undefined, date: localToday },
+    { query: { enabled: !!selectedDoctorId, queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: localToday }) } }
   );
 
   const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });
@@ -107,10 +110,10 @@ export default function QueuePage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined }) });
+      queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: localToday }) });
     }, 30000);
     return () => clearInterval(interval);
-  }, [selectedDoctorId, queryClient]);
+  }, [selectedDoctorId, localToday, queryClient]);
 
   const handleCallNext = () => {
     if (!selectedDoctorId) return;
@@ -181,7 +184,10 @@ export default function QueuePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">OPD Queue</h1>
-          <p className="text-sm text-muted-foreground">Live queue management</p>
+          <p className="text-sm text-muted-foreground">
+            {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            {" · "}Today only · Auto-refreshes every 30 seconds
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="btn-refresh-queue">
