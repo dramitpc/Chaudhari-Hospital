@@ -78,7 +78,7 @@ router.post("/billing/invoices", authenticate, async (req, res): Promise<void> =
     return;
   }
   const items = (parsed.data.items as Array<{ quantity: number; unitPrice: number; discount?: number; tax?: number; total: number }>) ?? [];
-  const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const subtotal = items.reduce((s, i) => s + i.total, 0);
   const discountAmt = parsed.data.discount ?? 0;
   const taxAmt = items.reduce((s, i) => s + (i.tax ?? 0), 0);
   const total = subtotal - discountAmt + taxAmt;
@@ -132,7 +132,7 @@ router.patch("/billing/invoices/:id", authenticate, async (req, res): Promise<vo
   const updates: Partial<typeof invoicesTable.$inferInsert> = {};
   if (parsed.data.items) {
     const items = parsed.data.items as Array<{ quantity: number; unitPrice: number; discount?: number; tax?: number; total: number }>;
-    const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const subtotal = items.reduce((s, i) => s + i.total, 0);
     const taxAmt = items.reduce((s, i) => s + (i.tax ?? 0), 0);
     const discountAmt = parsed.data.discount ?? 0;
     const total = subtotal - discountAmt + taxAmt;
