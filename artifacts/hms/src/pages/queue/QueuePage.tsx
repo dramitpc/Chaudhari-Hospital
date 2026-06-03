@@ -270,63 +270,73 @@ export default function QueuePage() {
 
       {isLoading ? (
         <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
-      ) : tokens.filter(t => t.status !== "completed" && t.status !== "cancelled" && t.status !== "skipped").length === 0 ? (
+      ) : allTokens.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-12 text-center text-muted-foreground">
-          {visitTypeFilter ? `No ${visitTypeFilter === "new" ? "new visit" : "follow-up"} patients in queue` : "No tokens generated today"}
+          {visitTypeFilter ? `No ${visitTypeFilter === "new" ? "new visit" : "follow-up"} patients in queue today` : "No tokens generated today"}
         </div>
       ) : (
         <div className="space-y-3">
-          {tokens.filter(t => t.status !== "completed" && t.status !== "cancelled" && t.status !== "skipped").map(token => (
-            <div key={token.id} className={`rounded-lg border-2 p-4 flex items-center gap-4 ${statusColors[token.status] ?? ""}`} data-testid={`token-${token.tokenNumber}`}>
-              <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-2 border-current font-bold text-xl sm:text-2xl">
-                {token.tokenNumber}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-semibold text-foreground">{token.patientName}</span>
-                  <VisitTypeBadge visitType={token.visitType} />
-                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
-                    {token.status.replace("_", " ")}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {token.patientPhone ?? "No phone"}
-                </p>
-                {token.status === "waiting" && (
-                  <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 flex-shrink-0">
-                {token.status === "waiting" && (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
-                  </>
-                )}
-                {token.status === "called" && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
-                    disabled={createConsultationMutation.isPending || updateStatusMutation.isPending}
-                  >
-                    Start Consultation
-                  </Button>
-                )}
-                {token.status === "in_consultation" && (
-                  <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "completed")}>Complete</Button>
-                )}
-                <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
-                  <Receipt className="h-3.5 w-3.5 mr-1" />New Invoice
-                </Button>
-              </div>
+          {/* Active tokens (waiting / called / in_consultation) */}
+          {tokens.filter(t => t.status !== "completed" && t.status !== "cancelled" && t.status !== "skipped").length === 0 ? (
+            <div className="rounded-lg border border-border bg-card p-6 text-center text-muted-foreground text-sm">
+              All patients seen for today — no one currently waiting.
             </div>
-          ))}
+          ) : (
+            tokens.filter(t => t.status !== "completed" && t.status !== "cancelled" && t.status !== "skipped").map(token => (
+              <div key={token.id} className={`rounded-lg border-2 p-4 flex items-center gap-4 ${statusColors[token.status] ?? ""}`} data-testid={`token-${token.tokenNumber}`}>
+                <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-2 border-current font-bold text-xl sm:text-2xl">
+                  {token.tokenNumber}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-semibold text-foreground">{token.patientName}</span>
+                    <VisitTypeBadge visitType={token.visitType} />
+                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
+                      {token.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {token.patientPhone ?? "No phone"}
+                  </p>
+                  {token.status === "waiting" && (
+                    <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 flex-shrink-0">
+                  {token.status === "waiting" && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
+                    </>
+                  )}
+                  {token.status === "called" && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
+                      disabled={createConsultationMutation.isPending || updateStatusMutation.isPending}
+                    >
+                      Start Consultation
+                    </Button>
+                  )}
+                  {token.status === "in_consultation" && (
+                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "completed")}>Complete</Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
+                    <Receipt className="h-3.5 w-3.5 mr-1" />New Invoice
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
 
-          {tokens.filter(t => t.status === "completed" || t.status === "skipped").length > 0 && (
+          {/* Completed / Skipped — today only (scoped by API to localToday) */}
+          {allTokens.filter(t => t.status === "completed" || t.status === "skipped" || t.status === "cancelled").length > 0 && (
             <div className="mt-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Completed / Skipped</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">
+                Completed / Skipped today ({allTokens.filter(t => t.status === "completed" || t.status === "skipped" || t.status === "cancelled").length})
+              </p>
               <div className="space-y-2">
-                {tokens.filter(t => t.status === "completed" || t.status === "skipped").map(token => (
+                {allTokens.filter(t => t.status === "completed" || t.status === "skipped" || t.status === "cancelled").map(token => (
                   <div key={token.id} className={`rounded-lg border-2 p-3 flex items-center gap-3 ${statusColors[token.status] ?? ""}`}>
                     <div className="w-10 h-10 rounded-full flex items-center justify-center border font-semibold text-sm flex-shrink-0">
                       {token.tokenNumber}
