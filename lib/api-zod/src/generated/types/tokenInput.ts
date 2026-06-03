@@ -13,4 +13,6 @@ export interface TokenInput {
   visitType: TokenInputVisitType;
   appointmentId?: string;
   priority?: number;
+  /** Local calendar date YYYY-MM-DD; if omitted the server uses its UTC date */
+  date?: string;
 }

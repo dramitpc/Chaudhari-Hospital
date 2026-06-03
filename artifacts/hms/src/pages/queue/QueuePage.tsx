@@ -154,7 +154,7 @@ export default function QueuePage() {
   const handleGenerateToken = () => {
     if (!tokenPatientId || !selectedDoctorId) return;
     generateTokenMutation.mutate(
-      { data: { patientId: tokenPatientId, doctorId: selectedDoctorId, visitType: tokenVisitType } },
+      { data: { patientId: tokenPatientId, doctorId: selectedDoctorId, visitType: tokenVisitType, date: localToday } },
       {
         onSuccess: (token) => {
           toast({

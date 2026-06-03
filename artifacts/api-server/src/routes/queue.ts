@@ -90,7 +90,7 @@ router.post("/queue/tokens", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const today = new Date().toISOString().split("T")[0];
+  const today = parsed.data.date ?? new Date().toISOString().split("T")[0];
   const existing = await db.select().from(queueTokensTable)
     .where(and(eq(queueTokensTable.queueDate, today), eq(queueTokensTable.doctorId, parsed.data.doctorId)));
   const nextToken = existing.length + 1;

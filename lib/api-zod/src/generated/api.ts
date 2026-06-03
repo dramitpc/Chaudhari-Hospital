@@ -712,7 +712,8 @@ export const GenerateTokenBody = zod.object({
   "doctorId": zod.string(),
   "visitType": zod.enum(['new', 'followup']),
   "appointmentId": zod.string().optional(),
-  "priority": zod.number().optional()
+  "priority": zod.number().optional(),
+  "date": zod.string().optional().describe('Local calendar date YYYY-MM-DD; if omitted the server uses its UTC date')
 })
 
 

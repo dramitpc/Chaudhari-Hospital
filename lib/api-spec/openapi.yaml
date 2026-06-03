@@ -2019,6 +2019,9 @@ components:
           type: string
         priority:
           type: integer
+        date:
+          type: string
+          description: "Local calendar date YYYY-MM-DD; if omitted the server uses its UTC date"
 
     TokenStatusUpdate:
       type: object
