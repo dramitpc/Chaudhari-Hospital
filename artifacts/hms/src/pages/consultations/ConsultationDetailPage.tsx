@@ -34,6 +34,16 @@ type DrugItem = {
   quantity?: number | null;
 };
 
+const LS_DRUG_FREQ = "clinicos_drug_freq";
+function getDrugFreq(): Record<string, number> {
+  try { return JSON.parse(localStorage.getItem(LS_DRUG_FREQ) ?? "{}"); } catch { return {}; }
+}
+function trackDrugFreq(drugIds: string[]) {
+  const freq = getDrugFreq();
+  for (const id of drugIds) freq[id] = (freq[id] ?? 0) + 1;
+  try { localStorage.setItem(LS_DRUG_FREQ, JSON.stringify(freq)); } catch { /* ignore */ }
+}
+
 // ── Attachment helpers (shared with InvestigationsPage logic) ─────────────────
 type Attachment = { name: string; data: string };
 
@@ -112,6 +122,8 @@ export default function ConsultationDetailPage() {
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [showRxPreview, setShowRxPreview] = useState(false);
+  const [selectedDrugIds, setSelectedDrugIds] = useState<Set<string>>(new Set());
+  const [drugPickerSearch, setDrugPickerSearch] = useState("");
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
@@ -493,6 +505,26 @@ export default function ConsultationDetailPage() {
         }
       },
     });
+  };
+
+  const handleAddSelectedDrugs = () => {
+    const toAdd = drugs.filter(d => selectedDrugIds.has(d.id));
+    if (!toAdd.length) return;
+    trackDrugFreq(toAdd.map(d => d.id));
+    const newRows: DrugItem[] = toAdd.map(d => ({
+      drugId: d.id,
+      drugName: d.name,
+      genericName: d.genericName ?? null,
+      dosage: d.defaultDosage ?? "",
+      frequency: d.defaultFrequency ?? "",
+      duration: d.defaultDuration ?? "",
+      instructions: d.defaultInstructions ?? "",
+    }));
+    setDrugItems(prev => {
+      const nonEmpty = prev.filter(i => i.drugName.trim());
+      return [...nonEmpty, ...newRows];
+    });
+    setSelectedDrugIds(new Set());
   };
 
   const addDrugRow = () => setDrugItems(prev => [...prev, { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
@@ -1731,6 +1763,85 @@ export default function ConsultationDetailPage() {
               })()}
 
               <div className="space-y-4">
+                {/* ── Drug Picker ── */}
+                {(() => {
+                  const freq = getDrugFreq();
+                  const q = drugPickerSearch.toLowerCase();
+                  const filtered = drugs.filter(d =>
+                    !q ||
+                    d.name.toLowerCase().includes(q) ||
+                    (d.genericName ?? "").toLowerCase().includes(q) ||
+                    (d.category ?? "").toLowerCase().includes(q)
+                  );
+                  const sorted = [...filtered].sort((a, b) => (freq[b.id] ?? 0) - (freq[a.id] ?? 0));
+                  const hasFrequent = sorted.some(d => (freq[d.id] ?? 0) > 0);
+                  const frequentDrugs = sorted.filter(d => (freq[d.id] ?? 0) > 0);
+                  const otherDrugs = sorted.filter(d => (freq[d.id] ?? 0) === 0);
+
+                  const toggleDrug = (id: string) => {
+                    setSelectedDrugIds(prev => {
+                      const next = new Set(prev);
+                      next.has(id) ? next.delete(id) : next.add(id);
+                      return next;
+                    });
+                  };
+
+                  const renderRow = (d: typeof drugs[0]) => (
+                    <div
+                      key={d.id}
+                      onClick={() => toggleDrug(d.id)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer select-none text-xs transition-colors ${
+                        selectedDrugIds.has(d.id)
+                          ? "bg-primary/10 border border-primary/30"
+                          : "hover:bg-muted/60 border border-transparent"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        readOnly
+                        checked={selectedDrugIds.has(d.id)}
+                        className="h-3 w-3 accent-primary pointer-events-none"
+                      />
+                      <span className="font-medium flex-1 truncate">{d.name}</span>
+                      {d.genericName && <span className="text-muted-foreground truncate max-w-[90px]">{d.genericName}</span>}
+                      {d.defaultDosage && <span className="text-muted-foreground shrink-0">{d.defaultDosage}</span>}
+                      {(freq[d.id] ?? 0) > 0 && <span className="shrink-0 text-amber-500" title={`Used ${freq[d.id]} time(s)`}>⭐</span>}
+                    </div>
+                  );
+
+                  return (
+                    <div className="rounded-lg border border-border bg-muted/20 p-2 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          className="h-7 text-xs flex-1"
+                          placeholder="Search drugs…"
+                          value={drugPickerSearch}
+                          onChange={e => setDrugPickerSearch(e.target.value)}
+                        />
+                        {selectedDrugIds.size > 0 && (
+                          <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleAddSelectedDrugs}>
+                            <Plus className="h-3 w-3 mr-1" /> Add {selectedDrugIds.size} selected
+                          </Button>
+                        )}
+                      </div>
+                      <div className="max-h-44 overflow-y-auto space-y-0.5 pr-0.5">
+                        {filtered.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-3">No drugs match your search</p>
+                        )}
+                        {!q && hasFrequent && (
+                          <>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1">⭐ Frequently Used</p>
+                            {frequentDrugs.map(renderRow)}
+                            {otherDrugs.length > 0 && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-2">All Drugs</p>}
+                          </>
+                        )}
+                        {(!q && hasFrequent ? otherDrugs : sorted).map(renderRow)}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── Editable drug rows ── */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -1747,29 +1858,11 @@ export default function ConsultationDetailPage() {
                       {drugItems.map((item, i) => (
                         <tr key={i}>
                           <td className="pr-2 py-1">
-                            <Select onValueChange={v => {
-                              const drug = drugs.find(d => d.id === v);
-                              if (drug) {
-                                updateDrugRow(i, "drugId", drug.id);
-                                updateDrugRow(i, "drugName", drug.name);
-                                updateDrugRow(i, "dosage", drug.defaultDosage ?? "");
-                                updateDrugRow(i, "frequency", drug.defaultFrequency ?? "");
-                                updateDrugRow(i, "duration", drug.defaultDuration ?? "");
-                                updateDrugRow(i, "instructions", drug.defaultInstructions ?? "");
-                              }
-                            }}>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Select drug" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {drugs.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
                             <Input
-                              className="h-7 text-xs mt-1"
+                              className="h-7 text-xs"
                               value={item.drugName}
                               onChange={e => updateDrugRow(i, "drugName", e.target.value)}
-                              placeholder="Or type manually"
+                              placeholder="Drug name"
                             />
                           </td>
                           <td className="pr-2 py-1">
@@ -1793,7 +1886,7 @@ export default function ConsultationDetailPage() {
                   </table>
                 </div>
                 <Button variant="outline" size="sm" onClick={addDrugRow}>
-                  <Plus className="h-3 w-3 mr-1" /> Add Drug
+                  <Plus className="h-3 w-3 mr-1" /> Add Row Manually
                 </Button>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setShowPrescriptionModal(false)}>Cancel</Button>
