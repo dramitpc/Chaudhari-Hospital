@@ -2828,6 +2828,52 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PaymentModeSummary"
+        revenueList:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyRevenueItem"
+
+    DailyRevenueItem:
+      type: object
+      required: [invoiceNumber, patientName, status, total, items]
+      properties:
+        invoiceNumber:
+          type: string
+        patientId:
+          type: string
+        patientName:
+          type: string
+        status:
+          type: string
+        total:
+          type: number
+        amountPaid:
+          type: number
+        balance:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyRevenueLineItem"
+
+    DailyRevenueLineItem:
+      type: object
+      required: [description, total]
+      properties:
+        description:
+          type: string
+        chargeTypeName:
+          type: string
+        chargeTypeCategory:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        discount:
+          type: number
+        total:
+          type: number
 
     DoctorDaySummary:
       type: object

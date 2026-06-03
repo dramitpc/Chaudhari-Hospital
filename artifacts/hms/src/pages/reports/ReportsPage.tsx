@@ -112,6 +112,75 @@ export default function ReportsPage() {
                   ) : <p className="text-muted-foreground text-sm">No payment data</p>}
                 </div>
               </div>
+
+              {/* Revenue Generation List */}
+              <div className="rounded-lg border border-border bg-card overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Day's Revenue Generation</h3>
+                  <span className="text-xs text-muted-foreground">{(opdReport.revenueList ?? []).length} invoice(s)</span>
+                </div>
+                {(opdReport.revenueList ?? []).length === 0 ? (
+                  <p className="px-4 py-6 text-sm text-muted-foreground text-center">No invoices for this date</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {(opdReport.revenueList ?? []).map((inv, idx) => (
+                      <div key={idx} className="px-4 py-3">
+                        {/* Invoice header row */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium text-sm">{inv.patientName}</span>
+                            <span className="text-xs text-muted-foreground font-mono">{inv.invoiceNumber}</span>
+                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium capitalize
+                              ${inv.status === "paid" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : inv.status === "partial" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : inv.status === "draft" ? "bg-muted text-muted-foreground"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}`}>
+                              {inv.status}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-semibold text-sm">₹{inv.total.toFixed(2)}</span>
+                            {(inv.balance ?? 0) > 0 && (
+                              <span className="ml-2 text-xs text-orange-600">bal ₹{inv.balance!.toFixed(2)}</span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Line items */}
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-muted-foreground">
+                              <th className="text-left pb-1 font-normal">Charge Type</th>
+                              <th className="text-left pb-1 font-normal">Description</th>
+                              <th className="text-right pb-1 font-normal">Qty</th>
+                              <th className="text-right pb-1 font-normal">Unit Price</th>
+                              <th className="text-right pb-1 font-normal">Disc (₹)</th>
+                              <th className="text-right pb-1 font-normal">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {inv.items.map((item, li) => (
+                              <tr key={li} className="border-t border-border/50">
+                                <td className="py-1 pr-3">
+                                  {item.chargeTypeName ? (
+                                    <span className="inline-flex px-1.5 py-0.5 rounded bg-muted text-[10px] capitalize">
+                                      {item.chargeTypeName}
+                                    </span>
+                                  ) : <span className="text-muted-foreground">—</span>}
+                                </td>
+                                <td className="py-1 pr-3 text-muted-foreground">{item.description}</td>
+                                <td className="py-1 text-right">{item.quantity}</td>
+                                <td className="py-1 text-right">₹{(item.unitPrice ?? 0).toFixed(2)}</td>
+                                <td className="py-1 text-right">{item.discount ? `₹${item.discount.toFixed(2)}` : "—"}</td>
+                                <td className="py-1 text-right font-medium">₹{item.total.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </TabsContent>

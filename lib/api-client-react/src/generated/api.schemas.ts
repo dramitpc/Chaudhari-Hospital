@@ -1023,6 +1023,27 @@ export interface PaymentModeSummary {
   count: number;
 }
 
+export interface DailyRevenueLineItem {
+  description: string;
+  chargeTypeName?: string;
+  chargeTypeCategory?: string;
+  quantity?: number;
+  unitPrice?: number;
+  discount?: number;
+  total: number;
+}
+
+export interface DailyRevenueItem {
+  invoiceNumber: string;
+  patientId?: string;
+  patientName: string;
+  status: string;
+  total: number;
+  amountPaid?: number;
+  balance?: number;
+  items: DailyRevenueLineItem[];
+}
+
 export interface DailyOpdReport {
   date: string;
   totalPatients: number;
@@ -1031,6 +1052,7 @@ export interface DailyOpdReport {
   followUps?: number;
   byDoctor: DoctorDaySummary[];
   byPaymentMode?: PaymentModeSummary[];
+  revenueList?: DailyRevenueItem[];
 }
 
 export interface ChargeTypeBreakdownRow {

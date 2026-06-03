@@ -29,18 +29,49 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
     };
   }));
 
-  const invoiceRows = await db.select({ paymentMode: invoicesTable.paymentMode, total: invoicesTable.total })
-    .from(invoicesTable).where(sql`date(created_at) = ${date}`);
-  const totalRevenue = invoiceRows.reduce((s, r) => s + r.total, 0);
+  const fullInvoices = await db.select().from(invoicesTable).where(sql`date(invoices.created_at) = ${date}`);
+  const totalRevenue = fullInvoices.reduce((s, r) => s + r.total, 0);
 
   const modeMap: Record<string, { amount: number; count: number }> = {};
-  for (const r of invoiceRows) {
+  for (const r of fullInvoices) {
     const mode = r.paymentMode ?? "unknown";
     if (!modeMap[mode]) modeMap[mode] = { amount: 0, count: 0 };
     modeMap[mode].amount += r.total;
     modeMap[mode].count += 1;
   }
   const byPaymentMode = Object.entries(modeMap).map(([mode, v]) => ({ mode, ...v }));
+
+  // Revenue list — per invoice with patient name + line item breakdown
+  const allPatients = await db.select({ id: patientsTable.id, fullName: patientsTable.fullName }).from(patientsTable);
+  const patientMap: Record<string, string> = {};
+  for (const p of allPatients) patientMap[p.id] = p.fullName;
+
+  const allCts = await db.select().from(chargeTypesTable);
+  const ctMap: Record<string, { name: string; category: string }> = {};
+  for (const ct of allCts) ctMap[ct.id] = { name: ct.name, category: ct.category };
+
+  type RawItem = { chargeTypeId?: string; description?: string; quantity?: number; unitPrice?: number; discount?: number; total?: number };
+  const revenueList = fullInvoices.map(inv => ({
+    invoiceNumber: inv.invoiceNumber,
+    patientId: inv.patientId,
+    patientName: patientMap[inv.patientId] ?? "Unknown",
+    status: inv.status,
+    total: inv.total,
+    amountPaid: inv.amountPaid,
+    balance: inv.balance,
+    items: ((inv.items as unknown as RawItem[]) ?? []).map(item => {
+      const ct = item.chargeTypeId ? ctMap[item.chargeTypeId] : null;
+      return {
+        description: item.description ?? ct?.name ?? "—",
+        chargeTypeName: ct?.name,
+        chargeTypeCategory: ct?.category,
+        quantity: item.quantity ?? 1,
+        unitPrice: item.unitPrice ?? 0,
+        discount: item.discount ?? 0,
+        total: item.total ?? 0,
+      };
+    }),
+  }));
 
   res.json({
     date,
@@ -50,6 +81,7 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
     followUps: totalPatients - Number(newPatients[0]?.count ?? 0),
     byDoctor: byDoctor.filter(d => d.patients > 0),
     byPaymentMode,
+    revenueList,
   });
 });
 

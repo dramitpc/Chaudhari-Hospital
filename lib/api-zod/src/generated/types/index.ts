@@ -39,6 +39,8 @@ export * from './consultationUpdate';
 export * from './consultationVisitType';
 export * from './consultationVitals';
 export * from './dailyOpdReport';
+export * from './dailyRevenueItem';
+export * from './dailyRevenueLineItem';
 export * from './dashboardSummary';
 export * from './doctorDaySummary';
 export * from './doctorProductivityReport';

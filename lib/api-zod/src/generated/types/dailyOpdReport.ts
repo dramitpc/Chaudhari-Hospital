@@ -5,6 +5,7 @@
  * Hospital Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { DailyRevenueItem } from './dailyRevenueItem';
 import type { DoctorDaySummary } from './doctorDaySummary';
 import type { PaymentModeSummary } from './paymentModeSummary';
 
@@ -16,4 +17,5 @@ export interface DailyOpdReport {
   followUps?: number;
   byDoctor: DoctorDaySummary[];
   byPaymentMode?: PaymentModeSummary[];
+  revenueList?: DailyRevenueItem[];
 }
