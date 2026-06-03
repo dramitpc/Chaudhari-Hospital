@@ -442,7 +442,7 @@ export default function ConsultationDetailPage() {
   const [payRef, setPayRef] = useState("");
 
   const calcInvItemTotal = (qty: number, price: number, disc: number) =>
-    +(qty * price * (1 - disc / 100)).toFixed(2);
+    +Math.max(0, qty * price - disc).toFixed(2);
 
   const invSubtotal = invItems.reduce((s, it) => s + it.total, 0);
   const invTotal = +(invSubtotal * (1 - invDiscount / 100)).toFixed(2);
@@ -2303,7 +2303,7 @@ export default function ConsultationDetailPage() {
               <span>Description</span>
               <span className="text-center">Qty</span>
               <span className="text-right">Unit Price</span>
-              <span className="text-right">Disc %</span>
+              <span className="text-right">Disc (₹)</span>
               <span className="text-right">Total</span>
               <span></span>
             </div>
@@ -2362,9 +2362,8 @@ export default function ConsultationDetailPage() {
                   className="h-8 text-xs text-right"
                   type="number"
                   min="0"
-                  max="100"
-                  step="0.1"
-                  placeholder="0"
+                  step="0.01"
+                  placeholder="0.00"
                   value={item.discount || ""}
                   onChange={e => updateInvItem(idx, "discount", +e.target.value)}
                 />
