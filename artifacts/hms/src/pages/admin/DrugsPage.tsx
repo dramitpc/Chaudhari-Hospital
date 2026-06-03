@@ -78,9 +78,10 @@ export default function DrugsPage() {
 
       <Input placeholder="Search drugs..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="max-w-sm" />
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)]">
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 border-b border-border">
+          <thead className="bg-muted/40 border-b border-border sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generic</th>
@@ -118,6 +119,7 @@ export default function DrugsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
