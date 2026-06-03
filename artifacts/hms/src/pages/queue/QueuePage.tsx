@@ -3,18 +3,20 @@ import { useLocation } from "wouter";
 import {
   useGetQueue, useCallNextPatient, useUpdateTokenStatus, useGenerateToken,
   useCreateConsultation, useListDoctors, useListPatients,
-  getGetQueueQueryKey, getListDoctorsQueryKey, getListPatientsQueryKey
+  useListInvoices, useRecordPayment,
+  getGetQueueQueryKey, getListDoctorsQueryKey, getListPatientsQueryKey, getListInvoicesQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PlusCircle, ChevronRight, RefreshCw, Receipt } from "lucide-react";
+import { PlusCircle, ChevronRight, RefreshCw, Receipt, DollarSign } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   waiting: "border-amber-400 bg-amber-50 dark:bg-amber-900/20",
@@ -107,6 +109,38 @@ export default function QueuePage() {
   const updateStatusMutation = useUpdateTokenStatus();
   const generateTokenMutation = useGenerateToken();
   const createConsultationMutation = useCreateConsultation();
+  const recordQueuePaymentMutation = useRecordPayment();
+
+  // Read invoice-created flags from sessionStorage (set by ConsultationDetailPage after creating an invoice)
+  const [invoicedPatientIds] = useState<Set<string>>(() => {
+    try {
+      const stored = sessionStorage.getItem("clinicos_inv_created");
+      return new Set<string>(stored ? JSON.parse(stored) : []);
+    } catch { return new Set<string>(); }
+  });
+
+  // Payment dialog state
+  const [paymentPatientId, setPaymentPatientId] = useState<string | null>(null);
+  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string>("");
+  const [queuePayAmount, setQueuePayAmount] = useState("");
+  const [queuePayMode, setQueuePayMode] = useState<"cash" | "card" | "upi" | "insurance">("cash");
+  const [queuePayRef, setQueuePayRef] = useState("");
+
+  const { data: patientInvoicesData } = useListInvoices(
+    { patientId: paymentPatientId ?? "", limit: 20 },
+    { query: { enabled: !!paymentPatientId, queryKey: getListInvoicesQueryKey({ patientId: paymentPatientId ?? "", limit: 20 }) } }
+  );
+  const patientInvoices = (patientInvoicesData?.data ?? []).filter(
+    inv => (inv.balance ?? 0) > 0 && inv.status !== "cancelled" && inv.status !== "refunded"
+  );
+
+  const openQueuePayment = (patientId: string) => {
+    setPaymentPatientId(patientId);
+    setPaymentInvoiceId("");
+    setQueuePayAmount("");
+    setQueuePayMode("cash");
+    setQueuePayRef("");
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -302,7 +336,12 @@ export default function QueuePage() {
                     <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 flex-shrink-0">
+                <div className="flex flex-wrap gap-2 flex-shrink-0 items-center">
+                  {invoicedPatientIds.has(token.patientId) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700 animate-pulse">
+                      <Receipt className="h-3 w-3" /> Invoice ✓
+                    </span>
+                  )}
                   {token.status === "waiting" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
@@ -321,8 +360,15 @@ export default function QueuePage() {
                   {token.status === "in_consultation" && (
                     <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "completed")}>Complete</Button>
                   )}
+                  <Button
+                    size="sm" variant="outline"
+                    className="text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-800"
+                    onClick={() => openQueuePayment(token.patientId)}
+                  >
+                    <DollarSign className="h-3.5 w-3.5 mr-1" />Pay
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
-                    <Receipt className="h-3.5 w-3.5 mr-1" />New Invoice
+                    <Receipt className="h-3.5 w-3.5 mr-1" />Invoice
                   </Button>
                 </div>
               </div>
@@ -344,8 +390,20 @@ export default function QueuePage() {
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
                       <span className="text-sm text-muted-foreground truncate">{token.patientName}</span>
                       <VisitTypeBadge visitType={token.visitType} />
+                      {invoicedPatientIds.has(token.patientId) && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700">
+                          <Receipt className="h-2.5 w-2.5" /> ₹
+                        </span>
+                      )}
                     </div>
-                    <span className={`ml-auto inline-flex px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${statusBadgeColors[token.status] ?? ""}`}>
+                    <Button
+                      size="sm" variant="ghost"
+                      className="h-7 px-2 text-xs text-green-700 hover:bg-green-50 dark:text-green-400 flex-shrink-0"
+                      onClick={() => openQueuePayment(token.patientId)}
+                    >
+                      <DollarSign className="h-3 w-3 mr-0.5" />Pay
+                    </Button>
+                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${statusBadgeColors[token.status] ?? ""}`}>
                       {token.status}
                     </span>
                   </div>
@@ -355,6 +413,106 @@ export default function QueuePage() {
           )}
         </div>
       )}
+
+      {/* ── Record Payment Dialog ──────────────────────────────────────────── */}
+      <Dialog open={!!paymentPatientId} onOpenChange={(open) => !open && setPaymentPatientId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              Record Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {!patientInvoicesData ? (
+              <div className="space-y-2 py-2">
+                <div className="h-8 bg-muted animate-pulse rounded" />
+                <div className="h-8 bg-muted animate-pulse rounded" />
+              </div>
+            ) : patientInvoices.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No unpaid invoices found for this patient.</p>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Invoice <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={paymentInvoiceId}
+                    onValueChange={(v) => {
+                      setPaymentInvoiceId(v);
+                      const inv = patientInvoices.find(i => i.id === v);
+                      if (inv?.balance != null) setQueuePayAmount(String(Math.max(0, inv.balance)));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select invoice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {patientInvoices.map(inv => (
+                        <SelectItem key={inv.id} value={inv.id}>
+                          {inv.invoiceNumber} — ₹{(inv.balance ?? 0).toFixed(2)} due
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Amount (₹) <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number" min="0" step="0.01"
+                    value={queuePayAmount}
+                    onChange={e => setQueuePayAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Payment Mode <span className="text-destructive">*</span></Label>
+                  <Select value={queuePayMode} onValueChange={v => setQueuePayMode(v as "cash" | "card" | "upi" | "insurance")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="insurance">Insurance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Transaction Reference</Label>
+                  <Input
+                    value={queuePayRef}
+                    onChange={e => setQueuePayRef(e.target.value)}
+                    placeholder="UTR / transaction ID (optional)"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentPatientId(null)}>Cancel</Button>
+            {patientInvoices.length > 0 && (
+              <Button
+                disabled={!paymentInvoiceId || !queuePayAmount || recordQueuePaymentMutation.isPending}
+                onClick={() => {
+                  if (!paymentInvoiceId || !queuePayAmount) return;
+                  recordQueuePaymentMutation.mutate(
+                    { id: paymentInvoiceId, data: { amount: +queuePayAmount, paymentMode: queuePayMode, transactionReference: queuePayRef || undefined } },
+                    {
+                      onSuccess: () => {
+                        toast({ title: "Payment recorded" });
+                        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: paymentPatientId ?? "", limit: 20 }) });
+                        setPaymentPatientId(null);
+                      },
+                      onError: () => toast({ title: "Failed to record payment", variant: "destructive" }),
+                    }
+                  );
+                }}
+              >
+                Record Payment
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Generate Token Modal */}
       <Dialog open={showTokenModal} onOpenChange={(open) => {

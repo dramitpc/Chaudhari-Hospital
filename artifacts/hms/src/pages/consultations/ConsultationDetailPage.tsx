@@ -4,8 +4,9 @@ import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
+  useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
   useCreateInvestigation, useUpdateInvestigation, useListInvestigations,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey, getListChargeTypesQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
@@ -105,6 +106,10 @@ export default function ConsultationDetailPage() {
   const createPrescriptionMutation = useCreatePrescription();
   const updatePatientMutation = useUpdatePatient();
   const createInvestigationMutation = useCreateInvestigation();
+  const createInvoiceMutation = useCreateInvoice();
+  const updateInvoiceMutation = useUpdateInvoice();
+  const recordPaymentMutation = useRecordPayment();
+  const { data: chargeTypes } = useListChargeTypes({ query: { queryKey: getListChargeTypesQueryKey() } });
 
   const patientId = consultation?.patientId ?? "";
   const { data: patient } = useGetPatient(patientId, {
@@ -422,6 +427,141 @@ export default function ConsultationDetailPage() {
   const [referralToSpecialty, setReferralToSpecialty] = useState("");
   const [referralToAddress, setReferralToAddress] = useState("");
   const [referralReason, setReferralReason] = useState("");
+
+  // ── Invoice form & payment state ──────────────────────────────────────────
+  type InvItem = { chargeTypeId: string; description: string; quantity: number; unitPrice: number; discount: number; total: number };
+  const blankInvItem = (): InvItem => ({ chargeTypeId: "", description: "", quantity: 1, unitPrice: 0, discount: 0, total: 0 });
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [invItems, setInvItems] = useState<InvItem[]>([blankInvItem()]);
+  const [invDiscount, setInvDiscount] = useState(0);
+  const [invoiceNotes, setInvoiceNotes] = useState("");
+  const [recordPayingId, setRecordPayingId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMode, setPayMode] = useState<"cash" | "card" | "upi" | "insurance">("cash");
+  const [payRef, setPayRef] = useState("");
+
+  const calcInvItemTotal = (qty: number, price: number, disc: number) =>
+    +(qty * price * (1 - disc / 100)).toFixed(2);
+
+  const invSubtotal = invItems.reduce((s, it) => s + it.total, 0);
+  const invTotal = +(invSubtotal * (1 - invDiscount / 100)).toFixed(2);
+
+  const updateInvItem = (idx: number, field: keyof InvItem, val: string | number) =>
+    setInvItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const u = { ...it, [field]: val };
+      if (field === "quantity" || field === "unitPrice" || field === "discount") {
+        u.total = calcInvItemTotal(
+          field === "quantity" ? +val : u.quantity,
+          field === "unitPrice" ? +val : u.unitPrice,
+          field === "discount" ? +val : u.discount,
+        );
+      }
+      return u;
+    }));
+
+  const openNewInvoice = () => {
+    setEditingInvoiceId(null);
+    setInvItems([blankInvItem()]);
+    setInvDiscount(0);
+    setInvoiceNotes("");
+    setShowInvoiceModal(true);
+  };
+
+  const openEditInvoice = (inv: {
+    id: string;
+    items: Array<{ chargeTypeId?: string | null; description: string; quantity: number; unitPrice: number; discount?: number | null; total: number }>;
+    discount?: number | null;
+    notes?: string | null;
+  }) => {
+    setEditingInvoiceId(inv.id);
+    setInvItems(inv.items.map(it => ({
+      chargeTypeId: it.chargeTypeId ?? "",
+      description: it.description,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      discount: it.discount ?? 0,
+      total: it.total,
+    })));
+    setInvDiscount(inv.discount ?? 0);
+    setInvoiceNotes(inv.notes ?? "");
+    setShowInvoiceModal(true);
+  };
+
+  const openRecordPayment = (inv: { id: string; balance?: number | null }) => {
+    setRecordPayingId(inv.id);
+    setPayAmount(inv.balance != null ? String(Math.max(0, inv.balance)) : "");
+    setPayMode("cash");
+    setPayRef("");
+  };
+
+  const handleSaveInvoice = (status: "draft" | "pending") => {
+    const items = invItems.filter(it => it.description.trim());
+    if (!items.length) { toast({ title: "Add at least one line item", variant: "destructive" }); return; }
+    const body = {
+      patientId,
+      consultationId: id,
+      doctorId: (consultation as unknown as Record<string, string | null | undefined>)?.doctorId ?? undefined,
+      items: items.map(it => ({
+        chargeTypeId: it.chargeTypeId || undefined,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        discount: it.discount || undefined,
+        tax: undefined as number | undefined,
+        total: it.total,
+      })),
+      discount: invDiscount || undefined,
+      notes: invoiceNotes || undefined,
+    };
+    if (editingInvoiceId) {
+      updateInvoiceMutation.mutate(
+        { id: editingInvoiceId, data: { ...body, status } },
+        {
+          onSuccess: () => {
+            toast({ title: "Invoice updated" });
+            queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+            setShowInvoiceModal(false);
+          },
+          onError: () => toast({ title: "Failed to update invoice", variant: "destructive" }),
+        }
+      );
+    } else {
+      createInvoiceMutation.mutate(
+        { data: body },
+        {
+          onSuccess: () => {
+            toast({ title: "Invoice created" });
+            try {
+              const stored = sessionStorage.getItem("clinicos_inv_created");
+              const ids: string[] = stored ? JSON.parse(stored) : [];
+              if (!ids.includes(patientId)) ids.push(patientId);
+              sessionStorage.setItem("clinicos_inv_created", JSON.stringify(ids));
+            } catch { /* ignore */ }
+            queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+            setShowInvoiceModal(false);
+          },
+          onError: () => toast({ title: "Failed to create invoice", variant: "destructive" }),
+        }
+      );
+    }
+  };
+
+  const handleRecordPayment = () => {
+    if (!recordPayingId || !payAmount) return;
+    recordPaymentMutation.mutate(
+      { id: recordPayingId, data: { amount: +payAmount, paymentMode: payMode, transactionReference: payRef || undefined } },
+      {
+        onSuccess: () => {
+          toast({ title: "Payment recorded" });
+          queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+          setRecordPayingId(null);
+        },
+        onError: () => toast({ title: "Failed to record payment", variant: "destructive" }),
+      }
+    );
+  };
 
   const handlePrintLetter = (elementId: string, title: string) => {
     const content = document.getElementById(elementId)?.innerHTML;
@@ -1378,7 +1518,13 @@ export default function ConsultationDetailPage() {
             </TabsContent>
 
             {/* ── Invoices tab ─────────────────────────────────────────────── */}
-            <TabsContent value="invoices" className="mt-4">
+            <TabsContent value="invoices" className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-foreground">Patient Invoices</p>
+                <Button size="sm" onClick={openNewInvoice}>
+                  <Plus className="h-3 w-3 mr-1" /> New Invoice
+                </Button>
+              </div>
               {(() => {
                 const allInvoices = (invoicesData?.data ?? [])
                   .slice()
@@ -1394,10 +1540,10 @@ export default function ConsultationDetailPage() {
 
                 if (allInvoices.length === 0) {
                   return (
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                      <FileText className="h-10 w-10 mb-3 opacity-30" />
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                      <Receipt className="h-10 w-10 mb-3 opacity-30" />
                       <p className="text-sm font-medium">No invoices yet</p>
-                      <p className="text-xs mt-1">Invoices generated for this patient will appear here.</p>
+                      <p className="text-xs mt-1">Click "New Invoice" to create the first invoice for this visit.</p>
                     </div>
                   );
                 }
@@ -1422,12 +1568,14 @@ export default function ConsultationDetailPage() {
                           <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Total</th>
                           <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Paid</th>
                           <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Balance</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground"></th>
+                          <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {allInvoices.map(inv => {
                           const isThisConsultation = inv.consultationId === id;
+                          const canEdit = inv.status === "draft" || inv.status === "pending";
+                          const hasBalance = (inv.balance ?? 0) > 0 && inv.status !== "cancelled" && inv.status !== "paid" && inv.status !== "refunded";
                           return (
                             <tr
                               key={inv.id}
@@ -1452,13 +1600,25 @@ export default function ConsultationDetailPage() {
                               <td className="px-4 py-2.5 text-right text-xs text-orange-600 dark:text-orange-400">
                                 {(inv.balance ?? 0) > 0 ? `₹${(inv.balance ?? 0).toFixed(2)}` : "—"}
                               </td>
-                              <td className="px-4 py-2.5 text-center">
-                                <Link
-                                  href={`/billing/${inv.id}`}
-                                  className="text-[11px] text-blue-600 hover:underline whitespace-nowrap"
-                                >
-                                  View →
-                                </Link>
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center justify-center gap-2.5">
+                                  {canEdit && (
+                                    <button
+                                      onClick={() => openEditInvoice(inv)}
+                                      className="text-[11px] text-blue-600 hover:underline whitespace-nowrap"
+                                    >Edit</button>
+                                  )}
+                                  {hasBalance && (
+                                    <button
+                                      onClick={() => openRecordPayment(inv)}
+                                      className="text-[11px] text-green-700 dark:text-green-400 hover:underline whitespace-nowrap font-medium"
+                                    >Pay</button>
+                                  )}
+                                  <Link
+                                    href={`/billing/${inv.id}`}
+                                    className="text-[11px] text-blue-600 hover:underline whitespace-nowrap"
+                                  >View →</Link>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -2124,6 +2284,176 @@ export default function ConsultationDetailPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Invoice Form Modal ──────────────────────────────────────────────── */}
+      <Dialog open={showInvoiceModal} onOpenChange={(open) => !open && setShowInvoiceModal(false)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              {editingInvoiceId ? "Edit Invoice" : "New Invoice"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+            {/* Column headers */}
+            <div className="grid grid-cols-[130px_1fr_60px_90px_70px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
+              <span>Charge Type</span>
+              <span>Description</span>
+              <span className="text-center">Qty</span>
+              <span className="text-right">Unit Price</span>
+              <span className="text-right">Total</span>
+              <span></span>
+            </div>
+            {/* Line items */}
+            {invItems.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-[130px_1fr_60px_90px_70px_32px] gap-2 items-center">
+                <Select value={item.chargeTypeId} onValueChange={v => updateInvItem(idx, "chargeTypeId", v)}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">None</SelectItem>
+                    {(chargeTypes ?? []).map(ct => (
+                      <SelectItem key={ct.id} value={ct.id}>{ct.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  className="h-8 text-xs"
+                  placeholder="Description *"
+                  value={item.description}
+                  onChange={e => updateInvItem(idx, "description", e.target.value)}
+                />
+                <Input
+                  className="h-8 text-xs text-center"
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={e => updateInvItem(idx, "quantity", +e.target.value)}
+                />
+                <Input
+                  className="h-8 text-xs text-right"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={item.unitPrice || ""}
+                  onChange={e => updateInvItem(idx, "unitPrice", +e.target.value)}
+                />
+                <span className="text-xs font-medium text-right pr-1">₹{item.total.toFixed(2)}</span>
+                <Button
+                  size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => setInvItems(prev => prev.filter((_, i) => i !== idx))}
+                  disabled={invItems.length === 1}
+                ><X className="h-3.5 w-3.5" /></Button>
+              </div>
+            ))}
+            <Button
+              size="sm" variant="outline" className="mt-1"
+              onClick={() => setInvItems(prev => [...prev, blankInvItem()])}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Add Item
+            </Button>
+
+            {/* Totals + discount */}
+            <div className="flex flex-col items-end gap-2 border-t pt-3">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">Invoice Discount (%)</span>
+                <Input
+                  type="number" min="0" max="100" step="0.01"
+                  className="w-20 h-7 text-xs text-right"
+                  value={invDiscount || ""}
+                  onChange={e => setInvDiscount(+e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex gap-6 text-sm">
+                <span className="text-muted-foreground text-xs">Subtotal: <span className="font-medium text-foreground">₹{invSubtotal.toFixed(2)}</span></span>
+                {invDiscount > 0 && (
+                  <span className="text-muted-foreground text-xs">Discount: <span className="font-medium text-red-600">-₹{(invSubtotal - invTotal).toFixed(2)}</span></span>
+                )}
+                <span className="font-semibold">Total: ₹{invTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1">
+              <Label className="text-xs">Notes (optional)</Label>
+              <Textarea
+                rows={2}
+                placeholder="Any notes for this invoice..."
+                value={invoiceNotes}
+                onChange={e => setInvoiceNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowInvoiceModal(false)}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={() => handleSaveInvoice("draft")}
+              disabled={createInvoiceMutation.isPending || updateInvoiceMutation.isPending}
+            >Save as Draft</Button>
+            <Button
+              onClick={() => handleSaveInvoice("pending")}
+              disabled={createInvoiceMutation.isPending || updateInvoiceMutation.isPending}
+            >
+              {editingInvoiceId ? "Update Invoice" : "Create Invoice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Record Payment Modal ────────────────────────────────────────────── */}
+      <Dialog open={!!recordPayingId} onOpenChange={(open) => !open && setRecordPayingId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              Record Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Amount (₹) <span className="text-destructive">*</span></Label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={payAmount}
+                onChange={e => setPayAmount(e.target.value)}
+                placeholder="0.00"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Payment Mode <span className="text-destructive">*</span></Label>
+              <Select value={payMode} onValueChange={v => setPayMode(v as "cash" | "card" | "upi" | "insurance")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="insurance">Insurance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Transaction Reference</Label>
+              <Input
+                value={payRef}
+                onChange={e => setPayRef(e.target.value)}
+                placeholder="UTR / transaction ID (optional)"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecordPayingId(null)}>Cancel</Button>
+            <Button
+              onClick={handleRecordPayment}
+              disabled={!payAmount || recordPaymentMutation.isPending}
+            >Record Payment</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
