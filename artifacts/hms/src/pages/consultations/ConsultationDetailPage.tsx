@@ -2298,18 +2298,34 @@ export default function ConsultationDetailPage() {
           </DialogHeader>
           <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
             {/* Column headers */}
-            <div className="grid grid-cols-[130px_1fr_60px_90px_70px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
+            <div className="grid grid-cols-[130px_1fr_56px_84px_60px_64px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
               <span>Charge Type</span>
               <span>Description</span>
               <span className="text-center">Qty</span>
               <span className="text-right">Unit Price</span>
+              <span className="text-right">Disc %</span>
               <span className="text-right">Total</span>
               <span></span>
             </div>
             {/* Line items */}
             {invItems.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-[130px_1fr_60px_90px_70px_32px] gap-2 items-center">
-                <Select value={item.chargeTypeId} onValueChange={v => updateInvItem(idx, "chargeTypeId", v)}>
+              <div key={idx} className="grid grid-cols-[130px_1fr_56px_84px_60px_64px_32px] gap-2 items-center">
+                <Select
+                  value={item.chargeTypeId}
+                  onValueChange={v => {
+                    const ct = (chargeTypes ?? []).find(c => c.id === v);
+                    setInvItems(prev => prev.map((it, i) => {
+                      if (i !== idx) return it;
+                      const u = { ...it, chargeTypeId: v };
+                      if (ct) {
+                        u.unitPrice = ct.unitPrice;
+                        if (!u.description) u.description = ct.name;
+                        u.total = calcInvItemTotal(u.quantity, ct.unitPrice, u.discount);
+                      }
+                      return u;
+                    }));
+                  }}
+                >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -2341,6 +2357,16 @@ export default function ConsultationDetailPage() {
                   placeholder="0.00"
                   value={item.unitPrice || ""}
                   onChange={e => updateInvItem(idx, "unitPrice", +e.target.value)}
+                />
+                <Input
+                  className="h-8 text-xs text-right"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="0"
+                  value={item.discount || ""}
+                  onChange={e => updateInvItem(idx, "discount", +e.target.value)}
                 />
                 <span className="text-xs font-medium text-right pr-1">₹{item.total.toFixed(2)}</span>
                 <Button
