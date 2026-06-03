@@ -19,12 +19,33 @@ import {
   Sun,
   ScanLine,
   X,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
-function SidebarContent({ onNavClick }: { onNavClick: () => void }) {
+type NavItem = {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  show: boolean;
+  group?: string;
+};
+
+function SidebarContent({
+  onNavClick,
+  isExpanded,
+  pinned,
+  onTogglePin,
+}: {
+  onNavClick: () => void;
+  isExpanded: boolean;
+  pinned: boolean;
+  onTogglePin: () => void;
+}) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
@@ -37,7 +58,7 @@ function SidebarContent({ onNavClick }: { onNavClick: () => void }) {
   const isStaff = role === "staff" || isAdmin;
   const isRadiographer = role === "radiographer" || isAdmin;
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { name: "Dashboard",      href: "/dashboard",         icon: LayoutDashboard, show: !isRadiographer || isAdmin },
     { name: "Patients",       href: "/patients",           icon: Users,           show: !isRadiographer || isAdmin },
     { name: "Appointments",   href: "/appointments",       icon: Calendar,        show: isStaff && !isRadiographer },
@@ -55,82 +76,111 @@ function SidebarContent({ onNavClick }: { onNavClick: () => void }) {
     { name: "Settings",       href: "/admin/settings",     icon: Settings,        show: isAdmin, group: "Admin" },
   ];
 
+  const renderNavItem = (item: NavItem, testPrefix = "nav") => (
+    <Link key={item.name} href={item.href} onClick={onNavClick} className="block">
+      <span
+        data-testid={`${testPrefix}-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
+        title={!isExpanded ? item.name : undefined}
+        className={cn(
+          "flex items-center rounded-md py-2.5 text-sm font-medium transition-colors",
+          isExpanded ? "px-3 gap-0" : "px-0 justify-center",
+          location.startsWith(item.href)
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+        )}
+      >
+        <item.icon className={cn("h-5 w-5 flex-shrink-0 opacity-70", isExpanded && "mr-3")} />
+        {isExpanded && item.name}
+      </span>
+    </Link>
+  );
+
   return (
     <>
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-3">
-          {navItems.filter(item => item.show && !item.group).map((item) => (
-            <Link key={item.name} href={item.href} onClick={onNavClick} className="block">
-              <span
-                data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
-                className={cn(
-                  "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                  location.startsWith(item.href)
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="mr-3 h-5 w-5 flex-shrink-0 opacity-70" />
-                {item.name}
-              </span>
-            </Link>
-          ))}
+      <div className="flex-1 overflow-y-auto py-4 overflow-x-hidden">
+        <nav className={cn("space-y-1", isExpanded ? "px-3" : "px-1.5")}>
+          {navItems.filter(item => item.show && !item.group).map(item => renderNavItem(item))}
 
           {isAdmin && (
             <div className="mt-6">
-              <h3 className="px-3 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider mb-2">
-                Administration
-              </h3>
-              {navItems.filter(item => item.show && item.group === "Admin").map((item) => (
-                <Link key={item.name} href={item.href} onClick={onNavClick} className="block mt-1">
-                  <span
-                    data-testid={`nav-admin-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
-                    className={cn(
-                      "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                      location.startsWith(item.href)
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                    )}
-                  >
-                    <item.icon className="mr-3 h-5 w-5 flex-shrink-0 opacity-70" />
-                    {item.name}
-                  </span>
-                </Link>
-              ))}
+              {isExpanded && (
+                <h3 className="px-3 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider mb-2">
+                  Administration
+                </h3>
+              )}
+              {!isExpanded && <div className="border-t border-sidebar-border my-2" />}
+              {navItems.filter(item => item.show && item.group === "Admin").map(item =>
+                renderNavItem(item, "nav-admin")
+              )}
             </div>
           )}
         </nav>
       </div>
 
-      <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[140px]" data-testid="sidebar-user-name">
-              {user.fullName}
-            </span>
-            <span className="text-xs text-sidebar-foreground/70 capitalize" data-testid="sidebar-user-role">
-              {user.role}
-            </span>
+      <div className={cn("border-t border-sidebar-border", isExpanded ? "p-4" : "p-2")}>
+        {isExpanded ? (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[140px]" data-testid="sidebar-user-name">
+                  {user.fullName}
+                </span>
+                <span className="text-xs text-sidebar-foreground/70 capitalize" data-testid="sidebar-user-role">
+                  {user.role}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                title="Toggle theme"
+                data-testid="btn-toggle-theme"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-sidebar-foreground"
+              onClick={() => { onNavClick(); logout(); }}
+              data-testid="btn-logout"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <button
+              title="Toggle theme"
+              data-testid="btn-toggle-theme"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-1.5 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground transition-colors"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button
+              title="Logout"
+              data-testid="btn-logout"
+              onClick={() => { onNavClick(); logout(); }}
+              className="p-1.5 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title="Toggle theme"
-            data-testid="btn-toggle-theme"
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-        </div>
-        <Button
-          variant="outline"
-          className="w-full justify-start text-sidebar-foreground"
-          onClick={() => { onNavClick(); logout(); }}
-          data-testid="btn-logout"
+        )}
+
+        {/* Pin/unpin toggle — desktop only, shown inside content */}
+        <button
+          onClick={onTogglePin}
+          title={pinned ? "Collapse sidebar" : "Pin sidebar open"}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 rounded p-1.5 text-xs text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors"
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
+          {pinned
+            ? <><PanelLeftClose className="h-4 w-4" />{isExpanded && <span>Collapse</span>}</>
+            : <><PanelLeft className="h-4 w-4" />{isExpanded && <span>Pin open</span>}</>
+          }
+        </button>
       </div>
     </>
   );
@@ -139,11 +189,17 @@ function SidebarContent({ onNavClick }: { onNavClick: () => void }) {
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  pinned: boolean;
+  onTogglePin: () => void;
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, pinned, onTogglePin }: SidebarProps) {
   const { user } = useAuth();
+  const [hovered, setHovered] = useState(false);
+
   if (!user) return null;
+
+  const isExpanded = pinned || hovered;
 
   return (
     <>
@@ -178,17 +234,45 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <SidebarContent onNavClick={onClose} />
+        <SidebarContent onNavClick={onClose} isExpanded={true} pinned={pinned} onTogglePin={onTogglePin} />
       </aside>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex h-screen w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border sticky top-0 print:hidden">
-        <div className="flex h-16 shrink-0 items-center px-6 border-b border-sidebar-border">
-          <Stethoscope className="h-6 w-6 text-primary mr-2" />
-          <span className="text-lg font-bold text-sidebar-foreground">ClinicOS</span>
-        </div>
-        <SidebarContent onNavClick={() => {}} />
-      </aside>
+      {/* Desktop sidebar — wrapper reserves space, aside overlays on hover */}
+      <div
+        className={cn(
+          "hidden md:block relative sticky top-0 h-screen shrink-0 print:hidden",
+          "transition-[width] duration-200 ease-in-out",
+          pinned ? "w-64" : "w-14"
+        )}
+        onMouseEnter={() => !pinned && setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <aside
+          className={cn(
+            "absolute left-0 top-0 h-full flex flex-col bg-sidebar border-r border-sidebar-border",
+            "transition-[width] duration-200 ease-in-out overflow-hidden",
+            isExpanded ? "w-64" : "w-14",
+            !pinned && hovered && "shadow-2xl z-40"
+          )}
+        >
+          {/* Header */}
+          <div className={cn(
+            "flex h-16 shrink-0 items-center border-b border-sidebar-border",
+            isExpanded ? "px-6 gap-2" : "px-0 justify-center"
+          )}>
+            <Stethoscope className="h-6 w-6 text-primary flex-shrink-0" />
+            {isExpanded && (
+              <span className="text-lg font-bold text-sidebar-foreground whitespace-nowrap">ClinicOS</span>
+            )}
+          </div>
+          <SidebarContent
+            onNavClick={() => {}}
+            isExpanded={isExpanded}
+            pinned={pinned}
+            onTogglePin={onTogglePin}
+          />
+        </aside>
+      </div>
     </>
   );
 }

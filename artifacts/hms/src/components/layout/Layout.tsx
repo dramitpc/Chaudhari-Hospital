@@ -6,12 +6,30 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+const LS_PIN_KEY = "clinicos_sidebar_pinned";
+
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pinned, setPinned] = useState<boolean>(() => {
+    try { return localStorage.getItem(LS_PIN_KEY) !== "false"; } catch { return true; }
+  });
+
+  const handleTogglePin = () => {
+    setPinned(prev => {
+      const next = !prev;
+      try { localStorage.setItem(LS_PIN_KEY, String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        pinned={pinned}
+        onTogglePin={handleTogglePin}
+      />
 
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobile top bar — hidden on md+ */}
