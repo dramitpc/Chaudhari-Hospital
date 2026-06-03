@@ -594,115 +594,53 @@ export default function ConsultationDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="space-y-4 lg:order-2">
-          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <h3 className="font-semibold text-sm">Diagnosis &amp; Advice</h3>
-            <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
-              <Label className="text-xs">Diagnosis</Label>
-              <FieldFavPanel
-                lsKey="clinicos_diag"
-                currentValue={diagnosisValue}
-                onApply={v => { setDiagnosisValue(v); handleBlur("diagnosis", v); }}
-              />
-              <Input
-                className="col-span-full"
-                value={diagnosisValue}
-                onChange={e => setDiagnosisValue(e.target.value)}
-                onBlur={e => { handleBlur("diagnosis", e.target.value); trackFieldRecent("clinicos_diag", e.target.value); }}
-                placeholder="Primary diagnosis"
-                data-testid="input-diagnosis"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">ICD-10 Code</Label>
-              <Input
-                defaultValue={consultation.icd10Code ?? ""}
-                onBlur={e => handleBlur("icd10Code", e.target.value)}
-                placeholder="J06.9"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Follow-up Date</Label>
-              <Input
-                type="date"
-                defaultValue={consultation.followUpDate ?? ""}
-                onBlur={e => handleBlur("followUpDate", e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
-              <Label className="text-xs">Advice</Label>
-              <FieldFavPanel
-                lsKey="clinicos_advice"
-                currentValue={adviceValue}
-                onApply={v => { setAdviceValue(v); handleBlur("advice", v); }}
-              />
-              <Textarea
-                className="col-span-full"
-                value={adviceValue}
-                onChange={e => setAdviceValue(e.target.value)}
-                onBlur={e => { handleBlur("advice", e.target.value); trackFieldRecent("clinicos_advice", e.target.value); }}
-                rows={3}
-                placeholder="Advice and instructions..."
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Prescriptions</h3>
-              <Button size="sm" variant="outline" onClick={() => setShowPrescriptionModal(true)}>
-                <Plus className="h-3 w-3 mr-1" /> Add
-              </Button>
-            </div>
-            {prescriptions.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No prescriptions yet</p>
-            ) : prescriptions.map(p => (
-              <Link key={p.id} href={`/prescriptions/${p.id}`}>
-                <div className="rounded border border-border p-2 hover:bg-muted/30 cursor-pointer">
-                  <p className="text-xs font-medium">{p.items.length} medications</p>
-                  <p className="text-xs text-muted-foreground">{p.visitDate}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-            <h3 className="font-semibold text-sm">Quick Actions</h3>
-            <Button
-              size="sm" variant="outline" className="w-full justify-start relative"
-              onClick={() => setShowInvestigationModal(true)}
-              data-testid="btn-order-investigation"
-            >
-              <ScanLine className="mr-2 h-3 w-3" /> Order Investigation
-              {(existingInvestigations?.data?.length ?? 0) > 0 && (
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {existingInvestigations!.data!.length} ordered
-                </span>
-              )}
+      <div className="space-y-3">
+        {/* Quick Actions bar */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm" variant="outline" className="relative"
+            onClick={() => setShowInvestigationModal(true)}
+            data-testid="btn-order-investigation"
+          >
+            <ScanLine className="mr-1.5 h-3 w-3" /> Order Investigation
+            {(existingInvestigations?.data?.length ?? 0) > 0 && (
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                ({existingInvestigations!.data!.length})
+              </span>
+            )}
+          </Button>
+          <Link href={`/certificates`}>
+            <Button size="sm" variant="outline">
+              <FileText className="mr-1.5 h-3 w-3" /> Generate Certificate
             </Button>
-            <Link href={`/certificates`}>
-              <Button size="sm" variant="outline" className="w-full justify-start">
-                <FileText className="mr-2 h-3 w-3" /> Generate Certificate
-              </Button>
-            </Link>
-            <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => setShowThankingLetter(true)}>
-              <Mail className="mr-2 h-3 w-3" /> Thanking Letter
-            </Button>
-            <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => setShowReferralLetter(true)}>
-              <Send className="mr-2 h-3 w-3" /> Referral Letter
-            </Button>
-          </div>
+          </Link>
+          <Button size="sm" variant="outline" onClick={() => setShowThankingLetter(true)}>
+            <Mail className="mr-1.5 h-3 w-3" /> Thanking Letter
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowReferralLetter(true)}>
+            <Send className="mr-1.5 h-3 w-3" /> Referral Letter
+          </Button>
         </div>
 
-        <div className="lg:col-span-2 lg:order-1">
+        <div>
           <Tabs defaultValue="soap">
-            <TabsList className="w-full">
-              <TabsTrigger value="soap" className="flex-1">SOAP Notes</TabsTrigger>
-              <TabsTrigger value="medhistory" className="flex-1">Medical History</TabsTrigger>
-              <TabsTrigger value="clinical" className="flex-1">Clinical Notes</TabsTrigger>
-              <TabsTrigger value="investigation" className="flex-1">Investigations</TabsTrigger>
-              <TabsTrigger value="emrhistory" className="flex-1 relative">
+            <TabsList className="w-full h-auto flex-wrap gap-px p-1">
+              {/* Row 1 */}
+              <TabsTrigger value="soap" className="flex-[1_1_25%]">SOAP Notes</TabsTrigger>
+              <TabsTrigger value="medhistory" className="flex-[1_1_25%]">Medical History</TabsTrigger>
+              <TabsTrigger value="clinical" className="flex-[1_1_25%]">Clinical Notes</TabsTrigger>
+              <TabsTrigger value="investigation" className="flex-[1_1_25%]">Investigations</TabsTrigger>
+              {/* Row 2 */}
+              <TabsTrigger value="diagnosis" className="flex-[1_1_25%]">Diagnosis &amp; Advice</TabsTrigger>
+              <TabsTrigger value="prescriptions" className="flex-[1_1_25%] relative">
+                Prescriptions
+                {prescriptions.length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-semibold px-1.5 min-w-[18px] h-[18px]">
+                    {prescriptions.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="emrhistory" className="flex-[1_1_25%] relative">
                 EMR History
                 {(() => {
                   const cnt = (patientHistory?.consultations ?? []).filter(c => c.id !== id).length;
@@ -713,7 +651,7 @@ export default function ConsultationDetailPage() {
                   ) : null;
                 })()}
               </TabsTrigger>
-              <TabsTrigger value="invoices" className="flex-1 relative">
+              <TabsTrigger value="invoices" className="flex-[1_1_25%] relative">
                 Invoices
                 {(() => {
                   const cnt = (invoicesData?.data ?? []).length;
@@ -1145,6 +1083,87 @@ export default function ConsultationDetailPage() {
                   </div>
                 );
               })()}
+            </TabsContent>
+
+            {/* ── Diagnosis & Advice tab ──────────────────────────────────── */}
+            <TabsContent value="diagnosis" className="mt-4">
+              <div className="rounded-lg border border-border bg-card p-4 space-y-3 max-w-2xl">
+                <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
+                  <Label className="text-xs">Diagnosis</Label>
+                  <FieldFavPanel
+                    lsKey="clinicos_diag"
+                    currentValue={diagnosisValue}
+                    onApply={v => { setDiagnosisValue(v); handleBlur("diagnosis", v); }}
+                  />
+                  <Input
+                    className="col-span-full"
+                    value={diagnosisValue}
+                    onChange={e => setDiagnosisValue(e.target.value)}
+                    onBlur={e => { handleBlur("diagnosis", e.target.value); trackFieldRecent("clinicos_diag", e.target.value); }}
+                    placeholder="Primary diagnosis"
+                    data-testid="input-diagnosis"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">ICD-10 Code</Label>
+                  <Input
+                    defaultValue={consultation.icd10Code ?? ""}
+                    onBlur={e => handleBlur("icd10Code", e.target.value)}
+                    placeholder="J06.9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Follow-up Date</Label>
+                  <Input
+                    type="date"
+                    defaultValue={consultation.followUpDate ?? ""}
+                    onBlur={e => handleBlur("followUpDate", e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
+                  <Label className="text-xs">Advice</Label>
+                  <FieldFavPanel
+                    lsKey="clinicos_advice"
+                    currentValue={adviceValue}
+                    onApply={v => { setAdviceValue(v); handleBlur("advice", v); }}
+                  />
+                  <Textarea
+                    className="col-span-full"
+                    value={adviceValue}
+                    onChange={e => setAdviceValue(e.target.value)}
+                    onBlur={e => { handleBlur("advice", e.target.value); trackFieldRecent("clinicos_advice", e.target.value); }}
+                    rows={4}
+                    placeholder="Advice and instructions..."
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── Prescriptions tab ───────────────────────────────────────── */}
+            <TabsContent value="prescriptions" className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Prescriptions for this visit</p>
+                <Button size="sm" variant="outline" onClick={() => setShowPrescriptionModal(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Add Prescription
+                </Button>
+              </div>
+              {prescriptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No prescriptions yet for this visit.</p>
+              ) : (
+                <div className="space-y-2">
+                  {prescriptions.map(p => (
+                    <Link key={p.id} href={`/prescriptions/${p.id}`}>
+                      <div className="rounded-lg border border-border p-3 hover:bg-muted/30 cursor-pointer flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{p.items.length} medication{p.items.length !== 1 ? "s" : ""}</p>
+                          <p className="text-xs text-muted-foreground">{p.visitDate}</p>
+                        </div>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* ── EMR History tab ─────────────────────────────────────────── */}
