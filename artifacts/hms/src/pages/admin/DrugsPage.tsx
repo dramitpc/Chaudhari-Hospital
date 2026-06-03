@@ -24,8 +24,8 @@ export default function DrugsPage() {
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useListDrugs(
-    { search: debouncedSearch || undefined, page, limit: 20 },
-    { query: { queryKey: getListDrugsQueryKey({ search: debouncedSearch || undefined, page, limit: 20 }) } }
+    { search: debouncedSearch || undefined, page, limit: 500 },
+    { query: { queryKey: getListDrugsQueryKey({ search: debouncedSearch || undefined, page, limit: 500 }) } }
   );
   const createMutation = useCreateDrug();
   const updateMutation = useUpdateDrug();
