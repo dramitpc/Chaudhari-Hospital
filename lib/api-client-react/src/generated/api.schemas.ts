@@ -1248,6 +1248,10 @@ limit?: number;
 export type ListPrescriptionsParams = {
 patientId?: string;
 consultationId?: string;
+/**
+ * Filter by visit date (YYYY-MM-DD). Defaults to today.
+ */
+date?: string;
 page?: number;
 limit?: number;
 };

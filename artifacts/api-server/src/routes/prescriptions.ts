@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db, prescriptionsTable, prescriptionTemplatesTable, patientsTable, usersTable, consultationsTable } from "@workspace/db";
 import {
   ListPrescriptionsQueryParams,
@@ -101,13 +101,17 @@ router.post("/prescriptions/templates", authenticate, async (req, res): Promise<
 router.get("/prescriptions", authenticate, async (req, res): Promise<void> => {
   const params = ListPrescriptionsQueryParams.safeParse(req.query);
   const page = params.success && params.data.page ? Number(params.data.page) : 1;
-  const limit = params.success && params.data.limit ? Number(params.data.limit) : 20;
+  const limit = params.success && params.data.limit ? Number(params.data.limit) : 50;
+  const localToday = new Date().toLocaleDateString("en-CA");
+  const date = (params.success && (params.data as Record<string, unknown>).date as string) ?? localToday;
 
-  let query = db.select().from(prescriptionsTable).$dynamic();
-  if (params.success && params.data.patientId) query = query.where(eq(prescriptionsTable.patientId, params.data.patientId));
-  if (params.success && params.data.consultationId) query = query.where(eq(prescriptionsTable.consultationId, params.data.consultationId));
+  const conditions = [eq(prescriptionsTable.visitDate, date)];
+  if (params.success && params.data.patientId) conditions.push(eq(prescriptionsTable.patientId, params.data.patientId));
+  if (params.success && params.data.consultationId) conditions.push(eq(prescriptionsTable.consultationId, params.data.consultationId));
 
-  const all = await query.orderBy(desc(prescriptionsTable.visitDate));
+  const all = await db.select().from(prescriptionsTable)
+    .where(and(...conditions))
+    .orderBy(desc(prescriptionsTable.createdAt));
   const total = all.length;
   const slice = all.slice((page - 1) * limit, page * limit);
   const data = await Promise.all(slice.map(formatPrescription));

@@ -977,6 +977,7 @@ export const CompleteConsultationResponse = zod.object({
 export const ListPrescriptionsQueryParams = zod.object({
   "patientId": zod.coerce.string().optional(),
   "consultationId": zod.coerce.string().optional(),
+  "date": zod.coerce.string().optional().describe('Filter by visit date (YYYY-MM-DD). Defaults to today.'),
   "page": zod.coerce.number().optional(),
   "limit": zod.coerce.number().optional()
 })
