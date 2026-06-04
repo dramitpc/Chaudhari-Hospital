@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
-import { fmtDate } from "@/lib/dateUtils";
+import { fmtDate, calcAge as calcAgeUtil } from "@/lib/dateUtils";
 import {
   useGetPatient, useGetPatientHistory, useAddVitals, useGetPatientTimeline,
   getGetPatientQueryKey, getGetPatientHistoryQueryKey, getGetPatientTimelineQueryKey
@@ -132,7 +132,8 @@ export default function PatientDetailPage() {
         <TabsContent value="demographics" className="space-y-4 mt-4">
           <div className="rounded-lg border border-border bg-card p-6 grid grid-cols-2 md:grid-cols-3 gap-5">
             <FieldRow label="Full Name" value={patient.fullName} />
-            <FieldRow label="Date of Birth" value={patient.dateOfBirth} />
+            <FieldRow label="Date of Birth" value={patient.dateOfBirth ? fmtDate(patient.dateOfBirth) : null} />
+            <FieldRow label="Age" value={(calcAgeUtil(patient.dateOfBirth) ?? patient.age) != null ? `${calcAgeUtil(patient.dateOfBirth) ?? patient.age} years` : null} />
             <FieldRow label="Gender" value={patient.gender} />
             <FieldRow label="Phone" value={patient.phone} />
             <FieldRow label="Email" value={patient.email} />

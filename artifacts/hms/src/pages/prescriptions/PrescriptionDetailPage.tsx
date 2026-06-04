@@ -1,6 +1,6 @@
 import { useRoute, useLocation, useSearch } from "wouter";
 import { useEffect, useRef, useState } from "react";
-import { fmtDate } from "@/lib/dateUtils";
+import { fmtDate, calcAge } from "@/lib/dateUtils";
 import {
   useGetPrescription, useGetClinicSettings, useGetPatient, useGetConsultation, useTranslatePrescription,
   getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey, getGetConsultationQueryKey,
@@ -426,7 +426,7 @@ export default function PrescriptionDetailPage() {
           </div>
           <div className="pl-5 pr-5">
             <p className="text-xs text-muted-foreground">Age</p>
-            <p className="text-sm font-medium">{patient?.age ?? "—"}</p>
+            <p className="text-sm font-medium">{calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—"}</p>
           </div>
           <div className="pl-5 pr-5">
             <p className="text-xs text-muted-foreground">Sex</p>

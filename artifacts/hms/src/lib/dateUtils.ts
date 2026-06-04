@@ -6,6 +6,17 @@ function toDate(d: DateInput): Date | null {
   return isNaN(date.getTime()) ? null : date;
 }
 
+/** Calculate age in whole years from a date of birth */
+export function calcAge(dob: DateInput): number | null {
+  const birth = toDate(dob);
+  if (!birth) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 0 ? age : null;
+}
+
 /** Display a date as DD/MM/YYYY */
 export function fmtDate(d: DateInput): string {
   const date = toDate(d);

@@ -35,12 +35,24 @@ export default function EditPatientPage() {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
   });
 
-  const { register, handleSubmit, reset, control } = useForm();
+  const { register, handleSubmit, reset, control, watch, setValue } = useForm();
   const mutation = useUpdatePatient();
 
   useEffect(() => {
     if (patient) reset(patient);
   }, [patient, reset]);
+
+  const dobValue = watch("dateOfBirth");
+  useEffect(() => {
+    if (!dobValue) return;
+    const birth = new Date(dobValue);
+    if (isNaN(birth.getTime())) return;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    if (age >= 0) setValue("age", String(age));
+  }, [dobValue, setValue]);
 
   const onSubmit = (data: Record<string, unknown>) => {
     const payload = Object.fromEntries(
@@ -74,13 +86,21 @@ export default function EditPatientPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="font-semibold border-b border-border pb-2">Basic Information</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <Label>Full Name</Label>
               <Input {...register("fullName")} />
             </div>
             <div className="space-y-1.5">
               <Label>Phone</Label>
               <Input {...register("phone")} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Date of Birth</Label>
+              <Input type="date" {...register("dateOfBirth")} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Age (years)</Label>
+              <Input type="number" min="0" max="150" {...register("age")} placeholder="Auto-filled from DOB" />
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
