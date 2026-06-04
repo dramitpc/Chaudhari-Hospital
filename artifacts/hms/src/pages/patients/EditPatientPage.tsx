@@ -100,7 +100,18 @@ export default function EditPatientPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Age (years)</Label>
-              <Input type="number" min="0" max="150" {...register("age")} placeholder="Auto-filled from DOB" />
+              <Input
+                type="number"
+                min="0"
+                max="150"
+                {...register("age")}
+                readOnly={!!dobValue}
+                placeholder={dobValue ? "Calculated from DOB" : "e.g. 35"}
+                className={dobValue ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}
+              />
+              {dobValue && (
+                <p className="text-xs text-muted-foreground">Age is auto-calculated from Date of Birth</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
