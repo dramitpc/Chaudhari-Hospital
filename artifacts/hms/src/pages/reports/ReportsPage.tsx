@@ -46,11 +46,13 @@ export default function ReportsPage() {
       </div>
 
       <Tabs defaultValue="daily-opd">
-        <TabsList>
-          <TabsTrigger value="daily-opd">Daily OPD</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue</TabsTrigger>
-          <TabsTrigger value="productivity">Doctor Productivity</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="w-max min-w-full">
+            <TabsTrigger value="daily-opd">Daily OPD</TabsTrigger>
+            <TabsTrigger value="revenue">Revenue</TabsTrigger>
+            <TabsTrigger value="productivity" className="text-xs sm:text-sm">Doctor Productivity</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Daily OPD */}
         <TabsContent value="daily-opd" className="mt-4 space-y-4">
@@ -197,14 +199,14 @@ export default function ReportsPage() {
 
         {/* Revenue */}
         <TabsContent value="revenue" className="mt-4 space-y-4">
-          <div className="flex items-end gap-3">
-            <div className="space-y-1">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1 flex-1 min-w-[140px]">
               <Label className="text-xs">Start Date</Label>
-              <Input type="date" value={revenueStart} onChange={e => setRevenueStart(e.target.value)} className="w-44" />
+              <Input type="date" value={revenueStart} onChange={e => setRevenueStart(e.target.value)} className="w-full" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1 min-w-[140px]">
               <Label className="text-xs">End Date</Label>
-              <Input type="date" value={revenueEnd} onChange={e => setRevenueEnd(e.target.value)} className="w-44" />
+              <Input type="date" value={revenueEnd} onChange={e => setRevenueEnd(e.target.value)} className="w-full" />
             </div>
           </div>
 
@@ -327,14 +329,14 @@ export default function ReportsPage() {
 
         {/* Doctor Productivity */}
         <TabsContent value="productivity" className="mt-4 space-y-4">
-          <div className="flex items-end gap-3">
-            <div className="space-y-1">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1 flex-1 min-w-[140px]">
               <Label className="text-xs">Start Date</Label>
-              <Input type="date" value={prodStart} onChange={e => setProdStart(e.target.value)} className="w-44" />
+              <Input type="date" value={prodStart} onChange={e => setProdStart(e.target.value)} className="w-full" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1 min-w-[140px]">
               <Label className="text-xs">End Date</Label>
-              <Input type="date" value={prodEnd} onChange={e => setProdEnd(e.target.value)} className="w-44" />
+              <Input type="date" value={prodEnd} onChange={e => setProdEnd(e.target.value)} className="w-full" />
             </div>
           </div>
 

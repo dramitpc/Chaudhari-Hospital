@@ -317,26 +317,30 @@ export default function QueuePage() {
             </div>
           ) : (
             tokens.filter(t => t.status !== "completed" && t.status !== "cancelled" && t.status !== "skipped").map(token => (
-              <div key={token.id} className={`rounded-lg border-2 p-4 flex items-center gap-4 ${statusColors[token.status] ?? ""}`} data-testid={`token-${token.tokenNumber}`}>
-                <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-2 border-current font-bold text-xl sm:text-2xl">
-                  {token.tokenNumber}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-semibold text-foreground">{token.patientName}</span>
-                    <VisitTypeBadge visitType={token.visitType} />
-                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
-                      {token.status.replace("_", " ")}
-                    </span>
+              <div key={token.id} className={`rounded-lg border-2 p-3 sm:p-4 ${statusColors[token.status] ?? ""}`} data-testid={`token-${token.tokenNumber}`}>
+                {/* Top row: token circle + patient info */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 border-current font-bold text-base sm:text-xl mt-0.5">
+                    {token.tokenNumber}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {token.patientPhone ?? "No phone"}
-                  </p>
-                  {token.status === "waiting" && (
-                    <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-semibold text-foreground">{token.patientName}</span>
+                      <VisitTypeBadge visitType={token.visitType} />
+                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
+                        {token.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {token.patientPhone ?? "No phone"}
+                    </p>
+                    {token.status === "waiting" && (
+                      <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 flex-shrink-0 items-center">
+                {/* Action buttons — full-width row below on all sizes */}
+                <div className="flex flex-wrap gap-2 mt-2.5 justify-end items-center">
                   {invoicedPatientIds.has(token.patientId) && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700 animate-pulse">
                       <Receipt className="h-3 w-3" /> Invoice ✓
@@ -354,7 +358,7 @@ export default function QueuePage() {
                       onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
                       disabled={createConsultationMutation.isPending || updateStatusMutation.isPending}
                     >
-                      Start Consultation
+                      Start
                     </Button>
                   )}
                   {token.status === "in_consultation" && (

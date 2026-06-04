@@ -58,30 +58,30 @@ export default function PatientsPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[480px]">
           <thead className="bg-muted/40 border-b border-border">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Patient ID</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Age</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Gender</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Phone</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Blood Group</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Patient ID</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Name</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Age</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Gender</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Phone</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Blood Group</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className="border-b border-border">
-                  {Array.from({ length: 7 }).map((__, j) => (
-                    <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full" /></td>
+                  {Array.from({ length: 4 }).map((__, j) => (
+                    <td key={j} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>
                   ))}
                 </tr>
               ))
             ) : patients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">No patients found</td>
+                <td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">No patients found</td>
               </tr>
             ) : (
               patients.map((p) => (
@@ -91,17 +91,17 @@ export default function PatientsPage() {
                   onClick={() => setLocation(`/patients/${p.id}`)}
                   data-testid={`patient-row-${p.id}`}
                 >
-                  <td className="px-4 py-3 font-mono text-xs text-primary">{p.patientId}</td>
-                  <td className="px-4 py-3 font-medium">{p.fullName}</td>
-                  <td className="px-4 py-3">{calcAge(p.dateOfBirth) ?? p.age ?? "—"}</td>
-                  <td className="px-4 py-3 capitalize">{p.gender}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.phone ?? "-"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 font-mono text-xs text-primary hidden sm:table-cell">{p.patientId}</td>
+                  <td className="px-3 py-3 font-medium">{p.fullName}</td>
+                  <td className="px-3 py-3 hidden sm:table-cell">{calcAge(p.dateOfBirth) ?? p.age ?? "—"}</td>
+                  <td className="px-3 py-3 capitalize hidden md:table-cell">{p.gender}</td>
+                  <td className="px-3 py-3 text-muted-foreground">{p.phone ?? "-"}</td>
+                  <td className="px-3 py-3 hidden md:table-cell">
                     {p.bloodGroup ? (
                       <Badge variant="outline" className="font-mono">{p.bloodGroup}</Badge>
                     ) : <span className="text-muted-foreground">-</span>}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <Button
                       size="sm"
                       variant="outline"

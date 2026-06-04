@@ -60,40 +60,40 @@ export default function BillingPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[480px]">
           <thead className="bg-muted/40 border-b border-border">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Invoice #</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Patient</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Total</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Paid</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Balance</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Invoice #</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Patient</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Date</th>
+              <th className="px-3 py-3 text-right font-medium text-muted-foreground">Total</th>
+              <th className="px-3 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">Paid</th>
+              <th className="px-3 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">Balance</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Status</th>
+              <th className="px-3 py-3 text-left font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? Array.from({ length: 5 }).map((_, i) => (
               <tr key={i} className="border-b border-border">
-                {Array.from({ length: 8 }).map((__, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full" /></td>)}
+                {Array.from({ length: 5 }).map((__, j) => <td key={j} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>)}
               </tr>
             )) : invoices.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">No invoices found</td></tr>
+              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">No invoices found</td></tr>
             ) : invoices.map(inv => (
               <tr key={inv.id} className="border-b border-border hover:bg-muted/20">
-                <td className="px-4 py-3 font-mono text-xs text-primary">{inv.invoiceNumber}</td>
-                <td className="px-4 py-3 font-medium">{inv.patientName}</td>
-                <td className="px-4 py-3 text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</td>
-                <td className="px-4 py-3 text-right font-medium">₹{inv.total.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right text-green-600">₹{(inv.amountPaid ?? 0).toFixed(2)}</td>
-                <td className="px-4 py-3 text-right text-amber-600">₹{(inv.balance ?? 0).toFixed(2)}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3 font-mono text-xs text-primary">{inv.invoiceNumber}</td>
+                <td className="px-3 py-3 font-medium">{inv.patientName}</td>
+                <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                <td className="px-3 py-3 text-right font-medium">₹{inv.total.toFixed(2)}</td>
+                <td className="px-3 py-3 text-right text-green-600 hidden sm:table-cell">₹{(inv.amountPaid ?? 0).toFixed(2)}</td>
+                <td className="px-3 py-3 text-right text-amber-600 hidden sm:table-cell">₹{(inv.balance ?? 0).toFixed(2)}</td>
+                <td className="px-3 py-3">
                   <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusColors[inv.status] ?? ""}`}>
                     {inv.status}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <Link href={`/billing/${inv.id}`}>
                     <Button size="sm" variant="outline">View</Button>
                   </Link>
