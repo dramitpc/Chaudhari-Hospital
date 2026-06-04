@@ -1,5 +1,6 @@
 import { useRoute, useLocation, useSearch } from "wouter";
 import { useEffect, useRef, useState } from "react";
+import { fmtDate } from "@/lib/dateUtils";
 import {
   useGetPrescription, useGetClinicSettings, useGetPatient, useGetConsultation, useTranslatePrescription,
   getGetPrescriptionQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey, getGetConsultationQueryKey,
@@ -216,7 +217,7 @@ export default function PrescriptionDetailPage() {
     if (settings?.phone) lines.push(settings.phone);
     lines.push("");
     lines.push(`Patient: ${prescription.patientName}`);
-    lines.push(`Date: ${prescription.visitDate}`);
+    lines.push(`Date: ${fmtDate(prescription.visitDate)}`);
     lines.push(`Doctor: Dr. ${prescription.doctorName}`);
     if (prescription.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${prescription.diagnosis}`); }
     if (hasTranslation && translatedData?.diagnosis) lines.push(translatedData.diagnosis);
@@ -231,7 +232,7 @@ export default function PrescriptionDetailPage() {
     });
     if (prescription.advice) { lines.push(""); lines.push(`Advice: ${prescription.advice}`); }
     if (hasTranslation && translatedData?.advice) lines.push(translatedData.advice);
-    if (prescription.followUpDate) { lines.push(""); lines.push(`Follow-up: ${prescription.followUpDate}`); }
+    if (prescription.followUpDate) { lines.push(""); lines.push(`Follow-up: ${fmtDate(prescription.followUpDate)}`); }
     lines.push("");
     lines.push(`Thank you for visiting ${clinic}!`);
     return lines.join("\n");
@@ -410,8 +411,8 @@ export default function PrescriptionDetailPage() {
           </div>
         </div>
 
-        <div className={`mb-4 ${textAlign}`}>
-          <p className="text-sm text-muted-foreground">Date: {prescription.visitDate}</p>
+        <div className="mb-4 text-right">
+          <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 p-3 bg-muted/30 rounded divide-x divide-border">
@@ -588,7 +589,7 @@ export default function PrescriptionDetailPage() {
         {fmt.showFollowUp && prescription.followUpDate && (
           <div className="mb-6">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Follow-up</p>
-            <p className="text-sm">{prescription.followUpDate}</p>
+            <p className="text-sm">{fmtDate(prescription.followUpDate)}</p>
           </div>
         )}
 
