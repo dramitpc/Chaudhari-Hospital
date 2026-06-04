@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useListInvoices, getListInvoicesQueryKey } from "@workspace/api-client-react";
+import { fmtDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,7 +85,7 @@ export default function BillingPage() {
               <tr key={inv.id} className="border-b border-border hover:bg-muted/20">
                 <td className="px-3 py-3 font-mono text-xs text-primary">{inv.invoiceNumber}</td>
                 <td className="px-3 py-3 font-medium">{inv.patientName}</td>
-                <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{fmtDate(inv.createdAt)}</td>
                 <td className="px-3 py-3 text-right font-medium">₹{inv.total.toFixed(2)}</td>
                 <td className="px-3 py-3 text-right text-green-600 hidden sm:table-cell">₹{(inv.amountPaid ?? 0).toFixed(2)}</td>
                 <td className="px-3 py-3 text-right text-amber-600 hidden sm:table-cell">₹{(inv.balance ?? 0).toFixed(2)}</td>

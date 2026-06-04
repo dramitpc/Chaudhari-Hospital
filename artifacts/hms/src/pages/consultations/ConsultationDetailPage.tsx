@@ -1,5 +1,6 @@
 import { useRoute, useLocation, Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
+import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
   useListPrescriptions, useCreatePrescription, useListDrugs,
@@ -878,7 +879,7 @@ export default function ConsultationDetailPage() {
                                 <div className="flex-1 min-w-0">
                                   <span className="truncate block">{entryLabel(e)}</span>
                                   <span className="text-muted-foreground text-[10px]">
-                                    {new Date(e.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                    {fmtDateTime(e.savedAt)}
                                   </span>
                                 </div>
                                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyFieldValue(field, e.value)}>Apply</Button>
@@ -1351,7 +1352,7 @@ export default function ConsultationDetailPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-xs font-semibold">
-                                  {new Date(visit.visitDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  {fmtDate(visit.visitDate)}
                                 </span>
                                 <Badge
                                   variant={visit.status === "completed" ? "default" : "secondary"}
@@ -1442,7 +1443,7 @@ export default function ConsultationDetailPage() {
                                   {visit.followUpDate && (
                                     <div className="rounded border border-border bg-muted/30 p-2">
                                       <p className="font-semibold text-[10px] text-muted-foreground mb-0.5">Follow-up</p>
-                                      <p>{new Date(visit.followUpDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                                      <p>{fmtDate(visit.followUpDate)}</p>
                                       {visit.followUpNotes && <p className="mt-0.5 text-muted-foreground">{visit.followUpNotes}</p>}
                                     </div>
                                   )}
@@ -1457,7 +1458,7 @@ export default function ConsultationDetailPage() {
                                     <div key={rx.id} className="rounded border border-border bg-muted/30 p-2 space-y-1">
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="text-[10px] text-muted-foreground">
-                                          {new Date(rx.visitDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                          {fmtDate(rx.visitDate)}
                                         </span>
                                         <Link
                                           href={`/prescriptions/${rx.id}`}
@@ -1588,7 +1589,7 @@ export default function ConsultationDetailPage() {
                                 )}
                               </td>
                               <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                                {new Date(inv.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                {fmtDate(inv.createdAt)}
                               </td>
                               <td className="px-4 py-2.5">
                                 <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${statusColor[inv.status] ?? "bg-muted text-muted-foreground"}`}>
@@ -1771,7 +1772,7 @@ export default function ConsultationDetailPage() {
                 </div>
                 <div className="flex-1 text-right">
                   <p className="text-sm font-semibold">Dr. {consultation?.doctorName ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                  <p className="text-xs text-muted-foreground">{fmtDate(new Date())}</p>
                 </div>
               </div>
 
@@ -1913,7 +1914,7 @@ export default function ConsultationDetailPage() {
                             <div className="flex-1 min-w-0">
                               <span className="truncate block">{rxTemplateLabel(t)}</span>
                               <span className="text-muted-foreground text-[10px]">
-                                {new Date(t.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {t.items.filter(i => i.drugName).length} drug(s)
+                                {fmtDateTime(t.savedAt)} · {t.items.filter(i => i.drugName).length} drug(s)
                               </span>
                             </div>
                             <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyRxTemplate(t)}>Apply</Button>
@@ -2123,7 +2124,7 @@ export default function ConsultationDetailPage() {
                 <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.address ?? ""}</div>
                 <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.phone ?? ""}</div>
               </div>
-              <p><strong>Date:</strong> {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+              <p><strong>Date:</strong> {fmtDate(new Date())}</p>
               <br />
               <p><strong>To,</strong></p>
               <p>{thankingDoctorName || "Dr. _______________"}</p>
@@ -2221,7 +2222,7 @@ export default function ConsultationDetailPage() {
                 <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.address ?? ""}</div>
                 <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.phone ?? ""}</div>
               </div>
-              <p><strong>Date:</strong> {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+              <p><strong>Date:</strong> {fmtDate(new Date())}</p>
               <br />
               <p><strong>To,</strong></p>
               <p>{referralToDoctor || "Dr. _______________"}</p>

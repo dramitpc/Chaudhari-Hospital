@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Star, Clock, X, BookMarked } from "lucide-react";
+import { fmtDateTime } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -150,7 +151,7 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply }: Invest
                 <div key={e.id}>
                   <EntryRow entry={e} onDelete={() => deleteRecent(e.id)} />
                   <p className="text-[10px] text-muted-foreground pl-2 mt-0.5">
-                    {new Date(e.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {fmtDateTime(e.savedAt)}
                   </p>
                 </div>
               ))}

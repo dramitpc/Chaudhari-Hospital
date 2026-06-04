@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
+import { fmtDate } from "@/lib/dateUtils";
 import {
   useGetInvoice, useRecordPayment, useGetPatient, useGetClinicSettings,
   getGetInvoiceQueryKey, getListInvoicesQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey
@@ -81,7 +82,7 @@ export default function InvoiceDetailPage() {
     if (settings?.phone) lines.push(settings.phone);
     lines.push("");
     lines.push(`Invoice No: ${invoice.invoiceNumber}`);
-    lines.push(`Date: ${new Date(invoice.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`);
+    lines.push(`Date: ${fmtDate(invoice.createdAt)}`);
     lines.push(`Patient: ${invoice.patientName}`);
     if (invoice.doctorName) lines.push(`Doctor: Dr. ${invoice.doctorName}`);
     lines.push("");
@@ -115,7 +116,7 @@ export default function InvoiceDetailPage() {
                 {invoice.status}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">{new Date(invoice.createdAt).toLocaleDateString()}</p>
+            <p className="text-sm text-muted-foreground">{fmtDate(invoice.createdAt)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -245,7 +246,7 @@ export default function InvoiceDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Date</span>
-              <span>{new Date(invoice.createdAt).toLocaleDateString()}</span>
+              <span>{fmtDate(invoice.createdAt)}</span>
             </div>
             {invoice.paymentMode && (
               <div className="flex justify-between">

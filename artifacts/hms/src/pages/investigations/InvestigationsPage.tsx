@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { fmtDateTime } from "@/lib/dateUtils";
 import {
   useListInvestigations,
   useUpdateInvestigation,
@@ -434,9 +435,7 @@ export default function InvestigationsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(inv.createdAt).toLocaleString("en-IN", {
-                          day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-                        })}
+                        {fmtDateTime(inv.createdAt)}
                       </td>
 
                       {/* Actions — radiographer only */}

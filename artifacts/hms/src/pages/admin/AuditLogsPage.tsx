@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useListAuditLogs, getListAuditLogsQueryKey } from "@workspace/api-client-react";
+import { fmtDateTime } from "@/lib/dateUtils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,7 @@ export default function AuditLogsPage() {
               <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">No audit logs found</td></tr>
             ) : logs.map(log => (
               <tr key={log.id} className="border-b border-border hover:bg-muted/20">
-                <td className="px-4 py-2 font-mono whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</td>
+                <td className="px-4 py-2 font-mono whitespace-nowrap">{fmtDateTime(log.createdAt)}</td>
                 <td className="px-4 py-2 font-medium">{log.userName}</td>
                 <td className="px-4 py-2 capitalize">{log.userRole}</td>
                 <td className="px-4 py-2">

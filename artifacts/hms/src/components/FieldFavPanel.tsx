@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BookMarked, Star, Clock, X } from "lucide-react";
+import { fmtDateTime } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -101,7 +102,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
                   <div className="flex-1 min-w-0">
                     <span className="truncate block">{entryLabel(e)}</span>
                     <span className="text-muted-foreground text-[10px]">
-                      {new Date(e.savedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {fmtDateTime(e.savedAt)}
                     </span>
                   </div>
                   <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => handleApply(e.value)}>Apply</Button>

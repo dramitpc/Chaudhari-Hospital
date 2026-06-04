@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
+import { fmtDate } from "@/lib/dateUtils";
 import {
   useGetPatient, useGetPatientHistory, useAddVitals, useGetPatientTimeline,
   getGetPatientQueryKey, getGetPatientHistoryQueryKey, getGetPatientTimelineQueryKey
@@ -228,7 +229,7 @@ export default function PatientDetailPage() {
               <tbody>
                 {history?.vitals.map(v => (
                   <tr key={v.id} className="border-t border-border">
-                    <td className="px-4 py-2">{new Date(v.recordedAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-2">{fmtDate(v.recordedAt)}</td>
                     <td className="px-4 py-2">{v.bloodPressureSystolic && v.bloodPressureDiastolic ? `${v.bloodPressureSystolic}/${v.bloodPressureDiastolic}` : "-"}</td>
                     <td className="px-4 py-2">{v.pulseRate ?? "-"}</td>
                     <td className="px-4 py-2">{v.temperature ?? "-"}</td>
