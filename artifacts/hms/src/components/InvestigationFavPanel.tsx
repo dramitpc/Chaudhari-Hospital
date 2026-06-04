@@ -24,7 +24,7 @@ function getRecent(): InvEntry[] { return JSON.parse(localStorage.getItem(RECENT
 export function trackInvestigationRecent(entry: { type: string; bodyPart: string; notes: string }) {
   if (!entry.type.trim()) return;
   const stored = getRecent();
-  const deduped = stored.filter(e => !(e.type === entry.type && e.bodyPart === entry.bodyPart)).slice(0, 6);
+  const deduped = stored.filter(e => !(e.type === entry.type && e.bodyPart === entry.bodyPart)).slice(0, 8);
   localStorage.setItem(RECENT_KEY, JSON.stringify([
     { id: Date.now().toString(), name: "", ...entry, savedAt: Date.now() },
     ...deduped,
@@ -51,7 +51,6 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply }: Invest
 
   const handleApply = (entry: InvEntry) => {
     onApply({ type: entry.type, bodyPart: entry.bodyPart, notes: entry.notes });
-    setIsOpen(false);
   };
 
   const saveFav = () => {

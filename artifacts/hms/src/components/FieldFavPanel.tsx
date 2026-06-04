@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookMarked, Star, Clock, X } from "lucide-react";
+import { BookMarked, Star, Clock, X, PlusCircle, RefreshCw } from "lucide-react";
 import { fmtDateTime } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,16 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
     forceRefresh(n => n + 1);
   };
 
-  const handleApply = (value: string) => {
+  const handleAdd = (value: string) => {
+    const combined = currentValue.trim() ? `${currentValue.trim()}\n${value}` : value;
+    onApply(combined);
+    toast({ title: "Added" });
+  };
+
+  const handleReplace = (value: string) => {
     onApply(value);
     setIsOpen(false);
-    toast({ title: "Applied" });
+    toast({ title: "Replaced" });
   };
 
   const saveFav = () => {
@@ -81,9 +87,14 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
                 <Star className="h-3 w-3" /> Favourites
               </p>
               {favs.map(e => (
-                <div key={e.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                <div key={e.id} className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1">
                   <span className="truncate flex-1 font-medium">{entryLabel(e)}</span>
-                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => handleApply(e.value)}>Apply</Button>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-primary" onClick={() => handleAdd(e.value)}>
+                    <PlusCircle className="h-3 w-3 mr-1" />Add
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-muted-foreground" onClick={() => handleReplace(e.value)}>
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => deleteFav(e.id)}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -98,14 +109,19 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
                 <Clock className="h-3 w-3" /> Recently Used
               </p>
               {recent.map(e => (
-                <div key={e.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                <div key={e.id} className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1">
                   <div className="flex-1 min-w-0">
                     <span className="truncate block">{entryLabel(e)}</span>
                     <span className="text-muted-foreground text-[10px]">
                       {fmtDateTime(e.savedAt)}
                     </span>
                   </div>
-                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => handleApply(e.value)}>Apply</Button>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-primary" onClick={() => handleAdd(e.value)}>
+                    <PlusCircle className="h-3 w-3 mr-1" />Add
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-muted-foreground" onClick={() => handleReplace(e.value)}>
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => deleteRecent(e.id)}>
                     <X className="h-3 w-3" />
                   </Button>

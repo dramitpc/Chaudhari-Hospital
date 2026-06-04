@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, PlusCircle, RefreshCw, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
@@ -288,7 +288,7 @@ export default function ConsultationDetailPage() {
 
   const trackRxRecent = () => {
     if (!drugItems.some(i => i.drugName.trim())) return;
-    const deduped = getRxRecent().slice(0, 4);
+    const deduped = getRxRecent().slice(0, 8);
     persistRxRecent([{ id: Date.now().toString(), name: "", items: drugItems, savedAt: Date.now() }, ...deduped]);
   };
 
@@ -334,15 +334,25 @@ export default function ConsultationDetailPage() {
   const handleSoapBlur = (field: SoapField, value: string) => {
     handleBlur(field, value);
     if (!value.trim()) return;
-    const deduped = getFieldRecent(field).filter(r => r.value !== value).slice(0, 4);
+    const deduped = getFieldRecent(field).filter(r => r.value !== value).slice(0, 8);
     persistFieldRecent(field, [{ id: Date.now().toString(), name: "", value, savedAt: Date.now() }, ...deduped]);
   };
 
   const applyFieldValue = (field: SoapField, value: string) => {
+    setSoapValues(prev => {
+      const existing = prev[field].trim();
+      const combined = existing ? `${existing}\n${value}` : value;
+      handleBlur(field, combined);
+      return { ...prev, [field]: combined };
+    });
+    toast({ title: "Added" });
+  };
+
+  const replaceFieldValue = (field: SoapField, value: string) => {
     setSoapValues(prev => ({ ...prev, [field]: value }));
     handleBlur(field, value);
     setActiveFieldPanel(null);
-    toast({ title: "Applied" });
+    toast({ title: "Replaced" });
   };
 
   const saveFieldFavourite = (field: SoapField) => {
@@ -858,9 +868,14 @@ export default function ConsultationDetailPage() {
                               <Star className="h-3 w-3" /> Favourites
                             </p>
                             {favs.map(e => (
-                              <div key={e.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                              <div key={e.id} className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1">
                                 <span className="truncate flex-1 font-medium">{entryLabel(e)}</span>
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyFieldValue(field, e.value)}>Apply</Button>
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-primary" onClick={() => applyFieldValue(field, e.value)}>
+                                  <PlusCircle className="h-3 w-3 mr-1" />Add
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-muted-foreground" onClick={() => replaceFieldValue(field, e.value)}>
+                                  <RefreshCw className="h-3 w-3" />
+                                </Button>
                                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => deleteFieldFav(field, e.id)}>
                                   <X className="h-3 w-3" />
                                 </Button>
@@ -875,14 +890,19 @@ export default function ConsultationDetailPage() {
                               <Clock className="h-3 w-3" /> Recently Used
                             </p>
                             {recent.map(e => (
-                              <div key={e.id} className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
+                              <div key={e.id} className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1">
                                 <div className="flex-1 min-w-0">
                                   <span className="truncate block">{entryLabel(e)}</span>
                                   <span className="text-muted-foreground text-[10px]">
                                     {fmtDateTime(e.savedAt)}
                                   </span>
                                 </div>
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0" onClick={() => applyFieldValue(field, e.value)}>Apply</Button>
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-primary" onClick={() => applyFieldValue(field, e.value)}>
+                                  <PlusCircle className="h-3 w-3 mr-1" />Add
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-muted-foreground" onClick={() => replaceFieldValue(field, e.value)}>
+                                  <RefreshCw className="h-3 w-3" />
+                                </Button>
                                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => deleteFieldRecent(field, e.id)}>
                                   <X className="h-3 w-3" />
                                 </Button>
