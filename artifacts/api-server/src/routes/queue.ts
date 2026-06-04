@@ -46,10 +46,13 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const visitType = params.success ? (params.data as Record<string, unknown>).visitType as string | undefined : undefined;
 
   // Fetch ALL tokens (no visitType filter at DB level) so cumulative wait math is correct
-  let query = db.select().from(queueTokensTable).where(eq(queueTokensTable.queueDate, date)).$dynamic();
-  if (doctorId) query = query.where(eq(queueTokensTable.doctorId, doctorId));
+  const whereClause = doctorId
+    ? and(eq(queueTokensTable.queueDate, date), eq(queueTokensTable.doctorId, doctorId))
+    : eq(queueTokensTable.queueDate, date);
 
-  const tokens = await query.orderBy(queueTokensTable.tokenNumber);
+  const tokens = await db.select().from(queueTokensTable)
+    .where(whereClause)
+    .orderBy(queueTokensTable.tokenNumber);
   const formatted = await Promise.all(tokens.map(t => formatToken(t)));
 
   // Cumulative wait: for each "waiting" token, sum durations of all active tokens ahead
