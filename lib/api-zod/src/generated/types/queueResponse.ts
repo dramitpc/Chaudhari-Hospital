@@ -14,4 +14,9 @@ export interface QueueResponse {
   currentlyServing: number | null;
   /** @nullable */
   averageWaitMinutes?: number | null;
+  /**
+     * Rolling average of last 10 completed consultation durations in minutes
+     * @nullable
+     */
+  avgConsultationDuration?: number | null;
 }

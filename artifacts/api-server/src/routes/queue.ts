@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
 import { db, queueTokensTable, patientsTable, usersTable } from "@workspace/db";
 import {
   GetQueueQueryParams,
@@ -35,8 +35,7 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
   };
 }
 
-const VISIT_DURATION: Record<string, number> = { new: 10, followup: 5 };
-const ACTIVE_STATUSES = new Set(["waiting", "called", "in_consultation"]);
+const FALLBACK_DURATION = 8; // minutes, used when no completed consultations yet
 
 router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const params = GetQueueQueryParams.safeParse(req.query);
@@ -45,7 +44,7 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const doctorId = params.success ? params.data.doctorId : undefined;
   const visitType = params.success ? (params.data as Record<string, unknown>).visitType as string | undefined : undefined;
 
-  // Fetch ALL tokens (no visitType filter at DB level) so cumulative wait math is correct
+  // Fetch ALL tokens (no visitType filter at DB level) so wait math is correct
   const whereClause = doctorId
     ? and(eq(queueTokensTable.queueDate, date), eq(queueTokensTable.doctorId, doctorId))
     : eq(queueTokensTable.queueDate, date);
@@ -55,20 +54,50 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
     .orderBy(queueTokensTable.tokenNumber);
   const formatted = await Promise.all(tokens.map(t => formatToken(t)));
 
-  // Cumulative wait: for each "waiting" token, sum durations of all active tokens ahead
-  formatted.forEach((token, i) => {
-    if (token.status !== "waiting") {
+  // ── Rolling average of last 10 completed consultation durations ───────────
+  const completedWhereClause = doctorId
+    ? and(
+        eq(queueTokensTable.queueDate, date),
+        eq(queueTokensTable.doctorId, doctorId),
+        eq(queueTokensTable.status, "completed"),
+        isNotNull(queueTokensTable.consultationStartedAt),
+        isNotNull(queueTokensTable.consultationEndedAt),
+      )
+    : and(
+        eq(queueTokensTable.queueDate, date),
+        eq(queueTokensTable.status, "completed"),
+        isNotNull(queueTokensTable.consultationStartedAt),
+        isNotNull(queueTokensTable.consultationEndedAt),
+      );
+
+  const recentCompleted = await db.select({
+    consultationStartedAt: queueTokensTable.consultationStartedAt,
+    consultationEndedAt: queueTokensTable.consultationEndedAt,
+  }).from(queueTokensTable)
+    .where(completedWhereClause)
+    .orderBy(desc(queueTokensTable.updatedAt))
+    .limit(10);
+
+  const durations = recentCompleted
+    .filter(t => t.consultationStartedAt && t.consultationEndedAt)
+    .map(t => (t.consultationEndedAt!.getTime() - t.consultationStartedAt!.getTime()) / 60000);
+
+  const avgConsultationDuration = durations.length > 0
+    ? Math.max(1, Math.round(durations.reduce((a, b) => a + b, 0) / durations.length))
+    : null;
+
+  const rollingAvg = avgConsultationDuration ?? FALLBACK_DURATION;
+
+  // ── Assign estimated wait using: rollingAvg × (waitingPosition - 1) ───────
+  // Position 1 (first in waiting) = 0 min, Position 2 = 1×avg, etc.
+  let waitingIndex = 0;
+  formatted.forEach(token => {
+    if (token.status === "waiting") {
+      token.estimatedWaitMinutes = rollingAvg * waitingIndex;
+      waitingIndex++;
+    } else {
       token.estimatedWaitMinutes = null;
-      return;
     }
-    let cumulativeWait = 0;
-    for (let j = 0; j < i; j++) {
-      const ahead = formatted[j];
-      if (ACTIVE_STATUSES.has(ahead.status)) {
-        cumulativeWait += VISIT_DURATION[ahead.visitType ?? "new"] ?? 10;
-      }
-    }
-    token.estimatedWaitMinutes = cumulativeWait;
   });
 
   // Apply visitType filter after computing waits
@@ -84,6 +113,7 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
     totalWaiting: waiting.length,
     currentlyServing: inProgress?.tokenNumber ?? null,
     averageWaitMinutes: avgWait,
+    avgConsultationDuration,
   });
 });
 

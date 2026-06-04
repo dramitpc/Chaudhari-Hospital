@@ -318,8 +318,14 @@ export default function QueuePage() {
           )}
         </div>
         <div className="rounded-lg border border-border bg-card p-4 text-center">
-          <p className="text-sm text-muted-foreground">Avg Wait</p>
-          <p className="text-3xl font-bold text-blue-600">{queueData?.averageWaitMinutes ?? 0}<span className="text-base font-normal ml-1">min</span></p>
+          <p className="text-sm text-muted-foreground">Avg Consult Time</p>
+          <p className="text-3xl font-bold text-blue-600">
+            {queueData?.avgConsultationDuration ?? "—"}
+            {queueData?.avgConsultationDuration != null && <span className="text-base font-normal ml-1">min</span>}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {queueData?.avgConsultationDuration != null ? "rolling avg · last 10 patients" : "no data yet · using 8 min default"}
+          </p>
         </div>
       </div>
 

@@ -700,7 +700,8 @@ export const GetQueueResponse = zod.object({
 })),
   "totalWaiting": zod.number(),
   "currentlyServing": zod.number().nullable(),
-  "averageWaitMinutes": zod.number().nullish()
+  "averageWaitMinutes": zod.number().nullish(),
+  "avgConsultationDuration": zod.number().nullish().describe('Rolling average of last 10 completed consultation durations in minutes')
 })
 
 

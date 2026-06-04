@@ -2057,6 +2057,9 @@ components:
           type: ["integer", "null"]
         averageWaitMinutes:
           type: ["integer", "null"]
+        avgConsultationDuration:
+          type: ["integer", "null"]
+          description: Rolling average of last 10 completed consultation durations in minutes
 
     # ── CONSULTATION SCHEMAS ─────────────────────────────────────────────────
     Consultation:
