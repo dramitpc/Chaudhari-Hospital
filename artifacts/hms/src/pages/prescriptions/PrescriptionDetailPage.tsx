@@ -205,7 +205,7 @@ export default function PrescriptionDetailPage() {
   const hasTranslation = !!translatedData?.language && translatedData.language !== "en";
   const textAlign = fmt.headerAlign === "center" ? "text-center" : "text-left";
   const showTranslated = fmt.displayMode !== "english" && hasTranslation;
-  const showEnglish = fmt.displayMode !== "translated";
+  const showEnglish = fmt.displayMode !== "translated" || !hasTranslation;
   const isBilingual = fmt.displayMode === "bilingual" && hasTranslation;
 
   const displayItems = (showTranslated && translatedData?.items) ? translatedData.items : items;
@@ -275,24 +275,23 @@ export default function PrescriptionDetailPage() {
             </Button>
           </div>
 
-          {/* Display mode — only shown when translation exists */}
-          {hasTranslation && (
-            <div className="flex items-center gap-1 border border-border rounded-md p-0.5">
-              {(["english", "translated", "bilingual"] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => set("displayMode", mode)}
-                  className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
-                    fmt.displayMode === mode
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {mode === "english" ? "EN" : mode === "translated" ? translatedData?.languageName?.slice(0, 2).toUpperCase() ?? "TR" : "Bilingual"}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Display mode toggle — always shown so user can switch back */}
+          <div className="flex items-center gap-1 border border-border rounded-md p-0.5">
+            {(["english", "translated", "bilingual"] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => set("displayMode", mode)}
+                disabled={!hasTranslation && mode !== "english"}
+                className={`text-xs px-2.5 py-1 rounded transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed ${
+                  fmt.displayMode === mode && (hasTranslation || mode === "english")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "english" ? "EN" : mode === "translated" ? translatedData?.languageName?.slice(0, 2).toUpperCase() ?? "TR" : "Bilingual"}
+              </button>
+            ))}
+          </div>
 
           {/* Format popover */}
           <Popover>
