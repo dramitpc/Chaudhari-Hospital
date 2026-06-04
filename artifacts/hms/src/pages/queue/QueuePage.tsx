@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useGetQueue, useCallNextPatient, useUpdateTokenStatus, useGenerateToken,
-  useCreateConsultation, useListDoctors, useListPatients,
+  useCreateConsultation, useListDoctors, useListPatients, useRegisterPatient,
   useListInvoices, useRecordPayment,
   getGetQueueQueryKey, getListDoctorsQueryKey, getListPatientsQueryKey, getListInvoicesQueryKey
 } from "@workspace/api-client-react";
@@ -110,6 +110,15 @@ export default function QueuePage() {
   const generateTokenMutation = useGenerateToken();
   const createConsultationMutation = useCreateConsultation();
   const recordQueuePaymentMutation = useRecordPayment();
+  const registerPatientMutation = useRegisterPatient();
+
+  // "Register New Patient" inline state
+  const [dialogMode, setDialogMode] = useState<"existing" | "new">("existing");
+  const [newName, setNewName] = useState("");
+  const [newGender, setNewGender] = useState<"male" | "female" | "other" | "">("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newAge, setNewAge] = useState("");
+  const [newDob, setNewDob] = useState("");
 
   // Read invoice-created flags from sessionStorage (set by ConsultationDetailPage after creating an invoice)
   const [invoicedPatientIds] = useState<Set<string>>(() => {
@@ -185,6 +194,18 @@ export default function QueuePage() {
     );
   };
 
+  const resetTokenModal = () => {
+    setShowTokenModal(false);
+    setTokenPatientId("");
+    setTokenVisitType("new");
+    setDialogMode("existing");
+    setNewName("");
+    setNewGender("");
+    setNewPhone("");
+    setNewAge("");
+    setNewDob("");
+  };
+
   const handleGenerateToken = () => {
     if (!tokenPatientId || !selectedDoctorId) return;
     generateTokenMutation.mutate(
@@ -196,11 +217,36 @@ export default function QueuePage() {
             description: `${token.patientName} — ${tokenVisitType === "followup" ? "Follow-up" : "New Visit"}`,
           });
           queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-          setShowTokenModal(false);
-          setTokenPatientId("");
-          setTokenVisitType("new");
+          resetTokenModal();
         },
         onError: () => toast({ title: "Error", description: "Failed to generate token", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleRegisterAndQueue = () => {
+    if (!newName || !newGender || !selectedDoctorId) return;
+    registerPatientMutation.mutate(
+      { data: { fullName: newName, gender: newGender, phone: newPhone || undefined, age: newAge || undefined, dateOfBirth: newDob || undefined } },
+      {
+        onSuccess: (patient) => {
+          generateTokenMutation.mutate(
+            { data: { patientId: patient.id, doctorId: selectedDoctorId, visitType: tokenVisitType, date: localToday } },
+            {
+              onSuccess: (token) => {
+                toast({
+                  title: `Token #${token.tokenNumber} generated`,
+                  description: `${patient.fullName} registered & added to queue`,
+                });
+                queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+                queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey({ limit: 200 }) });
+                resetTokenModal();
+              },
+              onError: () => toast({ title: "Registered but queue failed", description: "Patient was registered; add to queue manually.", variant: "destructive" }),
+            }
+          );
+        },
+        onError: () => toast({ title: "Failed to register patient", variant: "destructive" }),
       }
     );
   };
@@ -519,29 +565,103 @@ export default function QueuePage() {
       </Dialog>
 
       {/* Generate Token Modal */}
-      <Dialog open={showTokenModal} onOpenChange={(open) => {
-        setShowTokenModal(open);
-        if (!open) { setTokenPatientId(""); setTokenVisitType("new"); }
-      }}>
-        <DialogContent>
+      <Dialog open={showTokenModal} onOpenChange={(open) => { if (!open) resetTokenModal(); else setShowTokenModal(true); }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Generate Queue Token</DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Patient</Label>
-              <Select onValueChange={setTokenPatientId} value={tokenPatientId}>
-                <SelectTrigger data-testid="select-token-patient">
-                  <SelectValue placeholder="Select patient" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(patients?.data ?? []).map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Mode toggle */}
+            <div className="grid grid-cols-2 rounded-lg border border-border overflow-hidden text-sm font-medium">
+              <button
+                type="button"
+                onClick={() => setDialogMode("existing")}
+                className={`py-2 transition-colors ${dialogMode === "existing" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+              >
+                Existing Patient
+              </button>
+              <button
+                type="button"
+                onClick={() => setDialogMode("new")}
+                className={`py-2 transition-colors ${dialogMode === "new" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+              >
+                + Register New
+              </button>
             </div>
 
+            {dialogMode === "existing" ? (
+              <div className="space-y-1.5">
+                <Label>Patient <span className="text-destructive">*</span></Label>
+                <Select onValueChange={setTokenPatientId} value={tokenPatientId}>
+                  <SelectTrigger data-testid="select-token-patient">
+                    <SelectValue placeholder="Select patient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(patients?.data ?? []).map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-3 rounded-lg border border-dashed border-border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">New Patient Details</p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Full Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    placeholder="Patient full name"
+                    data-testid="input-new-patient-name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Gender <span className="text-destructive">*</span></Label>
+                    <Select onValueChange={v => setNewGender(v as "male" | "female" | "other")} value={newGender}>
+                      <SelectTrigger data-testid="select-new-patient-gender">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Age (years)</Label>
+                    <Input
+                      type="number" min="0" max="150"
+                      value={newAge}
+                      onChange={e => setNewAge(e.target.value)}
+                      placeholder="e.g. 35"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Phone</Label>
+                    <Input
+                      value={newPhone}
+                      onChange={e => setNewPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Date of Birth</Label>
+                    <Input
+                      type="date"
+                      value={newDob}
+                      onChange={e => setNewDob(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Visit Type */}
             <div className="space-y-1.5">
               <Label>
                 Visit Type <span className="text-destructive">*</span>
@@ -579,14 +699,24 @@ export default function QueuePage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setShowTokenModal(false)}>Cancel</Button>
-              <Button
-                onClick={handleGenerateToken}
-                disabled={!tokenPatientId || generateTokenMutation.isPending}
-                data-testid="btn-confirm-generate-token"
-              >
-                Generate Token
-              </Button>
+              <Button variant="outline" onClick={resetTokenModal}>Cancel</Button>
+              {dialogMode === "existing" ? (
+                <Button
+                  onClick={handleGenerateToken}
+                  disabled={!tokenPatientId || generateTokenMutation.isPending}
+                  data-testid="btn-confirm-generate-token"
+                >
+                  Generate Token
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleRegisterAndQueue}
+                  disabled={!newName || !newGender || registerPatientMutation.isPending || generateTokenMutation.isPending}
+                  data-testid="btn-register-and-queue"
+                >
+                  {registerPatientMutation.isPending || generateTokenMutation.isPending ? "Registering…" : "Register & Generate Token"}
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
