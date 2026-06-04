@@ -173,7 +173,7 @@ Rules:
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
-      max_completion_tokens: 2048,
+      max_completion_tokens: 8192,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -181,8 +181,15 @@ Rules:
     });
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const jsonStr = raw.replace(/^```json\n?|\n?```$/g, "").trim();
-    translated = JSON.parse(jsonStr) as Record<string, string>;
-  } catch {
+    try {
+      translated = JSON.parse(jsonStr) as Record<string, string>;
+    } catch (parseErr) {
+      req.log.error({ parseErr, raw }, "Translation JSON parse failed");
+      res.status(502).json({ error: "Translation response was malformed. Please try again." });
+      return;
+    }
+  } catch (err) {
+    req.log.error({ err }, "Translation API call failed");
     res.status(502).json({ error: "Translation failed. Please try again." });
     return;
   }
