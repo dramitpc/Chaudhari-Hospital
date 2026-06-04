@@ -220,7 +220,6 @@ export default function PrescriptionDetailPage() {
     lines.push(`Date: ${fmtDate(prescription.visitDate)}`);
     lines.push(`Doctor: Dr. ${prescription.doctorName}`);
     if (prescription.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${prescription.diagnosis}`); }
-    if (hasTranslation && translatedData?.diagnosis) lines.push(translatedData.diagnosis);
     lines.push("");
     lines.push("*Medicines:*");
     items.forEach((item, i) => {
@@ -447,18 +446,12 @@ export default function PrescriptionDetailPage() {
           </div>
         )}
 
-        {/* Diagnosis */}
-        {fmt.showDiagnosis && (prescription.diagnosis || translatedData?.diagnosis) && (
-          isBilingual ? (
-            <BilingualField label="Diagnosis" en={prescription.diagnosis} translated={translatedData?.diagnosis} />
-          ) : (
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
-              <p className="text-sm" style={showTranslated ? { fontFamily: "'Noto Sans', sans-serif" } : {}}>
-                {showTranslated ? (translatedData?.diagnosis ?? prescription.diagnosis) : prescription.diagnosis}
-              </p>
-            </div>
-          )
+        {/* Diagnosis — always English */}
+        {fmt.showDiagnosis && prescription.diagnosis && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
+            <p className="text-sm">{prescription.diagnosis}</p>
+          </div>
         )}
 
         {/* SOAP */}

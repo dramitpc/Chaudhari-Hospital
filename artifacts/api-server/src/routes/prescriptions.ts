@@ -103,14 +103,17 @@ router.get("/prescriptions", authenticate, async (req, res): Promise<void> => {
   const page = params.success && params.data.page ? Number(params.data.page) : 1;
   const limit = params.success && params.data.limit ? Number(params.data.limit) : 50;
   const localToday = new Date().toLocaleDateString("en-CA");
-  const date = (params.success && (params.data as Record<string, unknown>).date as string) ?? localToday;
+  const date: string = (params.success ? ((params.data as Record<string, unknown>).date as string | undefined) : undefined) ?? localToday;
 
-  const conditions = [eq(prescriptionsTable.visitDate, date)];
-  if (params.success && params.data.patientId) conditions.push(eq(prescriptionsTable.patientId, params.data.patientId));
-  if (params.success && params.data.consultationId) conditions.push(eq(prescriptionsTable.consultationId, params.data.consultationId));
+  const patientId = params.success ? params.data.patientId : undefined;
+  const consultationId = params.success ? params.data.consultationId : undefined;
 
   const all = await db.select().from(prescriptionsTable)
-    .where(and(...conditions))
+    .where(and(
+      eq(prescriptionsTable.visitDate, date),
+      patientId     ? eq(prescriptionsTable.patientId,     patientId)     : undefined,
+      consultationId ? eq(prescriptionsTable.consultationId, consultationId) : undefined,
+    ))
     .orderBy(desc(prescriptionsTable.createdAt));
   const total = all.length;
   const slice = all.slice((page - 1) * limit, page * limit);
@@ -147,7 +150,6 @@ router.post("/prescriptions/:id/translate", authenticate, async (req, res): Prom
   const items = (p.items as PrescriptionItem[]) ?? [];
 
   const fieldsToTranslate: Record<string, string> = {};
-  if (p.diagnosis) fieldsToTranslate.diagnosis = p.diagnosis;
   if (p.advice) fieldsToTranslate.advice = p.advice;
   if (p.notes) fieldsToTranslate.notes = p.notes;
   items.forEach((item, i) => {
@@ -197,7 +199,7 @@ Rules:
   const translations = {
     language: targetLang,
     languageName: langName,
-    diagnosis: translated.diagnosis ?? null,
+    diagnosis: null,
     advice: translated.advice ?? null,
     notes: translated.notes ?? null,
     items: translatedItems,
