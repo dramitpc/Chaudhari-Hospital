@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import {
-  useListCertificates, useCreateCertificate, useListPatients, useListUsers,
-  getListCertificatesQueryKey, getListPatientsQueryKey, getListUsersQueryKey
+  useListCertificates, useCreateCertificate, useListPatients, useListUsers, useGetClinicSettings,
+  getListCertificatesQueryKey, getListPatientsQueryKey, getListUsersQueryKey, getGetClinicSettingsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,6 +18,15 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"];
 
+const certTitles: Record<string, string> = {
+  sick_leave: "Sick Leave Certificate",
+  fitness: "Fitness Certificate",
+  medical: "Medical Certificate",
+  procedure: "Procedure Certificate",
+  vaccination: "Vaccination Certificate",
+  referral_thank_you: "Thanking Letter",
+};
+
 const typeColors: Record<string, string> = {
   sick_leave: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   fitness: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
@@ -27,6 +35,125 @@ const typeColors: Record<string, string> = {
   vaccination: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
   referral_thank_you: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
 };
+
+type PreviewProps = {
+  form: {
+    type: string;
+    issuedDate: string;
+    fromDate: string;
+    toDate: string;
+    diagnosis: string;
+    content: string;
+  };
+  patientName: string;
+  doctorName: string;
+  clinicName: string;
+  clinicAddress?: string;
+  clinicPhone?: string;
+  clinicReg?: string;
+};
+
+function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress, clinicPhone, clinicReg }: PreviewProps) {
+  const certTitle = certTitles[form.type] ?? "Medical Certificate";
+  const isThankingLetter = form.type === "referral_thank_you";
+  const pt = patientName || "Patient Name";
+  const dr = doctorName || "Doctor Name";
+
+  return (
+    <div className="bg-white text-gray-900 rounded border-2 border-gray-200 p-6 text-[10px] leading-relaxed shadow-sm">
+      {/* Clinic header */}
+      <div className="text-center border-b-2 border-blue-600 pb-3 mb-4">
+        <p className="text-sm font-bold text-blue-700">{clinicName || "ClinicOS"}</p>
+        {clinicAddress && <p className="text-muted-foreground mt-0.5">{clinicAddress}</p>}
+        {clinicPhone && <p className="text-muted-foreground">Tel: {clinicPhone}</p>}
+        {clinicReg && <p className="text-muted-foreground">Reg: {clinicReg}</p>}
+      </div>
+
+      {isThankingLetter ? (
+        <>
+          <div className="text-center mb-4">
+            <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-gray-800 pb-0.5">
+              Thanking Letter
+            </span>
+            <p className="text-muted-foreground mt-1">Date: {form.issuedDate || "—"}</p>
+          </div>
+          <div className="space-y-2">
+            <p>To,<br /><strong>Dr. ________</strong></p>
+            <p>Dear Dr. ________,</p>
+            <p>
+              We sincerely thank you for referring <strong>{pt}</strong> to our clinic.
+              The patient was examined and treated on <strong>{form.issuedDate || "—"}</strong> by{" "}
+              <strong>Dr. {dr}</strong>.
+            </p>
+            {form.diagnosis && <p><strong>Diagnosis: </strong>{form.diagnosis}</p>}
+            {form.fromDate && form.toDate && (
+              <p>Treatment period: <strong>{form.fromDate}</strong> to <strong>{form.toDate}</strong></p>
+            )}
+            {form.content && (
+              <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                <p>{form.content}</p>
+              </div>
+            )}
+            <p className="mt-3">We look forward to continued collaboration.</p>
+            <p>Thanking you,</p>
+          </div>
+          <div className="mt-8 pt-2 border-t border-gray-800 w-40">
+            <p className="font-medium">Dr. {dr}</p>
+            <p className="text-gray-500">Signature &amp; Stamp</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="text-center mb-4">
+            <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-gray-800 pb-0.5">
+              {certTitle}
+            </span>
+            <p className="text-muted-foreground mt-1">Date: {form.issuedDate || "—"}</p>
+          </div>
+          <div className="space-y-2">
+            <p>
+              This is to certify that <strong>{pt}</strong> has been examined and{" "}
+              {form.type === "sick_leave" ? (
+                <>is found to be suffering from <strong>{form.diagnosis || "illness"}</strong> and is advised
+                rest from <strong>{form.fromDate || form.issuedDate || "—"}</strong> to{" "}
+                <strong>{form.toDate || form.issuedDate || "—"}</strong>.</>
+              ) : form.type === "fitness" ? (
+                <>is found medically fit for duty/activities as of the date of this certificate.</>
+              ) : (
+                <>{form.content || "has been issued this certificate as required."}</>
+              )}
+            </p>
+            {form.diagnosis && form.type !== "sick_leave" && (
+              <p className="font-medium">Diagnosis: {form.diagnosis}</p>
+            )}
+            {form.fromDate && form.toDate && form.type !== "sick_leave" && (
+              <p>Period: <strong>{form.fromDate}</strong> to <strong>{form.toDate}</strong></p>
+            )}
+            {form.content && form.type !== "sick_leave" && form.type !== "fitness" && (
+              <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                <p>{form.content}</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-6">
+            <div className="text-center">
+              <div className="border-t border-gray-800 pt-1">
+                <p className="font-medium">Dr. {dr}</p>
+                <p className="text-gray-500">Signature &amp; Stamp</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="border-t border-gray-800 pt-1">
+                <p className="font-medium">{pt}</p>
+                <p className="text-gray-500">Patient Signature</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function CertificatesPage() {
   const { user } = useAuth();
@@ -49,7 +176,13 @@ export default function CertificatesPage() {
   });
   const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });
   const { data: doctors } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
+  const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
   const createMutation = useCreateCertificate();
+
+  const selectedPatient = (patients?.data ?? []).find(p => p.id === form.patientId);
+  const selectedDoctor = (doctors?.data ?? []).find(d => d.id === form.doctorId);
+  const patientName = selectedPatient?.fullName ?? "";
+  const doctorName = selectedDoctor?.fullName ?? (user?.role === "doctor" ? (user as unknown as { fullName?: string }).fullName ?? "" : "");
 
   const handleCreate = () => {
     if (!form.patientId || !form.doctorId) return;
@@ -123,66 +256,87 @@ export default function CertificatesPage() {
       </div>
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Issue Medical Certificate</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Patient</Label>
-              <Select onValueChange={v => setForm(f => ({ ...f, patientId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                <SelectContent>
-                  {(patients?.data ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {user?.role !== "doctor" && (
-              <div className="space-y-1.5">
-                <Label>Doctor</Label>
-                <Select defaultValue={form.doctorId} onValueChange={v => setForm(f => ({ ...f, doctorId: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                  <SelectContent>
-                    {(doctors?.data ?? []).map(d => <SelectItem key={d.id} value={d.id}>{d.fullName}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+        <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0">
+          <div className="grid grid-cols-1 md:grid-cols-[420px_1fr]">
+            {/* ── Form panel ── */}
+            <div className="p-6 border-r border-border overflow-y-auto max-h-[85vh]">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Issue Medical Certificate</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Patient</Label>
+                  <Select onValueChange={v => setForm(f => ({ ...f, patientId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
+                    <SelectContent>
+                      {(patients?.data ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {user?.role !== "doctor" && (
+                  <div className="space-y-1.5">
+                    <Label>Doctor</Label>
+                    <Select defaultValue={form.doctorId} onValueChange={v => setForm(f => ({ ...f, doctorId: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                      <SelectContent>
+                        {(doctors?.data ?? []).map(d => <SelectItem key={d.id} value={d.id}>{d.fullName}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <Label>Certificate Type</Label>
+                  <Select defaultValue={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CERT_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Issued Date</Label>
+                    <Input type="date" value={form.issuedDate} onChange={e => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">From Date</Label>
+                    <Input type="date" value={form.fromDate} onChange={e => setForm(f => ({ ...f, fromDate: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">To Date</Label>
+                    <Input type="date" value={form.toDate} onChange={e => setForm(f => ({ ...f, toDate: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Diagnosis</Label>
+                  <Input value={form.diagnosis} onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))} placeholder="Diagnosis / reason" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Certificate Content</Label>
+                  <Textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
+                    rows={3} placeholder="Certificate body text..." />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+                  <Button onClick={handleCreate} disabled={!form.patientId || !form.doctorId || createMutation.isPending}>
+                    {createMutation.isPending ? "Issuing..." : "Issue Certificate"}
+                  </Button>
+                </div>
               </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Certificate Type</Label>
-              <Select defaultValue={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CERT_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace("_", " ")}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Issued Date</Label>
-                <Input type="date" value={form.issuedDate} onChange={e => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">From Date</Label>
-                <Input type="date" value={form.fromDate} onChange={e => setForm(f => ({ ...f, fromDate: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">To Date</Label>
-                <Input type="date" value={form.toDate} onChange={e => setForm(f => ({ ...f, toDate: e.target.value }))} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Diagnosis</Label>
-              <Input value={form.diagnosis} onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))} placeholder="Diagnosis / reason" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Certificate Content</Label>
-              <Textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
-                rows={3} placeholder="Certificate body text..." />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={!form.patientId || !form.doctorId || createMutation.isPending}>
-                Issue Certificate
-              </Button>
+
+            {/* ── Preview panel ── */}
+            <div className="bg-muted/30 p-6 overflow-y-auto max-h-[85vh]">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Live Preview</p>
+              <CertPreview
+                form={form}
+                patientName={patientName}
+                doctorName={doctorName}
+                clinicName={settings?.clinicName ?? "ClinicOS"}
+                clinicAddress={settings?.address ?? undefined}
+                clinicPhone={settings?.phone ?? undefined}
+                clinicReg={settings?.registrationNumber ?? undefined}
+              />
             </div>
           </div>
         </DialogContent>
