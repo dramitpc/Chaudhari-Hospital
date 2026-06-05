@@ -1850,7 +1850,7 @@ export default function ConsultationDetailPage() {
               {(clinicalValues["chiefComplaint"] || consultation?.chiefComplaint) && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Chief Complaint</p>
-                  <p className="text-sm">{clinicalValues["chiefComplaint"] || consultation?.chiefComplaint}</p>
+                  <p className="text-sm whitespace-pre-wrap">{clinicalValues["chiefComplaint"] || consultation?.chiefComplaint}</p>
                 </div>
               )}
 
@@ -1858,10 +1858,10 @@ export default function ConsultationDetailPage() {
               {(soapValues.soapSubjective || soapValues.soapObjective || soapValues.soapAssessment || soapValues.soapPlan) && (
                 <div className="space-y-0.5">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">SOAP Notes</p>
-                  {soapValues.soapSubjective && <p className="text-sm"><span className="font-medium">S: </span>{soapValues.soapSubjective}</p>}
-                  {soapValues.soapObjective  && <p className="text-sm"><span className="font-medium">O: </span>{soapValues.soapObjective}</p>}
-                  {soapValues.soapAssessment && <p className="text-sm"><span className="font-medium">A: </span>{soapValues.soapAssessment}</p>}
-                  {soapValues.soapPlan       && <p className="text-sm"><span className="font-medium">P: </span>{soapValues.soapPlan}</p>}
+                  {soapValues.soapSubjective && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">S: </span>{soapValues.soapSubjective}</p>}
+                  {soapValues.soapObjective  && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">O: </span>{soapValues.soapObjective}</p>}
+                  {soapValues.soapAssessment && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">A: </span>{soapValues.soapAssessment}</p>}
+                  {soapValues.soapPlan       && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">P: </span>{soapValues.soapPlan}</p>}
                 </div>
               )}
 
@@ -1877,7 +1877,7 @@ export default function ConsultationDetailPage() {
               {(diagnosisValue || consultation?.diagnosis) && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Diagnosis</p>
-                  <p className="text-sm">{diagnosisValue || consultation?.diagnosis}</p>
+                  <p className="text-sm whitespace-pre-wrap">{diagnosisValue || consultation?.diagnosis}</p>
                 </div>
               )}
 
@@ -1918,7 +1918,7 @@ export default function ConsultationDetailPage() {
               {(adviceValue || consultation?.advice) && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Advice</p>
-                  <p className="text-sm">{adviceValue || consultation?.advice}</p>
+                  <p className="text-sm whitespace-pre-wrap">{adviceValue || consultation?.advice}</p>
                 </div>
               )}
 

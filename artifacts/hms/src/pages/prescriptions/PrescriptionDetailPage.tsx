@@ -450,11 +450,11 @@ export default function PrescriptionDetailPage() {
         {fmt.showSoap && (prescription.soapSubjective || prescription.soapObjective || prescription.soapAssessment || prescription.soapPlan) && (
           <div className="mb-4 space-y-1.5">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">SOAP Notes</p>
-            {prescription.chiefComplaint && <p className="text-sm"><span className="font-medium">CC: </span>{prescription.chiefComplaint}</p>}
-            {prescription.soapSubjective && <p className="text-sm"><span className="font-medium">S: </span>{prescription.soapSubjective}</p>}
-            {prescription.soapObjective && <p className="text-sm"><span className="font-medium">O: </span>{prescription.soapObjective}</p>}
-            {prescription.soapAssessment && <p className="text-sm"><span className="font-medium">A: </span>{prescription.soapAssessment}</p>}
-            {prescription.soapPlan && <p className="text-sm"><span className="font-medium">P: </span>{prescription.soapPlan}</p>}
+            {prescription.chiefComplaint && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">CC: </span>{prescription.chiefComplaint}</p>}
+            {prescription.soapSubjective && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">S: </span>{prescription.soapSubjective}</p>}
+            {prescription.soapObjective && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">O: </span>{prescription.soapObjective}</p>}
+            {prescription.soapAssessment && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">A: </span>{prescription.soapAssessment}</p>}
+            {prescription.soapPlan && <p className="text-sm whitespace-pre-wrap"><span className="font-medium">P: </span>{prescription.soapPlan}</p>}
           </div>
         )}
 
@@ -469,7 +469,7 @@ export default function PrescriptionDetailPage() {
         {fmt.showDiagnosis && prescription.diagnosis && (
           <div className="mb-4">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
-            <p className="text-sm">{prescription.diagnosis}</p>
+            <p className="text-sm whitespace-pre-wrap">{prescription.diagnosis}</p>
           </div>
         )}
 
