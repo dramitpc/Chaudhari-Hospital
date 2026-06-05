@@ -84,6 +84,8 @@ export default function QueuePage() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenPatientId, setTokenPatientId] = useState("");
   const [tokenVisitType, setTokenVisitType] = useState<"new" | "followup">("new");
+  const [patientSearch, setPatientSearch] = useState("");
+  const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
 
   const { data: doctorsData } = useListDoctors({ query: { queryKey: getListDoctorsQueryKey() } });
   const doctors = doctorsData?.data ?? [];
@@ -199,6 +201,8 @@ export default function QueuePage() {
     setTokenPatientId("");
     setTokenVisitType("new");
     setDialogMode("existing");
+    setPatientSearch("");
+    setPatientDropdownOpen(false);
     setNewName("");
     setNewGender("");
     setNewPhone("");
@@ -599,16 +603,74 @@ export default function QueuePage() {
             {dialogMode === "existing" ? (
               <div className="space-y-1.5">
                 <Label>Patient <span className="text-destructive">*</span></Label>
-                <Select onValueChange={setTokenPatientId} value={tokenPatientId}>
-                  <SelectTrigger data-testid="select-token-patient">
-                    <SelectValue placeholder="Select patient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(patients?.data ?? []).map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const allPatients = patients?.data ?? [];
+                  const q = patientSearch.trim().toLowerCase();
+                  const filtered = q
+                    ? allPatients.filter(p =>
+                        p.fullName.toLowerCase().includes(q) ||
+                        (p.patientId ?? "").toLowerCase().includes(q) ||
+                        (p.phone ?? "").includes(q)
+                      )
+                    : allPatients;
+                  const selected = allPatients.find(p => p.id === tokenPatientId);
+                  return (
+                    <div className="relative">
+                      {selected && !patientDropdownOpen ? (
+                        <div
+                          className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 cursor-pointer hover:bg-muted/50"
+                          onClick={() => {
+                            setPatientSearch("");
+                            setPatientDropdownOpen(true);
+                            setTokenPatientId("");
+                          }}
+                          data-testid="selected-patient-display"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{selected.fullName}</p>
+                            <p className="text-xs text-muted-foreground">{selected.patientId}{selected.phone ? ` · ${selected.phone}` : ""}</p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">change</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Input
+                            autoFocus
+                            value={patientSearch}
+                            onChange={e => { setPatientSearch(e.target.value); setPatientDropdownOpen(true); }}
+                            onFocus={() => setPatientDropdownOpen(true)}
+                            placeholder="Search by name, patient ID, or mobile…"
+                            data-testid="input-patient-search"
+                          />
+                          {patientDropdownOpen && (
+                            <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-52 overflow-y-auto">
+                              {filtered.length === 0 ? (
+                                <p className="px-3 py-2 text-sm text-muted-foreground">No patients found</p>
+                              ) : (
+                                filtered.slice(0, 50).map(p => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 hover:bg-muted transition-colors"
+                                    onMouseDown={e => e.preventDefault()}
+                                    onClick={() => {
+                                      setTokenPatientId(p.id);
+                                      setPatientSearch("");
+                                      setPatientDropdownOpen(false);
+                                    }}
+                                  >
+                                    <p className="text-sm font-medium">{p.fullName}</p>
+                                    <p className="text-xs text-muted-foreground">{p.patientId}{p.phone ? ` · ${p.phone}` : ""}</p>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="space-y-3 rounded-lg border border-dashed border-border bg-muted/30 p-3">
