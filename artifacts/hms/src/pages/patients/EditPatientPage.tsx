@@ -160,7 +160,7 @@ export default function EditPatientPage() {
                 name="preferredLanguage"
                 control={control}
                 render={({ field }) => (
-                  <Select value={field.value ?? "en"} onValueChange={field.onChange}>
+                  <Select value={field.value ?? "mr"} onValueChange={field.onChange}>
                     <SelectTrigger data-testid="select-preferred-language">
                       <SelectValue placeholder="Select language" />
                     </SelectTrigger>

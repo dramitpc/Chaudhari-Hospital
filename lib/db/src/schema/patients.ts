@@ -25,7 +25,7 @@ export const patientsTable = pgTable("patients", {
   currentMedications: text("current_medications"),
   referringDoctorName: text("referring_doctor_name"),
   referringDoctorPhone: text("referring_doctor_phone"),
-  preferredLanguage: text("preferred_language").default("en"),
+  preferredLanguage: text("preferred_language").default("mr"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
