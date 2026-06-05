@@ -439,6 +439,7 @@ export const GetPatientHistoryResponse = zod.object({
   "tokenId": zod.string().nullish(),
   "visitDate": zod.string(),
   "status": zod.enum(['in_progress', 'completed', 'cancelled']),
+  "referringDoctorName": zod.string().nullish(),
   "chiefComplaint": zod.string().nullish(),
   "historyOfPresentIllness": zod.string().nullish(),
   "clinicalNotes": zod.string().nullish(),
@@ -804,6 +805,7 @@ export const ListConsultationsResponse = zod.object({
   "tokenId": zod.string().nullish(),
   "visitDate": zod.string(),
   "status": zod.enum(['in_progress', 'completed', 'cancelled']),
+  "referringDoctorName": zod.string().nullish(),
   "chiefComplaint": zod.string().nullish(),
   "historyOfPresentIllness": zod.string().nullish(),
   "clinicalNotes": zod.string().nullish(),
@@ -858,6 +860,7 @@ export const GetConsultationResponse = zod.object({
   "tokenId": zod.string().nullish(),
   "visitDate": zod.string(),
   "status": zod.enum(['in_progress', 'completed', 'cancelled']),
+  "referringDoctorName": zod.string().nullish(),
   "chiefComplaint": zod.string().nullish(),
   "historyOfPresentIllness": zod.string().nullish(),
   "clinicalNotes": zod.string().nullish(),
@@ -887,6 +890,7 @@ export const UpdateConsultationParams = zod.object({
 })
 
 export const UpdateConsultationBody = zod.object({
+  "referringDoctorName": zod.string().optional(),
   "chiefComplaint": zod.string().optional(),
   "historyOfPresentIllness": zod.string().optional(),
   "clinicalNotes": zod.string().optional(),
@@ -913,6 +917,7 @@ export const UpdateConsultationResponse = zod.object({
   "tokenId": zod.string().nullish(),
   "visitDate": zod.string(),
   "status": zod.enum(['in_progress', 'completed', 'cancelled']),
+  "referringDoctorName": zod.string().nullish(),
   "chiefComplaint": zod.string().nullish(),
   "historyOfPresentIllness": zod.string().nullish(),
   "clinicalNotes": zod.string().nullish(),
@@ -957,6 +962,7 @@ export const CompleteConsultationResponse = zod.object({
   "tokenId": zod.string().nullish(),
   "visitDate": zod.string(),
   "status": zod.enum(['in_progress', 'completed', 'cancelled']),
+  "referringDoctorName": zod.string().nullish(),
   "chiefComplaint": zod.string().nullish(),
   "historyOfPresentIllness": zod.string().nullish(),
   "clinicalNotes": zod.string().nullish(),

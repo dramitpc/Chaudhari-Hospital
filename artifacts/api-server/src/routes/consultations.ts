@@ -31,6 +31,7 @@ async function formatConsultation(c: typeof consultationsTable.$inferSelect) {
     tokenId: c.tokenId ?? null,
     visitDate: c.visitDate,
     status: c.status,
+    referringDoctorName: c.referringDoctorName ?? null,
     chiefComplaint: c.chiefComplaint ?? null,
     historyOfPresentIllness: c.historyOfPresentIllness ?? null,
     clinicalNotes: c.clinicalNotes ?? null,

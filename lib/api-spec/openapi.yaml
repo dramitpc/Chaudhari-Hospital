@@ -2091,6 +2091,8 @@ components:
         status:
           type: string
           enum: [in_progress, completed, cancelled]
+        referringDoctorName:
+          type: ["string", "null"]
         chiefComplaint:
           type: ["string", "null"]
         historyOfPresentIllness:
@@ -2148,6 +2150,8 @@ components:
     ConsultationUpdate:
       type: object
       properties:
+        referringDoctorName:
+          type: string
         chiefComplaint:
           type: string
         historyOfPresentIllness:

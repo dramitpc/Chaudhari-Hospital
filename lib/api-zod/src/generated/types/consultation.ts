@@ -22,6 +22,8 @@ export interface Consultation {
   visitDate: string;
   status: ConsultationStatus;
   /** @nullable */
+  referringDoctorName?: string | null;
+  /** @nullable */
   chiefComplaint?: string | null;
   /** @nullable */
   historyOfPresentIllness?: string | null;

@@ -168,9 +168,9 @@ export default function ConsultationDetailPage() {
   }, [patient, medHistInit]);
 
   // ── Clinical Notes + Investigation controlled state ───────────────────────
-  type ClinicalField = "chiefComplaint" | "historyOfPresentIllness" | "clinicalNotes" | "followUpNotes";
+  type ClinicalField = "referringDoctorName" | "chiefComplaint" | "historyOfPresentIllness" | "clinicalNotes" | "followUpNotes";
   const [clinicalValues, setClinicalValues] = useState<Record<ClinicalField, string>>({
-    chiefComplaint: "", historyOfPresentIllness: "", clinicalNotes: "", followUpNotes: ""
+    referringDoctorName: "", chiefComplaint: "", historyOfPresentIllness: "", clinicalNotes: "", followUpNotes: ""
   });
   const [investigationValue, setInvestigationValue] = useState("");
   const [clinicalInit, setClinicalInit] = useState(false);
@@ -247,6 +247,7 @@ export default function ConsultationDetailPage() {
   useEffect(() => {
     if (consultation && !clinicalInit) {
       setClinicalValues({
+        referringDoctorName:     consultation.referringDoctorName     ?? (patient?.referringDoctorName ?? ""),
         chiefComplaint:          consultation.chiefComplaint          ?? "",
         historyOfPresentIllness: consultation.historyOfPresentIllness ?? "",
         clinicalNotes:           consultation.clinicalNotes           ?? "",
@@ -976,6 +977,7 @@ export default function ConsultationDetailPage() {
 
             <TabsContent value="clinical" className="mt-4 space-y-3">
               {([
+                { field: "referringDoctorName"     as ClinicalField, label: "Referring Doctor",             rows: 1, placeholder: "Name of referring doctor (if any)", isInput: true  },
                 { field: "chiefComplaint"          as ClinicalField, label: "Chief Complaint",              rows: 1, placeholder: "Main presenting complaint",        isInput: true  },
                 { field: "historyOfPresentIllness" as ClinicalField, label: "History of Present Illness",   rows: 4, placeholder: "Detailed illness history...",      isInput: false },
                 { field: "clinicalNotes"           as ClinicalField, label: "Clinical Notes",               rows: 6, placeholder: "Additional clinical observations...", isInput: false },

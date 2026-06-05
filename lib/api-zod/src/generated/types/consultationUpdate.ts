@@ -7,6 +7,7 @@
  */
 
 export interface ConsultationUpdate {
+  referringDoctorName?: string;
   chiefComplaint?: string;
   historyOfPresentIllness?: string;
   clinicalNotes?: string;

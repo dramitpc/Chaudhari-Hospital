@@ -261,6 +261,8 @@ export interface Consultation {
   visitDate: string;
   status: ConsultationStatus;
   /** @nullable */
+  referringDoctorName?: string | null;
+  /** @nullable */
   chiefComplaint?: string | null;
   /** @nullable */
   historyOfPresentIllness?: string | null;
@@ -643,6 +645,7 @@ export interface ConsultationInput {
 }
 
 export interface ConsultationUpdate {
+  referringDoctorName?: string;
   chiefComplaint?: string;
   historyOfPresentIllness?: string;
   clinicalNotes?: string;

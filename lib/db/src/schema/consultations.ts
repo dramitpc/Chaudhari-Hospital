@@ -18,6 +18,7 @@ export const consultationsTable = pgTable("consultations", {
   tokenId: text("token_id").references(() => queueTokensTable.id),
   visitDate: text("visit_date").notNull(),
   status: consultationStatusEnum("status").notNull().default("in_progress"),
+  referringDoctorName: text("referring_doctor_name"),
   chiefComplaint: text("chief_complaint"),
   historyOfPresentIllness: text("history_of_present_illness"),
   clinicalNotes: text("clinical_notes"),
