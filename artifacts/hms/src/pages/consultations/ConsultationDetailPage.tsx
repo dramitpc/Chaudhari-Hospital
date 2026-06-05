@@ -457,7 +457,7 @@ export default function ConsultationDetailPage() {
     +Math.max(0, qty * price - disc).toFixed(2);
 
   const invSubtotal = invItems.reduce((s, it) => s + it.total, 0);
-  const invTotal = +(invSubtotal * (1 - invDiscount / 100)).toFixed(2);
+  const invTotal = +Math.max(0, invSubtotal - invDiscount).toFixed(2);
 
   const updateInvItem = (idx: number, field: keyof InvItem, val: string | number) =>
     setInvItems(prev => prev.map((it, i) => {
@@ -2424,13 +2424,13 @@ export default function ConsultationDetailPage() {
             {/* Totals + discount */}
             <div className="flex flex-col items-end gap-2 border-t pt-3">
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">Invoice Discount (%)</span>
+                <span className="text-xs text-muted-foreground">Invoice Discount (₹)</span>
                 <Input
-                  type="number" min="0" max="100" step="0.01"
-                  className="w-20 h-7 text-xs text-right"
+                  type="number" min="0" step="0.01"
+                  className="w-24 h-7 text-xs text-right"
                   value={invDiscount || ""}
                   onChange={e => setInvDiscount(+e.target.value)}
-                  placeholder="0"
+                  placeholder="0.00"
                 />
               </div>
               <div className="flex gap-6 text-sm">
