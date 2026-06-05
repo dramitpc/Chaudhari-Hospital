@@ -766,7 +766,10 @@ export default function ConsultationDetailPage() {
               <FileText className="mr-1.5 h-3 w-3" /> Generate Certificate
             </Button>
           </Link>
-          <Button size="sm" variant="outline" onClick={() => setShowThankingLetter(true)}>
+          <Button size="sm" variant="outline" onClick={() => {
+            setThankingDoctorName(clinicalValues["referringDoctorName"] ?? "");
+            setShowThankingLetter(true);
+          }}>
             <Mail className="mr-1.5 h-3 w-3" /> Thanking Letter
           </Button>
           <Button size="sm" variant="outline" onClick={() => setShowReferralLetter(true)}>
@@ -2132,80 +2135,101 @@ export default function ConsultationDetailPage() {
 
       {/* Thanking Letter Modal */}
       <Dialog open={showThankingLetter} onOpenChange={setShowThankingLetter}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Thanking Letter to Referring Doctor</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Referring Doctor's Name</Label>
-                <Input
-                  value={thankingDoctorName}
-                  onChange={e => setThankingDoctorName(e.target.value)}
-                  placeholder="Dr. ..."
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Referring Doctor's Address / Hospital</Label>
-                <Input
-                  value={thankingDoctorAddress}
-                  onChange={e => setThankingDoctorAddress(e.target.value)}
-                  placeholder="Clinic / Hospital name"
-                />
+        <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0">
+          <div className="grid grid-cols-1 md:grid-cols-[380px_1fr]">
+            {/* ── Form panel ── */}
+            <div className="p-6 border-r border-border overflow-y-auto max-h-[85vh]">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Thanking Letter to Referring Doctor</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="space-y-1">
+                  <Label className="text-xs">Referring Doctor's Name</Label>
+                  <Input
+                    value={thankingDoctorName}
+                    onChange={e => setThankingDoctorName(e.target.value)}
+                    placeholder="Dr. ..."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Referring Doctor's Address / Hospital</Label>
+                  <Input
+                    value={thankingDoctorAddress}
+                    onChange={e => setThankingDoctorAddress(e.target.value)}
+                    placeholder="Clinic / Hospital name"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowThankingLetter(false)}>Close</Button>
+                  <Button onClick={() => handlePrintLetter("thanking-letter-content", "Thanking Letter")}>
+                    <Printer className="mr-2 h-4 w-4" /> Print Letter
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div className="rounded border border-border bg-muted/20 p-4 text-sm font-serif leading-relaxed" id="thanking-letter-content">
-              <div className="clinic-header">
-                <div className="clinic-name">{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "ClinicOS Healthcare"}</div>
-                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.address ?? ""}</div>
-                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.phone ?? ""}</div>
-              </div>
-              <p><strong>Date:</strong> {fmtDate(new Date())}</p>
-              <br />
-              <p><strong>To,</strong></p>
-              <p>{thankingDoctorName || "Dr. _______________"}</p>
-              <p>{thankingDoctorAddress || "_______________"}</p>
-              <br />
-              <p><strong>Sub: Acknowledgement &amp; Thank You — Patient Referral</strong></p>
-              <br />
-              <p>Dear {thankingDoctorName || "Doctor"},</p>
-              <br />
-              <p>
-                I am writing to sincerely thank you for referring your patient,{" "}
-                <strong>{consultation?.patientName ?? "—"}</strong>
-                {(patient as unknown as Record<string, string> | undefined)?.age ? ` (Age: ${(patient as unknown as Record<string, string>).age})` : ""},
-                to our clinic. The patient was seen on <strong>{consultation?.visitDate ?? "—"}</strong>.
-              </p>
-              <br />
-              {consultation?.diagnosis && (
+            {/* ── Preview panel ── */}
+            <div className="bg-muted/30 p-6 overflow-y-auto max-h-[85vh]">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Live Preview</p>
+              <div
+                id="thanking-letter-content"
+                className="bg-white text-gray-900 rounded border-2 border-gray-200 p-8 text-[11px] leading-relaxed font-serif shadow-sm"
+              >
+                {/* Clinic header */}
+                <div className="text-center border-b-2 border-blue-600 pb-4 mb-5">
+                  <p className="text-sm font-bold text-blue-700 not-italic">
+                    {(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "ClinicOS Healthcare"}
+                  </p>
+                  {(clinicSettings as unknown as Record<string, string> | undefined)?.address && (
+                    <p className="text-gray-500 not-italic text-[10px] mt-0.5">
+                      {(clinicSettings as unknown as Record<string, string>).address}
+                    </p>
+                  )}
+                  {(clinicSettings as unknown as Record<string, string> | undefined)?.phone && (
+                    <p className="text-gray-500 not-italic text-[10px]">
+                      Tel: {(clinicSettings as unknown as Record<string, string>).phone}
+                    </p>
+                  )}
+                </div>
+
+                <p><strong>Date:</strong> {fmtDate(new Date())}</p>
+                <br />
+                <p><strong>To,</strong></p>
+                <p>{thankingDoctorName || "Dr. _______________"}</p>
+                <p>{thankingDoctorAddress || "_______________"}</p>
+                <br />
+                <p><strong>Sub: Acknowledgement &amp; Thank You — Patient Referral</strong></p>
+                <br />
+                <p>Dear {thankingDoctorName || "Doctor"},</p>
+                <br />
                 <p>
-                  Upon examination, the working diagnosis was noted as:{" "}
-                  <strong>{consultation.diagnosis}</strong>.
-                  {consultation.soapPlan ? ` The management plan includes: ${consultation.soapPlan}.` : ""}
+                  I am writing to sincerely thank you for referring your patient,{" "}
+                  <strong>{consultation?.patientName ?? "—"}</strong>
+                  {(patient as unknown as Record<string, string> | undefined)?.age ? ` (Age: ${(patient as unknown as Record<string, string>).age})` : ""},
+                  to our clinic. The patient was seen on <strong>{consultation?.visitDate ?? "—"}</strong>.
                 </p>
-              )}
-              <br />
-              <p>
-                We appreciate your confidence in our care and are committed to keeping you informed about this patient's progress. Please do not hesitate to contact us should you require any further information or wish to discuss the case.
-              </p>
-              <br />
-              <p>Thanking you once again for your valued referral.</p>
-              <br />
-              <div className="signature-block">
+                <br />
+                {consultation?.diagnosis && (
+                  <p>
+                    Upon examination, the working diagnosis was noted as:{" "}
+                    <strong>{consultation.diagnosis}</strong>.
+                    {consultation.soapPlan ? ` The management plan includes: ${consultation.soapPlan}.` : ""}
+                  </p>
+                )}
+                <br />
+                <p>
+                  We appreciate your confidence in our care and are committed to keeping you informed about this patient's progress. Please do not hesitate to contact us should you require any further information or wish to discuss the case.
+                </p>
+                <br />
+                <p>Thanking you once again for your valued referral.</p>
+                <br />
                 <p>Yours sincerely,</p>
                 <br /><br />
                 <p><strong>{consultation?.doctorName ?? "_______________"}</strong></p>
-                <p>{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? ""}</p>
+                <p className="not-italic text-gray-600">
+                  {(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? ""}
+                </p>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowThankingLetter(false)}>Close</Button>
-              <Button onClick={() => handlePrintLetter("thanking-letter-content", "Thanking Letter")}>
-                <Printer className="mr-2 h-4 w-4" /> Print Letter
-              </Button>
             </div>
           </div>
         </DialogContent>
