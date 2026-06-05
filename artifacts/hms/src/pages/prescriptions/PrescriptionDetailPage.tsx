@@ -446,14 +446,6 @@ export default function PrescriptionDetailPage() {
           </div>
         )}
 
-        {/* Diagnosis — always English */}
-        {fmt.showDiagnosis && prescription.diagnosis && (
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
-            <p className="text-sm">{prescription.diagnosis}</p>
-          </div>
-        )}
-
         {/* SOAP */}
         {fmt.showSoap && (prescription.soapSubjective || prescription.soapObjective || prescription.soapAssessment || prescription.soapPlan) && (
           <div className="mb-4 space-y-1.5">
@@ -470,6 +462,14 @@ export default function PrescriptionDetailPage() {
           <div className="mb-4">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Investigations</p>
             <p className="text-sm whitespace-pre-wrap">{prescription.investigationOrders}</p>
+          </div>
+        )}
+
+        {/* Diagnosis — always English */}
+        {fmt.showDiagnosis && prescription.diagnosis && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
+            <p className="text-sm">{prescription.diagnosis}</p>
           </div>
         )}
 
