@@ -131,6 +131,11 @@ router.patch("/billing/invoices/:id", authenticate, async (req, res): Promise<vo
   }
   const updates: Partial<typeof invoicesTable.$inferInsert> = {};
   if (parsed.data.items) {
+    const existing = await db.query.invoicesTable.findFirst({ where: eq(invoicesTable.id, params.data.id) });
+    if (!existing) {
+      res.status(404).json({ error: "Invoice not found" });
+      return;
+    }
     const items = parsed.data.items as Array<{ quantity: number; unitPrice: number; discount?: number; tax?: number; total: number }>;
     const subtotal = items.reduce((s, i) => s + i.total, 0);
     const taxAmt = items.reduce((s, i) => s + (i.tax ?? 0), 0);
@@ -141,6 +146,7 @@ router.patch("/billing/invoices/:id", authenticate, async (req, res): Promise<vo
     updates.tax = taxAmt;
     updates.discount = discountAmt;
     updates.total = total;
+    updates.balance = Math.max(0, total - (existing.amountPaid ?? 0));
   }
   if (parsed.data.notes) updates.notes = parsed.data.notes;
   if (parsed.data.status) updates.status = parsed.data.status as typeof invoicesTable.$inferInsert["status"];
