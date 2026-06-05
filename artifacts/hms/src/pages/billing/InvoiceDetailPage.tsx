@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { fmtDate } from "@/lib/dateUtils";
 import {
-  useGetInvoice, useRecordPayment, useGetPatient, useGetClinicSettings,
+  useGetInvoice, useRecordPayment, useUpdateInvoice, useGetPatient, useGetClinicSettings,
   getGetInvoiceQueryKey, getListInvoicesQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, Printer, Share2, XCircle } from "lucide-react";
 import ShareDialog from "@/components/ShareDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -48,10 +49,26 @@ export default function InvoiceDetailPage() {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
 
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const paymentMutation = useRecordPayment();
+  const cancelMutation = useUpdateInvoice();
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("cash");
   const [showShare, setShowShare] = useState(false);
+
+  const handleCancel = () => {
+    if (!confirm("Cancel this invoice? This cannot be undone.")) return;
+    cancelMutation.mutate({ id, data: { status: "cancelled" } }, {
+      onSuccess: () => {
+        toast({ title: "Invoice cancelled" });
+        queryClient.invalidateQueries({ queryKey: getGetInvoiceQueryKey(id) });
+        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+      },
+      onError: () => toast({ title: "Failed to cancel invoice", variant: "destructive" }),
+    });
+  };
 
   const handlePayment = () => {
     const amount = parseFloat(payAmount);
@@ -234,6 +251,22 @@ export default function InvoiceDetailPage() {
               </div>
               <Button className="w-full" onClick={handlePayment} disabled={paymentMutation.isPending} data-testid="btn-record-payment">
                 {paymentMutation.isPending ? "Recording..." : "Record Payment"}
+              </Button>
+            </div>
+          )}
+
+          {isAdmin && invoice.status !== "cancelled" && invoice.status !== "refunded" && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5">
+              <h3 className="font-semibold text-destructive mb-3">Admin Actions</h3>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={handleCancel}
+                disabled={cancelMutation.isPending}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                {cancelMutation.isPending ? "Cancelling..." : "Cancel Invoice"}
               </Button>
             </div>
           )}

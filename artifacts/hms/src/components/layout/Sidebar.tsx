@@ -66,7 +66,7 @@ function SidebarContent({
     { name: "Consultations",  href: "/consultations",      icon: Stethoscope,     show: isDoctor },
     { name: "Prescriptions",  href: "/prescriptions",      icon: Pill,            show: isDoctor },
     { name: "Investigations", href: "/investigations",     icon: ScanLine,        show: isRadiographer || isDoctor },
-    { name: "Billing",        href: "/billing",            icon: Receipt,         show: isStaff && !isRadiographer },
+    { name: "Billing",        href: "/billing",            icon: Receipt,         show: isStaff },
     { name: "Certificates",   href: "/certificates",       icon: FileText,        show: isDoctor },
     { name: "Reports",        href: "/reports",            icon: BarChart,        show: isDoctor },
     { name: "Users",          href: "/admin/users",        icon: ShieldCheck,     show: isAdmin, group: "Admin" },
