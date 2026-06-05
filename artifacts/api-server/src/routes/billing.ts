@@ -17,13 +17,13 @@ import { logAudit } from "../lib/auth";
 const router = Router();
 
 async function formatInvoice(inv: typeof invoicesTable.$inferSelect) {
-  const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, inv.patientId));
+  const [patient] = await db.select({ salutation: patientsTable.salutation, fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, inv.patientId));
   const doctor = inv.doctorId ? await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, inv.doctorId)) : [];
   return {
     id: inv.id,
     invoiceNumber: inv.invoiceNumber,
     patientId: inv.patientId,
-    patientName: patient?.fullName ?? "",
+    patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     consultationId: inv.consultationId ?? null,
     doctorId: inv.doctorId ?? null,
     doctorName: doctor[0]?.fullName ?? null,

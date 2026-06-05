@@ -250,6 +250,7 @@ export const ListPatientsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
   "patientId": zod.string(),
+  "salutation": zod.string().nullish(),
   "fullName": zod.string(),
   "dateOfBirth": zod.string().nullish(),
   "age": zod.string().nullish(),
@@ -282,6 +283,7 @@ export const ListPatientsResponse = zod.object({
  * @summary Register a new patient
  */
 export const RegisterPatientBody = zod.object({
+  "salutation": zod.string().optional(),
   "fullName": zod.string(),
   "dateOfBirth": zod.string().optional(),
   "age": zod.string().optional(),
@@ -313,6 +315,7 @@ export const GetPatientParams = zod.object({
 export const GetPatientResponse = zod.object({
   "id": zod.string(),
   "patientId": zod.string(),
+  "salutation": zod.string().nullish(),
   "fullName": zod.string(),
   "dateOfBirth": zod.string().nullish(),
   "age": zod.string().nullish(),
@@ -345,6 +348,7 @@ export const UpdatePatientParams = zod.object({
 })
 
 export const UpdatePatientBody = zod.object({
+  "salutation": zod.string().optional(),
   "fullName": zod.string().optional(),
   "dateOfBirth": zod.string().optional(),
   "age": zod.string().optional(),
@@ -366,6 +370,7 @@ export const UpdatePatientBody = zod.object({
 export const UpdatePatientResponse = zod.object({
   "id": zod.string(),
   "patientId": zod.string(),
+  "salutation": zod.string().nullish(),
   "fullName": zod.string(),
   "dateOfBirth": zod.string().nullish(),
   "age": zod.string().nullish(),
@@ -401,6 +406,7 @@ export const GetPatientHistoryResponse = zod.object({
   "patient": zod.object({
   "id": zod.string(),
   "patientId": zod.string(),
+  "salutation": zod.string().nullish(),
   "fullName": zod.string(),
   "dateOfBirth": zod.string().nullish(),
   "age": zod.string().nullish(),

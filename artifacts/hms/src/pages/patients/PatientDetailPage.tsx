@@ -99,7 +99,7 @@ export default function PatientDetailPage() {
               <Badge variant="outline" className="font-mono text-xs">{patient.patientId}</Badge>
               {patient.bloodGroup && <Badge variant="secondary">{patient.bloodGroup}</Badge>}
             </div>
-            <h1 className="text-2xl font-bold mt-1">{patient.fullName}</h1>
+            <h1 className="text-2xl font-bold mt-1">{patient.salutation ? `${patient.salutation} ${patient.fullName}` : patient.fullName}</h1>
             <p className="text-sm text-muted-foreground">
               {(calcAge(patient.dateOfBirth) ?? patient.age) ? `${calcAge(patient.dateOfBirth) ?? patient.age} yrs • ` : ""}{patient.gender} • {patient.phone ?? "No phone"}
             </p>
@@ -131,6 +131,7 @@ export default function PatientDetailPage() {
 
         <TabsContent value="demographics" className="space-y-4 mt-4">
           <div className="rounded-lg border border-border bg-card p-6 grid grid-cols-2 md:grid-cols-3 gap-5">
+            {patient.salutation && <FieldRow label="Salutation" value={patient.salutation} />}
             <FieldRow label="Full Name" value={patient.fullName} />
             <FieldRow label="Date of Birth" value={patient.dateOfBirth ? fmtDate(patient.dateOfBirth) : null} />
             <FieldRow label="Age" value={(calcAgeUtil(patient.dateOfBirth) ?? patient.age) != null ? `${calcAgeUtil(patient.dateOfBirth) ?? patient.age} years` : null} />

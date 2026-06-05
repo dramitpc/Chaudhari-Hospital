@@ -23,6 +23,7 @@ function formatPatient(p: typeof patientsTable.$inferSelect) {
   return {
     id: p.id,
     patientId: p.patientId,
+    salutation: p.salutation ?? null,
     fullName: p.fullName,
     dateOfBirth: p.dateOfBirth,
     age: p.age ?? null,

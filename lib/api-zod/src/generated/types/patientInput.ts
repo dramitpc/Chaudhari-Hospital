@@ -8,6 +8,7 @@
 import type { PatientInputGender } from './patientInputGender';
 
 export interface PatientInput {
+  salutation?: string;
   fullName: string;
   dateOfBirth?: string;
   age?: string;

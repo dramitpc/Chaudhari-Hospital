@@ -7,6 +7,7 @@ export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
 export const patientsTable = pgTable("patients", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   patientId: text("patient_id").notNull().unique(),
+  salutation: text("salutation"),
   fullName: text("full_name").notNull(),
   dateOfBirth: text("date_of_birth"),
   age: text("age"),

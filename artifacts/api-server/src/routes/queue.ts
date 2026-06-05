@@ -13,13 +13,13 @@ import { authenticate } from "../middlewares/authenticate";
 const router = Router();
 
 async function formatToken(t: typeof queueTokensTable.$inferSelect) {
-  const [patient] = await db.select({ fullName: patientsTable.fullName, phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, t.patientId));
+  const [patient] = await db.select({ salutation: patientsTable.salutation, fullName: patientsTable.fullName, phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, t.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, t.doctorId));
   return {
     id: t.id,
     tokenNumber: t.tokenNumber,
     patientId: t.patientId,
-    patientName: patient?.fullName ?? "",
+    patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     patientPhone: patient?.phone ?? null,
     doctorId: t.doctorId,
     doctorName: doctor?.fullName ?? "",

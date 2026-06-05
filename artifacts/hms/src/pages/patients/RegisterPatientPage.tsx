@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, UserPlus, ListOrdered } from "lucide-react";
 
 type FormValues = {
+  salutation?: string;
   fullName: string;
   dateOfBirth?: string;
   age?: string;
@@ -128,10 +129,25 @@ export default function RegisterPatientPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="font-semibold text-foreground border-b border-border pb-2">Basic Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>Full Name *</Label>
-              <Input {...register("fullName", { required: true })} data-testid="input-fullname" placeholder="Patient full name" />
-              {errors.fullName && <p className="text-xs text-destructive">Required</p>}
+            <div className="md:col-span-2 flex gap-2 items-start">
+              <div className="space-y-1.5 w-28 shrink-0">
+                <Label>Salutation</Label>
+                <Select onValueChange={(v) => setValue("salutation", v)}>
+                  <SelectTrigger data-testid="select-salutation">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Mr.", "Mrs.", "Ms.", "Miss", "Dr.", "Master", "Baby"].map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <Label>Full Name *</Label>
+                <Input {...register("fullName", { required: true })} data-testid="input-fullname" placeholder="Patient full name" />
+                {errors.fullName && <p className="text-xs text-destructive">Required</p>}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Date of Birth <span className="text-muted-foreground text-xs">(optional)</span></Label>

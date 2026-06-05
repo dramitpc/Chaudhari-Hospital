@@ -116,6 +116,7 @@ export default function QueuePage() {
 
   // "Register New Patient" inline state
   const [dialogMode, setDialogMode] = useState<"existing" | "new">("existing");
+  const [newSalutation, setNewSalutation] = useState("");
   const [newName, setNewName] = useState("");
   const [newGender, setNewGender] = useState<"male" | "female" | "other" | "">("");
   const [newPhone, setNewPhone] = useState("");
@@ -203,6 +204,7 @@ export default function QueuePage() {
     setDialogMode("existing");
     setPatientSearch("");
     setPatientDropdownOpen(false);
+    setNewSalutation("");
     setNewName("");
     setNewGender("");
     setNewPhone("");
@@ -231,7 +233,7 @@ export default function QueuePage() {
   const handleRegisterAndQueue = () => {
     if (!newName || !newGender || !selectedDoctorId) return;
     registerPatientMutation.mutate(
-      { data: { fullName: newName, gender: newGender, phone: newPhone || undefined, age: newAge || undefined, dateOfBirth: newDob || undefined } },
+      { data: { salutation: newSalutation || undefined, fullName: newName, gender: newGender, phone: newPhone || undefined, age: newAge || undefined, dateOfBirth: newDob || undefined } },
       {
         onSuccess: (patient) => {
           generateTokenMutation.mutate(
@@ -627,7 +629,7 @@ export default function QueuePage() {
                           data-testid="selected-patient-display"
                         >
                           <div>
-                            <p className="text-sm font-medium">{selected.fullName}</p>
+                            <p className="text-sm font-medium">{[selected.salutation, selected.fullName].filter(Boolean).join(" ")}</p>
                             <p className="text-xs text-muted-foreground">{selected.patientId}{selected.phone ? ` · ${selected.phone}` : ""}</p>
                           </div>
                           <span className="text-xs text-muted-foreground">change</span>
@@ -659,7 +661,7 @@ export default function QueuePage() {
                                       setPatientDropdownOpen(false);
                                     }}
                                   >
-                                    <p className="text-sm font-medium">{p.fullName}</p>
+                                    <p className="text-sm font-medium">{[p.salutation, p.fullName].filter(Boolean).join(" ")}</p>
                                     <p className="text-xs text-muted-foreground">{p.patientId}{p.phone ? ` · ${p.phone}` : ""}</p>
                                   </button>
                                 ))
@@ -675,14 +677,29 @@ export default function QueuePage() {
             ) : (
               <div className="space-y-3 rounded-lg border border-dashed border-border bg-muted/30 p-3">
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">New Patient Details</p>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Full Name <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    placeholder="Patient full name"
-                    data-testid="input-new-patient-name"
-                  />
+                <div className="flex gap-2 items-start">
+                  <div className="space-y-1.5 w-24 shrink-0">
+                    <Label className="text-xs">Salutation</Label>
+                    <Select onValueChange={v => setNewSalutation(v)} value={newSalutation}>
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Mr.", "Mrs.", "Ms.", "Miss", "Dr.", "Master", "Baby"].map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5 flex-1">
+                    <Label className="text-xs">Full Name <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      placeholder="Patient full name"
+                      data-testid="input-new-patient-name"
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">

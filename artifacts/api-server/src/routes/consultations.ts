@@ -16,7 +16,7 @@ import { logAudit } from "../lib/auth";
 const router = Router();
 
 async function formatConsultation(c: typeof consultationsTable.$inferSelect) {
-  const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, c.patientId));
+  const [patient] = await db.select({ salutation: patientsTable.salutation, fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, c.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, c.doctorId));
   const [token] = c.tokenId
     ? await db.select({ visitType: queueTokensTable.visitType }).from(queueTokensTable).where(eq(queueTokensTable.id, c.tokenId))
@@ -24,7 +24,7 @@ async function formatConsultation(c: typeof consultationsTable.$inferSelect) {
   return {
     id: c.id,
     patientId: c.patientId,
-    patientName: patient?.fullName ?? "",
+    patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     doctorId: c.doctorId,
     doctorName: doctor?.fullName ?? "",
     appointmentId: c.appointmentId ?? null,

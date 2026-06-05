@@ -7,6 +7,7 @@
  */
 
 export interface PatientUpdate {
+  salutation?: string;
   fullName?: string;
   dateOfBirth?: string;
   age?: string;

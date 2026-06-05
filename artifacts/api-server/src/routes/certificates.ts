@@ -12,12 +12,12 @@ import { logAudit } from "../lib/auth";
 const router = Router();
 
 async function formatCertificate(c: typeof certificatesTable.$inferSelect) {
-  const [patient] = await db.select({ fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, c.patientId));
+  const [patient] = await db.select({ salutation: patientsTable.salutation, fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, c.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, c.doctorId));
   return {
     id: c.id,
     patientId: c.patientId,
-    patientName: patient?.fullName ?? "",
+    patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     doctorId: c.doctorId,
     doctorName: doctor?.fullName ?? "",
     consultationId: c.consultationId ?? null,

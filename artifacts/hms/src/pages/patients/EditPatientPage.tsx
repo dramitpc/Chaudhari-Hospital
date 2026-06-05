@@ -86,9 +86,24 @@ export default function EditPatientPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="font-semibold border-b border-border pb-2">Basic Information</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label>Full Name</Label>
-              <Input {...register("fullName")} />
+            <div className="col-span-2 flex gap-2 items-start">
+              <div className="space-y-1.5 w-28 shrink-0">
+                <Label>Salutation</Label>
+                <Select onValueChange={(v) => setValue("salutation", v)} value={watch("salutation") ?? ""}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Mr.", "Mrs.", "Ms.", "Miss", "Dr.", "Master", "Baby"].map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <Label>Full Name</Label>
+                <Input {...register("fullName")} />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Phone</Label>

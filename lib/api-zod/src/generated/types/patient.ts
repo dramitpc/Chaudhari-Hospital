@@ -10,6 +10,8 @@ import type { PatientGender } from './patientGender';
 export interface Patient {
   id: string;
   patientId: string;
+  /** @nullable */
+  salutation?: string | null;
   fullName: string;
   /** @nullable */
   dateOfBirth?: string | null;
