@@ -161,7 +161,7 @@ export default function NewInvoicePage() {
               <th className="text-left pb-2 pr-2 w-72">Description</th>
               <th className="text-right pb-2 pr-2 w-16">Qty</th>
               <th className="text-right pb-2 pr-2 w-24">Unit Price</th>
-              <th className="text-right pb-2 pr-2 w-20">Discount</th>
+              <th className="text-right pb-2 pr-2 w-20">Disc (₹)</th>
               <th className="text-right pb-2 pr-2 w-20">Tax</th>
               <th className="text-right pb-2 w-24">Total</th>
               <th className="w-8"></th>
@@ -221,10 +221,13 @@ export default function NewInvoicePage() {
             <span>₹{subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm items-center">
-            <span className="text-muted-foreground">Discount</span>
-            <Input type="number" min="0" step="0.01" value={discount}
-              onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
-              className="w-28 h-7 text-right text-xs" />
+            <span className="text-muted-foreground">Discount (₹)</span>
+            <div className="relative w-28">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₹</span>
+              <Input type="number" min="0" step="0.01" value={discount}
+                onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
+                className="h-7 text-right text-xs pl-5" />
+            </div>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Tax</span>
