@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, and, SQL } from "drizzle-orm";
+import { eq, desc, and, sql, SQL } from "drizzle-orm";
 import { db, investigationsTable } from "@workspace/db";
 import {
   ListInvestigationsQueryParams,
@@ -31,6 +31,9 @@ router.get(
     }
     if (query.data.consultationId) {
       conditions.push(eq(investigationsTable.consultationId, query.data.consultationId));
+    }
+    if (query.data.date) {
+      conditions.push(sql`DATE(${investigationsTable.createdAt}) = ${query.data.date}`);
     }
 
     const rows = await db

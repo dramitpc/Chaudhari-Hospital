@@ -144,7 +144,10 @@ export default function InvestigationsPage() {
   const isRadiographer = user?.role === "radiographer";
   const [statusFilter, setStatusFilter] = useState<string>(isRadiographer ? "pending" : "all");
 
-  const params = statusFilter === "all" ? {} : { status: statusFilter as Investigation["status"] };
+  const localToday = new Date().toLocaleDateString("en-CA");
+  const params = statusFilter === "all"
+    ? { date: localToday }
+    : { date: localToday, status: statusFilter as Investigation["status"] };
   const { data, isLoading } = useListInvestigations(params, {
     query: { queryKey: getListInvestigationsQueryKey(params), refetchInterval: 30000 },
   });

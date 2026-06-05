@@ -1331,6 +1331,7 @@ export type ListInvestigationsParams = {
 status?: ListInvestigationsStatus;
 patientId?: string;
 consultationId?: string;
+date?: string;
 };
 
 export type ListInvestigationsStatus = typeof ListInvestigationsStatus[keyof typeof ListInvestigationsStatus];

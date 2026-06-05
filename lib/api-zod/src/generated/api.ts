@@ -1963,7 +1963,8 @@ export const UpdateClinicSettingsResponse = zod.object({
 export const ListInvestigationsQueryParams = zod.object({
   "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
   "patientId": zod.coerce.string().optional(),
-  "consultationId": zod.coerce.string().optional()
+  "consultationId": zod.coerce.string().optional(),
+  "date": zod.coerce.string().optional()
 })
 
 export const ListInvestigationsResponse = zod.object({

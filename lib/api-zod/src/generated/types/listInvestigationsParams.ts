@@ -11,4 +11,5 @@ export type ListInvestigationsParams = {
 status?: ListInvestigationsStatus;
 patientId?: string;
 consultationId?: string;
+date?: string;
 };
