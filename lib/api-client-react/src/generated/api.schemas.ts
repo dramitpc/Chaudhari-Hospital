@@ -1065,6 +1065,7 @@ export interface DailyOpdReport {
   byDoctor: DoctorDaySummary[];
   byPaymentMode?: PaymentModeSummary[];
   revenueList?: DailyRevenueItem[];
+  pendingList?: DailyRevenueItem[];
 }
 
 export interface ChargeTypeBreakdownRow {

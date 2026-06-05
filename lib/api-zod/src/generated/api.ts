@@ -1836,6 +1836,24 @@ export const GetDailyOpdReportResponse = zod.object({
   "discount": zod.number().optional(),
   "total": zod.number()
 }))
+})).optional(),
+  "pendingList": zod.array(zod.object({
+  "invoiceNumber": zod.string(),
+  "patientId": zod.string().optional(),
+  "patientName": zod.string(),
+  "status": zod.string(),
+  "total": zod.number(),
+  "amountPaid": zod.number().optional(),
+  "balance": zod.number().optional(),
+  "items": zod.array(zod.object({
+  "description": zod.string(),
+  "chargeTypeName": zod.string().optional(),
+  "chargeTypeCategory": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "discount": zod.number().optional(),
+  "total": zod.number()
+}))
 })).optional()
 })
 

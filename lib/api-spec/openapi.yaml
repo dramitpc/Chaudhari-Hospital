@@ -2854,6 +2854,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DailyRevenueItem"
+        pendingList:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyRevenueItem"
 
     DailyRevenueItem:
       type: object

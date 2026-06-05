@@ -30,13 +30,20 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
   }));
 
   const fullInvoices = await db.select().from(invoicesTable).where(sql`date(invoices.created_at) = ${date}`);
-  const totalRevenue = fullInvoices.reduce((s, r) => s + r.total, 0);
 
+  // Split paid vs pending (pending = any status that isn't fully paid)
+  const paidInvoices    = fullInvoices.filter(i => i.status === "paid");
+  const pendingInvoices = fullInvoices.filter(i => i.status !== "paid");
+
+  // Collected revenue = paid invoices only
+  const totalRevenue = paidInvoices.reduce((s, r) => s + r.amountPaid, 0);
+
+  // Payment-mode breakdown — only from paid invoices
   const modeMap: Record<string, { amount: number; count: number }> = {};
-  for (const r of fullInvoices) {
+  for (const r of paidInvoices) {
     const mode = r.paymentMode ?? "unknown";
     if (!modeMap[mode]) modeMap[mode] = { amount: 0, count: 0 };
-    modeMap[mode].amount += r.total;
+    modeMap[mode].amount += r.amountPaid;
     modeMap[mode].count += 1;
   }
   const byPaymentMode = Object.entries(modeMap).map(([mode, v]) => ({ mode, ...v }));
@@ -51,7 +58,7 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
   for (const ct of allCts) ctMap[ct.id] = { name: ct.name, category: ct.category };
 
   type RawItem = { chargeTypeId?: string; description?: string; quantity?: number; unitPrice?: number; discount?: number; total?: number };
-  const revenueList = fullInvoices.map(inv => ({
+  const mapInvoice = (inv: typeof fullInvoices[number]) => ({
     invoiceNumber: inv.invoiceNumber,
     patientId: inv.patientId,
     patientName: patientMap[inv.patientId] ?? "Unknown",
@@ -71,7 +78,10 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
         total: item.total ?? 0,
       };
     }),
-  }));
+  });
+
+  const revenueList = paidInvoices.map(mapInvoice);
+  const pendingList = pendingInvoices.map(mapInvoice);
 
   res.json({
     date,
@@ -82,6 +92,7 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
     byDoctor: byDoctor.filter(d => d.patients > 0),
     byPaymentMode,
     revenueList,
+    pendingList,
   });
 });
 
