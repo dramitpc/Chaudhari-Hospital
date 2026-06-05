@@ -433,6 +433,7 @@ export default function ConsultationDetailPage() {
   const [showThankingLetter, setShowThankingLetter] = useState(false);
   const [thankingDoctorName, setThankingDoctorName] = useState("");
   const [thankingDoctorAddress, setThankingDoctorAddress] = useState("");
+  const [thankingAdditionalNotes, setThankingAdditionalNotes] = useState("");
 
   const [showReferralLetter, setShowReferralLetter] = useState(false);
   const [referralToDoctor, setReferralToDoctor] = useState("");
@@ -2159,6 +2160,15 @@ export default function ConsultationDetailPage() {
                     placeholder="Clinic / Hospital name"
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Additional Notes</Label>
+                  <Textarea
+                    value={thankingAdditionalNotes}
+                    onChange={e => setThankingAdditionalNotes(e.target.value)}
+                    rows={4}
+                    placeholder="Any additional clinical details, treatment summary, follow-up instructions..."
+                  />
+                </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={() => setShowThankingLetter(false)}>Close</Button>
                   <Button onClick={() => handlePrintLetter("thanking-letter-content", "Thanking Letter")}>
@@ -2208,6 +2218,12 @@ export default function ConsultationDetailPage() {
                   {(patient as unknown as Record<string, string> | undefined)?.age ? ` (Age: ${(patient as unknown as Record<string, string>).age})` : ""},
                   to our clinic. The patient was seen on <strong>{consultation?.visitDate ?? "—"}</strong>.
                 </p>
+                {thankingAdditionalNotes && (
+                  <>
+                    <br />
+                    <p>{thankingAdditionalNotes}</p>
+                  </>
+                )}
                 <br />
                 {consultation?.diagnosis && (
                   <p>
