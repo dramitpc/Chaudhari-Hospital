@@ -31,8 +31,8 @@ export default function ConsultationsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useListConsultations(
-    { date },
-    { query: { queryKey: getListConsultationsQueryKey({ date }) } }
+    { date, limit: 500 },
+    { query: { queryKey: getListConsultationsQueryKey({ date, limit: 500 }) } }
   );
   const { data: users } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
   const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });

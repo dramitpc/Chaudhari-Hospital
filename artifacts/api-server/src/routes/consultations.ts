@@ -63,7 +63,7 @@ router.get("/consultations", authenticate, async (req, res): Promise<void> => {
   if (params.success && params.data.doctorId) query = query.where(eq(consultationsTable.doctorId, params.data.doctorId));
   if (params.success && params.data.date) query = query.where(eq(consultationsTable.visitDate, params.data.date));
 
-  const all = await query.orderBy(desc(consultationsTable.visitDate));
+  const all = await query.orderBy(desc(consultationsTable.createdAt));
   const total = all.length;
   const slice = all.slice((page - 1) * limit, page * limit);
   const data = await Promise.all(slice.map(formatConsultation));
