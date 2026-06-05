@@ -2213,114 +2213,137 @@ export default function ConsultationDetailPage() {
 
       {/* Referral Letter Modal */}
       <Dialog open={showReferralLetter} onOpenChange={setShowReferralLetter}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Referral Letter</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Refer To (Doctor Name)</Label>
-                <Input
-                  value={referralToDoctor}
-                  onChange={e => setReferralToDoctor(e.target.value)}
-                  placeholder="Dr. ..."
-                />
+        <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0">
+          <div className="grid grid-cols-1 md:grid-cols-[380px_1fr]">
+            {/* ── Form panel ── */}
+            <div className="p-6 border-r border-border overflow-y-auto max-h-[85vh]">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Referral Letter</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Refer To (Doctor Name)</Label>
+                    <Input
+                      value={referralToDoctor}
+                      onChange={e => setReferralToDoctor(e.target.value)}
+                      placeholder="Dr. ..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Specialty</Label>
+                    <Input
+                      value={referralToSpecialty}
+                      onChange={e => setReferralToSpecialty(e.target.value)}
+                      placeholder="e.g. Cardiology, Orthopaedics..."
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Hospital / Clinic Address</Label>
+                  <Input
+                    value={referralToAddress}
+                    onChange={e => setReferralToAddress(e.target.value)}
+                    placeholder="Referred hospital or clinic"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Reason for Referral (additional notes)</Label>
+                  <Textarea
+                    value={referralReason}
+                    onChange={e => setReferralReason(e.target.value)}
+                    rows={3}
+                    placeholder="Specific concerns, investigations requested, urgency..."
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowReferralLetter(false)}>Close</Button>
+                  <Button onClick={() => handlePrintLetter("referral-letter-content", "Referral Letter")}>
+                    <Printer className="mr-2 h-4 w-4" /> Print Letter
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Specialty</Label>
-                <Input
-                  value={referralToSpecialty}
-                  onChange={e => setReferralToSpecialty(e.target.value)}
-                  placeholder="e.g. Cardiology, Orthopaedics..."
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Hospital / Clinic Address</Label>
-              <Input
-                value={referralToAddress}
-                onChange={e => setReferralToAddress(e.target.value)}
-                placeholder="Referred hospital or clinic"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Reason for Referral (additional notes)</Label>
-              <Textarea
-                value={referralReason}
-                onChange={e => setReferralReason(e.target.value)}
-                rows={2}
-                placeholder="Specific concerns, investigations requested, urgency..."
-              />
             </div>
 
-            <div className="rounded border border-border bg-muted/20 p-4 text-sm font-serif leading-relaxed" id="referral-letter-content">
-              <div className="clinic-header">
-                <div className="clinic-name">{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "ClinicOS Healthcare"}</div>
-                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.address ?? ""}</div>
-                <div>{(clinicSettings as unknown as Record<string, string> | undefined)?.phone ?? ""}</div>
-              </div>
-              <p><strong>Date:</strong> {fmtDate(new Date())}</p>
-              <br />
-              <p><strong>To,</strong></p>
-              <p>{referralToDoctor || "Dr. _______________"}</p>
-              <p>{referralToSpecialty ? `Consultant — ${referralToSpecialty}` : "_______________"}</p>
-              <p>{referralToAddress || ""}</p>
-              <br />
-              <p><strong>Sub: Referral Letter — {consultation?.patientName ?? "Patient"}</strong></p>
-              <br />
-              <p>Dear {referralToDoctor ? `Dr. ${referralToDoctor.replace(/^Dr\.?\s*/i, "")}` : "Doctor"},</p>
-              <br />
-              <p>
-                I am referring my patient, <strong>{consultation?.patientName ?? "—"}</strong>
-                {(patient as unknown as Record<string, string> | undefined)?.age ? `, aged ${(patient as unknown as Record<string, string>).age}` : ""}
-                {(patient as unknown as Record<string, string> | undefined)?.gender ? `, ${(patient as unknown as Record<string, string>).gender}` : ""},
-                for your expert opinion and management
-                {referralToSpecialty ? ` in ${referralToSpecialty}` : ""}.
-              </p>
-              <br />
-              {consultation?.diagnosis && (
-                <p><strong>Diagnosis:</strong> {consultation.diagnosis}{consultation.icd10Code ? ` (ICD-10: ${consultation.icd10Code})` : ""}</p>
-              )}
-              {consultation?.chiefComplaint && (
-                <p><strong>Chief Complaint:</strong> {consultation.chiefComplaint}</p>
-              )}
-              {consultation?.soapAssessment && (
-                <p><strong>Assessment:</strong> {consultation.soapAssessment}</p>
-              )}
-              {(patient as unknown as Record<string, string> | undefined)?.medicalHistory && (
-                <p><strong>Past Medical History:</strong> {(patient as unknown as Record<string, string>).medicalHistory}</p>
-              )}
-              {(patient as unknown as Record<string, string> | undefined)?.currentMedications && (
-                <p><strong>Current Medications:</strong> {(patient as unknown as Record<string, string>).currentMedications}</p>
-              )}
-              {(patient as unknown as Record<string, string> | undefined)?.allergies && (
-                <p><strong>Allergies:</strong> {(patient as unknown as Record<string, string>).allergies}</p>
-              )}
-              {referralReason && (
-                <>
-                  <br />
-                  <p><strong>Reason for Referral:</strong> {referralReason}</p>
-                </>
-              )}
-              <br />
-              <p>
-                Your expert evaluation and management of this patient would be greatly appreciated. Please feel free to contact us for any additional clinical details.
-              </p>
-              <br />
-              <div className="signature-block">
+            {/* ── Preview panel ── */}
+            <div className="bg-muted/30 p-6 overflow-y-auto max-h-[85vh]">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Live Preview</p>
+              <div
+                id="referral-letter-content"
+                className="bg-white text-gray-900 rounded border-2 border-gray-200 p-8 text-[11px] leading-relaxed font-serif shadow-sm"
+              >
+                {/* Clinic header */}
+                <div className="text-center border-b-2 border-blue-600 pb-4 mb-5">
+                  <p className="text-sm font-bold text-blue-700 not-italic">
+                    {(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "ClinicOS Healthcare"}
+                  </p>
+                  {(clinicSettings as unknown as Record<string, string> | undefined)?.address && (
+                    <p className="text-gray-500 not-italic text-[10px] mt-0.5">
+                      {(clinicSettings as unknown as Record<string, string>).address}
+                    </p>
+                  )}
+                  {(clinicSettings as unknown as Record<string, string> | undefined)?.phone && (
+                    <p className="text-gray-500 not-italic text-[10px]">
+                      Tel: {(clinicSettings as unknown as Record<string, string>).phone}
+                    </p>
+                  )}
+                </div>
+
+                <p><strong>Date:</strong> {fmtDate(new Date())}</p>
+                <br />
+                <p><strong>To,</strong></p>
+                <p>{referralToDoctor || "Dr. _______________"}</p>
+                <p>{referralToSpecialty ? `Consultant — ${referralToSpecialty}` : "_______________"}</p>
+                {referralToAddress && <p>{referralToAddress}</p>}
+                <br />
+                <p><strong>Sub: Referral Letter — {consultation?.patientName ?? "Patient"}</strong></p>
+                <br />
+                <p>Dear {referralToDoctor ? `Dr. ${referralToDoctor.replace(/^Dr\.?\s*/i, "")}` : "Doctor"},</p>
+                <br />
+                <p>
+                  I am referring my patient, <strong>{consultation?.patientName ?? "—"}</strong>
+                  {(patient as unknown as Record<string, string> | undefined)?.age ? `, aged ${(patient as unknown as Record<string, string>).age}` : ""}
+                  {(patient as unknown as Record<string, string> | undefined)?.gender ? `, ${(patient as unknown as Record<string, string>).gender}` : ""},
+                  for your expert opinion and management
+                  {referralToSpecialty ? ` in ${referralToSpecialty}` : ""}.
+                </p>
+                <br />
+                {consultation?.diagnosis && (
+                  <p><strong>Diagnosis:</strong> {consultation.diagnosis}{consultation.icd10Code ? ` (ICD-10: ${consultation.icd10Code})` : ""}</p>
+                )}
+                {consultation?.chiefComplaint && (
+                  <p><strong>Chief Complaint:</strong> {consultation.chiefComplaint}</p>
+                )}
+                {consultation?.soapAssessment && (
+                  <p><strong>Assessment:</strong> {consultation.soapAssessment}</p>
+                )}
+                {(patient as unknown as Record<string, string> | undefined)?.medicalHistory && (
+                  <p><strong>Past Medical History:</strong> {(patient as unknown as Record<string, string>).medicalHistory}</p>
+                )}
+                {(patient as unknown as Record<string, string> | undefined)?.currentMedications && (
+                  <p><strong>Current Medications:</strong> {(patient as unknown as Record<string, string>).currentMedications}</p>
+                )}
+                {(patient as unknown as Record<string, string> | undefined)?.allergies && (
+                  <p><strong>Allergies:</strong> {(patient as unknown as Record<string, string>).allergies}</p>
+                )}
+                {referralReason && (
+                  <>
+                    <br />
+                    <p><strong>Reason for Referral:</strong> {referralReason}</p>
+                  </>
+                )}
+                <br />
+                <p>
+                  Your expert evaluation and management of this patient would be greatly appreciated. Please feel free to contact us for any additional clinical details.
+                </p>
+                <br />
                 <p>Yours sincerely,</p>
                 <br /><br />
                 <p><strong>{consultation?.doctorName ?? "_______________"}</strong></p>
-                <p>{(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? ""}</p>
+                <p className="not-italic text-gray-600">
+                  {(clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? ""}
+                </p>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowReferralLetter(false)}>Close</Button>
-              <Button onClick={() => handlePrintLetter("referral-letter-content", "Referral Letter")}>
-                <Printer className="mr-2 h-4 w-4" /> Print Letter
-              </Button>
             </div>
           </div>
         </DialogContent>
