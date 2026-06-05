@@ -8,8 +8,8 @@ export default function PrescriptionsPage() {
   const localToday = new Date().toLocaleDateString("en-CA");
 
   const { data, isLoading } = useListPrescriptions(
-    { date: localToday, limit: 50 },
-    { query: { queryKey: getListPrescriptionsQueryKey({ date: localToday, limit: 50 }) } }
+    { date: localToday, limit: 500 },
+    { query: { queryKey: getListPrescriptionsQueryKey({ date: localToday, limit: 500 }) } }
   );
 
   const prescriptions = data?.data ?? [];
