@@ -817,6 +817,23 @@ export default function ConsultationDetailPage() {
             </TabsList>
 
             <TabsContent value="soap" className="mt-4 space-y-4">
+              {/* Referring Doctor — sits above SOAP fields */}
+              <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
+                <Label className="text-xs">Referring Doctor</Label>
+                <FieldFavPanel
+                  lsKey="clinicos_clin_referringDoctorName"
+                  currentValue={clinicalValues["referringDoctorName"]}
+                  onApply={v => { setClinicalValues(prev => ({ ...prev, referringDoctorName: v })); handleBlur("referringDoctorName", v); }}
+                />
+                <Input
+                  className="col-span-full"
+                  value={clinicalValues["referringDoctorName"]}
+                  onChange={e => setClinicalValues(prev => ({ ...prev, referringDoctorName: e.target.value }))}
+                  onBlur={e => { handleBlur("referringDoctorName", e.target.value); trackFieldRecent("clinicos_clin_referringDoctorName", e.target.value); }}
+                  placeholder="Name of referring doctor (if any)"
+                />
+              </div>
+
               {SOAP_FIELDS.map(field => {
                 const labels: Record<string, string> = {
                   soapSubjective: "S — Subjective",
@@ -977,7 +994,6 @@ export default function ConsultationDetailPage() {
 
             <TabsContent value="clinical" className="mt-4 space-y-3">
               {([
-                { field: "referringDoctorName"     as ClinicalField, label: "Referring Doctor",             rows: 1, placeholder: "Name of referring doctor (if any)", isInput: true  },
                 { field: "chiefComplaint"          as ClinicalField, label: "Chief Complaint",              rows: 1, placeholder: "Main presenting complaint",        isInput: true  },
                 { field: "historyOfPresentIllness" as ClinicalField, label: "History of Present Illness",   rows: 4, placeholder: "Detailed illness history...",      isInput: false },
                 { field: "clinicalNotes"           as ClinicalField, label: "Clinical Notes",               rows: 6, placeholder: "Additional clinical observations...", isInput: false },
