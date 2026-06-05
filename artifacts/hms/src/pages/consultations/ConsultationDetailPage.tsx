@@ -624,8 +624,8 @@ export default function ConsultationDetailPage() {
     patientId: consultation!.patientId,
     doctorId: consultation!.doctorId,
     consultationId: id,
-    diagnosis: consultation!.diagnosis ?? undefined,
-    advice: consultation!.advice ?? undefined,
+    diagnosis: diagnosisValue || consultation!.diagnosis || undefined,
+    advice: adviceValue || consultation!.advice || undefined,
     followUpDate: consultation!.followUpDate ?? undefined,
     items: drugItems.filter(i => i.drugName),
   });
@@ -1846,21 +1846,49 @@ export default function ConsultationDetailPage() {
                 </div>
               )}
 
+              {/* Chief Complaint */}
+              {(clinicalValues["chiefComplaint"] || consultation?.chiefComplaint) && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Chief Complaint</p>
+                  <p className="text-sm">{clinicalValues["chiefComplaint"] || consultation?.chiefComplaint}</p>
+                </div>
+              )}
+
+              {/* SOAP Notes */}
+              {(soapValues.soapSubjective || soapValues.soapObjective || soapValues.soapAssessment || soapValues.soapPlan) && (
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">SOAP Notes</p>
+                  {soapValues.soapSubjective && <p className="text-sm"><span className="font-medium">S: </span>{soapValues.soapSubjective}</p>}
+                  {soapValues.soapObjective  && <p className="text-sm"><span className="font-medium">O: </span>{soapValues.soapObjective}</p>}
+                  {soapValues.soapAssessment && <p className="text-sm"><span className="font-medium">A: </span>{soapValues.soapAssessment}</p>}
+                  {soapValues.soapPlan       && <p className="text-sm"><span className="font-medium">P: </span>{soapValues.soapPlan}</p>}
+                </div>
+              )}
+
+              {/* Investigations */}
+              {(investigationValue || consultation?.investigationOrders) && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Investigations</p>
+                  <p className="text-sm whitespace-pre-wrap">{investigationValue || consultation?.investigationOrders}</p>
+                </div>
+              )}
+
               {/* Diagnosis */}
-              {consultation?.diagnosis && (
+              {(diagnosisValue || consultation?.diagnosis) && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Diagnosis</p>
-                  <p className="text-sm">{consultation.diagnosis}</p>
+                  <p className="text-sm">{diagnosisValue || consultation?.diagnosis}</p>
                 </div>
               )}
 
               {/* Rx drugs */}
               {drugItems.filter(i => i.drugName).length > 0 ? (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Medications</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Rx — Medications</p>
                   <table className="w-full text-xs border border-border rounded overflow-hidden">
                     <thead className="bg-muted/50">
                       <tr>
+                        <th className="text-left py-1.5 px-2">#</th>
                         <th className="text-left py-1.5 px-2">Drug</th>
                         <th className="text-left py-1.5 px-2">Dosage</th>
                         <th className="text-left py-1.5 px-2">Frequency</th>
@@ -1871,6 +1899,7 @@ export default function ConsultationDetailPage() {
                     <tbody>
                       {drugItems.filter(i => i.drugName).map((item, idx) => (
                         <tr key={idx} className="border-t border-border">
+                          <td className="py-1.5 px-2 text-muted-foreground">{idx + 1}</td>
                           <td className="py-1.5 px-2 font-medium">{item.drugName}</td>
                           <td className="py-1.5 px-2">{item.dosage || "—"}</td>
                           <td className="py-1.5 px-2">{item.frequency || "—"}</td>
@@ -1886,16 +1915,21 @@ export default function ConsultationDetailPage() {
               )}
 
               {/* Advice */}
-              {consultation?.advice && (
+              {(adviceValue || consultation?.advice) && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Advice</p>
-                  <p className="text-sm">{consultation.advice}</p>
+                  <p className="text-sm">{adviceValue || consultation?.advice}</p>
                 </div>
               )}
 
               {/* Follow-up */}
               {consultation?.followUpDate && (
-                <p className="text-xs text-muted-foreground">Follow-up: {consultation.followUpDate}</p>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Follow-up</p>
+                  <p className="text-sm">{consultation.followUpDate}
+                    {consultation.followUpNotes && <span className="text-muted-foreground"> — {consultation.followUpNotes}</span>}
+                  </p>
+                </div>
               )}
 
               {/* Footer actions */}
