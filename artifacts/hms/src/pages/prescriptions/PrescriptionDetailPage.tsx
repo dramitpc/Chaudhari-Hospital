@@ -586,7 +586,7 @@ export default function PrescriptionDetailPage() {
         )}
 
         <div className="mt-12 text-right">
-          <div className="inline-block border-t border-foreground pt-2 min-w-[180px]">
+          <div className="inline-block min-w-[180px]">
             {prescription.doctorSignatureData && (
               <img
                 src={prescription.doctorSignatureData}
