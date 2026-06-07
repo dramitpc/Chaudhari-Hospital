@@ -696,7 +696,7 @@ export const GetQueueResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "appointmentId": zod.string().nullish(),
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'completed', 'skipped', 'cancelled']),
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled']),
   "priority": zod.number().optional(),
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
@@ -736,7 +736,7 @@ export const UpdateTokenStatusParams = zod.object({
 })
 
 export const UpdateTokenStatusBody = zod.object({
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'completed', 'skipped', 'cancelled'])
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled'])
 })
 
 export const UpdateTokenStatusResponse = zod.object({
@@ -748,7 +748,7 @@ export const UpdateTokenStatusResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "appointmentId": zod.string().nullish(),
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'completed', 'skipped', 'cancelled']),
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled']),
   "priority": zod.number().optional(),
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
@@ -778,7 +778,7 @@ export const CallNextPatientResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "appointmentId": zod.string().nullish(),
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'completed', 'skipped', 'cancelled']),
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled']),
   "priority": zod.number().optional(),
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),

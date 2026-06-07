@@ -137,7 +137,7 @@ router.post("/consultations/:id/complete", authenticate, async (req, res): Promi
   }
   if (c.tokenId) {
     await db.update(queueTokensTable)
-      .set({ status: "completed", consultationEndedAt: new Date() })
+      .set({ status: "consultation_done", consultationEndedAt: new Date() })
       .where(eq(queueTokensTable.id, c.tokenId));
   }
   await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION", "consultations", c.id);

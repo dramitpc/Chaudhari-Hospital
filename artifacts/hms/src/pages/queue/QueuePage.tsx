@@ -22,6 +22,7 @@ const statusColors: Record<string, string> = {
   waiting: "border-amber-400 bg-amber-50 dark:bg-amber-900/20",
   called: "border-blue-400 bg-blue-50 dark:bg-blue-900/20",
   in_consultation: "border-green-400 bg-green-50 dark:bg-green-900/20",
+  consultation_done: "border-purple-400 bg-purple-50 dark:bg-purple-900/20",
   completed: "border-gray-300 bg-gray-50 dark:bg-gray-800/30 opacity-60",
   skipped: "border-gray-300 bg-gray-50 dark:bg-gray-800/30 opacity-60",
   cancelled: "border-red-300 bg-red-50 dark:bg-red-900/20 opacity-60",
@@ -31,6 +32,7 @@ const statusBadgeColors: Record<string, string> = {
   waiting: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   called: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
   in_consultation: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  consultation_done: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
   completed: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
   skipped: "bg-gray-100 text-gray-600",
   cancelled: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
@@ -173,7 +175,7 @@ export default function QueuePage() {
   };
 
   const handleUpdateStatus = (id: string, status: string) => {
-    updateStatusMutation.mutate({ id, data: { status: status as "waiting" | "called" | "in_consultation" | "completed" | "skipped" | "cancelled" } }, {
+    updateStatusMutation.mutate({ id, data: { status: status as "waiting" | "called" | "in_consultation" | "consultation_done" | "completed" | "skipped" | "cancelled" } }, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() }),
     });
   };
@@ -260,7 +262,7 @@ export default function QueuePage() {
   const allTokens = queueData?.tokens ?? [];
   const tokens = visitTypeFilter ? allTokens.filter(t => t.visitType === visitTypeFilter) : allTokens;
   const waiting = tokens.filter(t => t.status === "waiting");
-  const inConsultation = allTokens.find(t => t.status === "in_consultation" || t.status === "called");
+  const inConsultation = allTokens.find(t => t.status === "in_consultation" || t.status === "called" || t.status === "consultation_done");
 
   const newCount = allTokens.filter(t => t.status === "waiting" && t.visitType === "new").length;
   const followupCount = allTokens.filter(t => t.status === "waiting" && t.visitType === "followup").length;
@@ -425,8 +427,18 @@ export default function QueuePage() {
                     </Button>
                   )}
                   {token.status === "in_consultation" && token.consultationId && (
-                    <Button size="sm" onClick={() => navigate(`/consultations/${token.consultationId}`)}>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/consultations/${token.consultationId}`)}>
                       Open Consultation
+                    </Button>
+                  )}
+                  {token.status === "consultation_done" && (
+                    <Button
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => handleUpdateStatus(token.id, "completed")}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      Complete Visit
                     </Button>
                   )}
                   <Button

@@ -13,6 +13,7 @@ export const QueueTokenStatus = {
   waiting: 'waiting',
   called: 'called',
   in_consultation: 'in_consultation',
+  consultation_done: 'consultation_done',
   completed: 'completed',
   skipped: 'skipped',
   cancelled: 'cancelled',

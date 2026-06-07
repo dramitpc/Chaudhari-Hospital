@@ -2002,7 +2002,7 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [waiting, called, in_consultation, completed, skipped, cancelled]
+          enum: [waiting, called, in_consultation, consultation_done, completed, skipped, cancelled]
         priority:
           type: integer
         estimatedWaitMinutes:
@@ -2050,7 +2050,7 @@ components:
       properties:
         status:
           type: string
-          enum: [waiting, called, in_consultation, completed, skipped, cancelled]
+          enum: [waiting, called, in_consultation, consultation_done, completed, skipped, cancelled]
 
     CallNextInput:
       type: object
