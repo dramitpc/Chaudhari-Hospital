@@ -77,7 +77,10 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const visitDate = localDateStr();
+  const tokenRow = parsed.data.tokenId
+    ? (await db.select({ queueDate: queueTokensTable.queueDate }).from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
+    : null;
+  const visitDate = tokenRow?.queueDate ?? localDateStr();
   const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
   res.status(201).json(await formatConsultation(c));

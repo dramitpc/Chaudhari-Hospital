@@ -131,7 +131,10 @@ router.post("/prescriptions", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const visitDate = localDateStr();
+  const consultationRow = parsed.data.consultationId
+    ? (await db.select({ visitDate: consultationsTable.visitDate }).from(consultationsTable).where(eq(consultationsTable.id, parsed.data.consultationId)))[0]
+    : null;
+  const visitDate = consultationRow?.visitDate ?? localDateStr();
   const [p] = await db.insert(prescriptionsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_PRESCRIPTION", "prescriptions", p.id);
   res.status(201).json(await formatPrescription(p));
