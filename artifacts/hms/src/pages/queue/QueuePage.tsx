@@ -424,8 +424,10 @@ export default function QueuePage() {
                       Start
                     </Button>
                   )}
-                  {token.status === "in_consultation" && (
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "completed")}>Complete</Button>
+                  {token.status === "in_consultation" && token.consultationId && (
+                    <Button size="sm" onClick={() => navigate(`/consultations/${token.consultationId}`)}>
+                      Open Consultation
+                    </Button>
                   )}
                   <Button
                     size="sm" variant="outline"

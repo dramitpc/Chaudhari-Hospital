@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, desc, isNotNull } from "drizzle-orm";
-import { db, queueTokensTable, patientsTable, usersTable } from "@workspace/db";
+import { db, queueTokensTable, patientsTable, usersTable, consultationsTable } from "@workspace/db";
 import {
   GetQueueQueryParams,
   GenerateTokenBody,
@@ -34,6 +34,7 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
     gender: patientsTable.gender,
   }).from(patientsTable).where(eq(patientsTable.id, t.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, t.doctorId));
+  const [consultation] = await db.select({ id: consultationsTable.id }).from(consultationsTable).where(eq(consultationsTable.tokenId, t.id));
   return {
     id: t.id,
     tokenNumber: t.tokenNumber,
@@ -45,6 +46,7 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
     doctorId: t.doctorId,
     doctorName: doctor?.fullName ?? "",
     appointmentId: t.appointmentId ?? null,
+    consultationId: consultation?.id ?? null,
     status: t.status,
     visitType: t.visitType,
     priority: t.priority,

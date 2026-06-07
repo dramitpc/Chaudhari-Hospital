@@ -2015,6 +2015,8 @@ components:
           type: ["string", "null"]
         patientGender:
           type: ["string", "null"]
+        consultationId:
+          type: ["string", "null"]
         visitType:
           type: string
           enum: [new, followup]

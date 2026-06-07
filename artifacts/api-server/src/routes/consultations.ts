@@ -135,6 +135,11 @@ router.post("/consultations/:id/complete", authenticate, async (req, res): Promi
     res.status(404).json({ error: "Consultation not found" });
     return;
   }
+  if (c.tokenId) {
+    await db.update(queueTokensTable)
+      .set({ status: "completed", consultationEndedAt: new Date() })
+      .where(eq(queueTokensTable.id, c.tokenId));
+  }
   await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION", "consultations", c.id);
   res.json(await formatConsultation(c));
 });

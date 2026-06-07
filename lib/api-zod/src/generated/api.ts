@@ -703,6 +703,7 @@ export const GetQueueResponse = zod.object({
   "createdAt": zod.string(),
   "patientAge": zod.string().nullish(),
   "patientGender": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish()
@@ -754,6 +755,7 @@ export const UpdateTokenStatusResponse = zod.object({
   "createdAt": zod.string(),
   "patientAge": zod.string().nullish(),
   "patientGender": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish()
@@ -783,6 +785,7 @@ export const CallNextPatientResponse = zod.object({
   "createdAt": zod.string(),
   "patientAge": zod.string().nullish(),
   "patientGender": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish()

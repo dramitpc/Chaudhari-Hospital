@@ -581,6 +581,8 @@ export interface QueueToken {
   patientAge?: string | null;
   /** @nullable */
   patientGender?: string | null;
+  /** @nullable */
+  consultationId?: string | null;
   visitType?: QueueTokenVisitType;
   /** @nullable */
   consultationStartedAt?: string | null;
