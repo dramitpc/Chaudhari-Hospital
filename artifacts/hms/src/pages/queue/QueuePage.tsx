@@ -148,6 +148,16 @@ export default function QueuePage() {
     inv => (inv.balance ?? 0) > 0 && inv.status !== "cancelled" && inv.status !== "refunded"
   );
 
+  // Complete Visit confirmation
+  const [completeVisitTarget, setCompleteVisitTarget] = useState<{ tokenId: string; patientId: string } | null>(null);
+  const { data: completeVisitInvoicesData, isLoading: completeVisitInvoicesLoading } = useListInvoices(
+    { patientId: completeVisitTarget?.patientId ?? "", limit: 20 },
+    { query: { enabled: !!completeVisitTarget, queryKey: getListInvoicesQueryKey({ patientId: completeVisitTarget?.patientId ?? "", limit: 20 }) } }
+  );
+  const completeVisitPendingInvoices = (completeVisitInvoicesData?.data ?? []).filter(
+    inv => (inv.balance ?? 0) > 0 && inv.status !== "cancelled" && inv.status !== "refunded"
+  );
+
   const openQueuePayment = (patientId: string) => {
     setPaymentPatientId(patientId);
     setPaymentInvoiceId("");
@@ -435,7 +445,7 @@ export default function QueuePage() {
                     <Button
                       size="sm"
                       className="bg-purple-600 hover:bg-purple-700 text-white"
-                      onClick={() => handleUpdateStatus(token.id, "completed")}
+                      onClick={() => setCompleteVisitTarget({ tokenId: token.id, patientId: token.patientId })}
                       disabled={updateStatusMutation.isPending}
                     >
                       Complete Visit
@@ -593,6 +603,69 @@ export default function QueuePage() {
                 Record Payment
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Complete Visit Confirmation Dialog ─────────────────────────────── */}
+      <Dialog open={!!completeVisitTarget} onOpenChange={(open) => { if (!open) setCompleteVisitTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Complete Visit
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {completeVisitInvoicesLoading ? (
+              <div className="space-y-2 py-2">
+                <div className="h-6 bg-muted animate-pulse rounded" />
+                <div className="h-6 bg-muted animate-pulse rounded w-3/4" />
+              </div>
+            ) : completeVisitPendingInvoices.length > 0 ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-3 py-3 space-y-2">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  ⚠ Invoice Payment Pending
+                </p>
+                <ul className="space-y-1">
+                  {completeVisitPendingInvoices.map(inv => (
+                    <li key={inv.id} className="text-xs text-amber-700 dark:text-amber-400 flex justify-between">
+                      <span>{inv.invoiceNumber}</span>
+                      <span className="font-medium">₹{(inv.balance ?? 0).toFixed(2)} due</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-amber-700 dark:text-amber-400">Please clear the invoice before ending the visit.</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No pending invoices. Ready to complete the visit.</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCompleteVisitTarget(null)}>Cancel</Button>
+            {completeVisitPendingInvoices.length > 0 && !completeVisitInvoicesLoading && (
+              <Button
+                variant="outline"
+                className="text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400"
+                onClick={() => {
+                  if (completeVisitTarget) openQueuePayment(completeVisitTarget.patientId);
+                  setCompleteVisitTarget(null);
+                }}
+              >
+                <DollarSign className="h-3.5 w-3.5 mr-1" /> Pay Now
+              </Button>
+            )}
+            <Button
+              disabled={updateStatusMutation.isPending || completeVisitInvoicesLoading}
+              className={completeVisitPendingInvoices.length > 0 ? "bg-amber-600 hover:bg-amber-700" : ""}
+              onClick={() => {
+                if (completeVisitTarget) {
+                  handleUpdateStatus(completeVisitTarget.tokenId, "completed");
+                  setCompleteVisitTarget(null);
+                }
+              }}
+            >
+              {completeVisitPendingInvoices.length > 0 ? "Complete Anyway" : "Complete Visit"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
