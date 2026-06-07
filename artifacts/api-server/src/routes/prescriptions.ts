@@ -114,8 +114,8 @@ router.get("/prescriptions", authenticate, async (req, res): Promise<void> => {
 
   const all = await db.select().from(prescriptionsTable)
     .where(and(
-      eq(prescriptionsTable.visitDate, date),
-      patientId     ? eq(prescriptionsTable.patientId,     patientId)     : undefined,
+      !consultationId && !patientId ? eq(prescriptionsTable.visitDate, date) : undefined,
+      patientId      ? eq(prescriptionsTable.patientId,     patientId)     : undefined,
       consultationId ? eq(prescriptionsTable.consultationId, consultationId) : undefined,
     ))
     .orderBy(desc(prescriptionsTable.createdAt));
