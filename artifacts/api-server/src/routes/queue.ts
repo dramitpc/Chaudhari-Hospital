@@ -12,8 +12,27 @@ import { authenticate } from "../middlewares/authenticate";
 
 const router = Router();
 
+function deriveAge(dob?: string | null, ageText?: string | null): string | null {
+  if (dob) {
+    const birth = new Date(dob);
+    const now = new Date();
+    let years = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) years--;
+    return `${years}y`;
+  }
+  return ageText ?? null;
+}
+
 async function formatToken(t: typeof queueTokensTable.$inferSelect) {
-  const [patient] = await db.select({ salutation: patientsTable.salutation, fullName: patientsTable.fullName, phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, t.patientId));
+  const [patient] = await db.select({
+    salutation: patientsTable.salutation,
+    fullName: patientsTable.fullName,
+    phone: patientsTable.phone,
+    dateOfBirth: patientsTable.dateOfBirth,
+    age: patientsTable.age,
+    gender: patientsTable.gender,
+  }).from(patientsTable).where(eq(patientsTable.id, t.patientId));
   const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, t.doctorId));
   return {
     id: t.id,
@@ -21,6 +40,8 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
     patientId: t.patientId,
     patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     patientPhone: patient?.phone ?? null,
+    patientAge: deriveAge(patient?.dateOfBirth, patient?.age),
+    patientGender: patient?.gender ?? null,
     doctorId: t.doctorId,
     doctorName: doctor?.fullName ?? "",
     appointmentId: t.appointmentId ?? null,

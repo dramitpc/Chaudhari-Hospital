@@ -2011,6 +2011,10 @@ components:
           type: string
         createdAt:
           type: string
+        patientAge:
+          type: ["string", "null"]
+        patientGender:
+          type: ["string", "null"]
         visitType:
           type: string
           enum: [new, followup]

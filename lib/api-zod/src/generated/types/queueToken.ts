@@ -25,6 +25,10 @@ export interface QueueToken {
   estimatedWaitMinutes?: number | null;
   queueDate?: string;
   createdAt: string;
+  /** @nullable */
+  patientAge?: string | null;
+  /** @nullable */
+  patientGender?: string | null;
   visitType?: QueueTokenVisitType;
   /** @nullable */
   consultationStartedAt?: string | null;

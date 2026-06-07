@@ -384,6 +384,9 @@ export default function QueuePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="font-semibold text-foreground">{token.patientName}</span>
+                      {token.patientAge && (
+                        <span className="text-xs text-muted-foreground">{token.patientAge}{token.patientGender ? ` / ${token.patientGender}` : ""}</span>
+                      )}
                       <VisitTypeBadge visitType={token.visitType} />
                       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
                         {token.status.replace("_", " ")}
@@ -391,6 +394,8 @@ export default function QueuePage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
                       {token.patientPhone ?? "No phone"}
+                      <span className="mx-1.5 opacity-40">·</span>
+                      <span title="Token generated at">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     </p>
                     {token.status === "waiting" && (
                       <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
@@ -449,9 +454,11 @@ export default function QueuePage() {
                     <div className="w-10 h-10 rounded-full flex items-center justify-center border font-semibold text-sm flex-shrink-0">
                       {token.tokenNumber}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
                       <span className="text-sm text-muted-foreground truncate">{token.patientName}</span>
+                      {token.patientAge && <span className="text-xs text-muted-foreground shrink-0">{token.patientAge}{token.patientGender ? ` / ${token.patientGender}` : ""}</span>}
                       <VisitTypeBadge visitType={token.visitType} />
+                      <span className="text-xs text-muted-foreground shrink-0">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                       {invoicedPatientIds.has(token.patientId) && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700">
                           <Receipt className="h-2.5 w-2.5" /> ₹
