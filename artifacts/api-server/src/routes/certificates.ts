@@ -13,13 +13,14 @@ const router = Router();
 
 async function formatCertificate(c: typeof certificatesTable.$inferSelect) {
   const [patient] = await db.select({ salutation: patientsTable.salutation, fullName: patientsTable.fullName }).from(patientsTable).where(eq(patientsTable.id, c.patientId));
-  const [doctor] = await db.select({ fullName: usersTable.fullName }).from(usersTable).where(eq(usersTable.id, c.doctorId));
+  const [doctor] = await db.select({ fullName: usersTable.fullName, signatureData: usersTable.signatureData }).from(usersTable).where(eq(usersTable.id, c.doctorId));
   return {
     id: c.id,
     patientId: c.patientId,
     patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     doctorId: c.doctorId,
     doctorName: doctor?.fullName ?? "",
+    doctorSignatureData: doctor?.signatureData ?? null,
     consultationId: c.consultationId ?? null,
     type: c.type,
     issuedDate: c.issuedDate,

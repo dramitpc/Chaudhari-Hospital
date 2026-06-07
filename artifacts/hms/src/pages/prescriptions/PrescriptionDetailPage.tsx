@@ -586,7 +586,14 @@ export default function PrescriptionDetailPage() {
         )}
 
         <div className="mt-12 text-right">
-          <div className="inline-block border-t border-foreground pt-2">
+          <div className="inline-block border-t border-foreground pt-2 min-w-[180px]">
+            {prescription.doctorSignatureData && (
+              <img
+                src={prescription.doctorSignatureData}
+                alt="Doctor signature"
+                className="h-14 max-w-[200px] object-contain ml-auto mb-1"
+              />
+            )}
             <p className="text-sm font-medium">Dr. {prescription.doctorName}</p>
             {prescription.doctorRegistrationNumber && (
               <p className="text-xs text-muted-foreground">Reg. No: {prescription.doctorRegistrationNumber}</p>

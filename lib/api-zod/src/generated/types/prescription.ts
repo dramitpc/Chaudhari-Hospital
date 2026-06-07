@@ -21,6 +21,8 @@ export interface Prescription {
   /** @nullable */
   doctorConsultingHours?: string | null;
   /** @nullable */
+  doctorSignatureData?: string | null;
+  /** @nullable */
   consultationId?: string | null;
   visitDate: string;
   /** @nullable */

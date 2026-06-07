@@ -193,6 +193,13 @@ export default function CertificateDetailPage() {
             <div className="mt-12 grid grid-cols-2 gap-8">
               <div>
                 <div className="border-t border-foreground pt-2">
+                  {cert.doctorSignatureData && (
+                    <img
+                      src={cert.doctorSignatureData}
+                      alt="Doctor signature"
+                      className="h-14 max-w-[200px] object-contain mb-1"
+                    />
+                  )}
                   <p className="text-sm font-medium">Dr. {cert.doctorName}</p>
                   <p className="text-xs text-muted-foreground">{clinic}</p>
                   <p className="text-xs text-muted-foreground">Signature &amp; Stamp</p>
@@ -249,6 +256,13 @@ export default function CertificateDetailPage() {
             <div className="mt-16 grid grid-cols-2 gap-8">
               <div className="text-center">
                 <div className="border-t border-foreground pt-2">
+                  {cert.doctorSignatureData && (
+                    <img
+                      src={cert.doctorSignatureData}
+                      alt="Doctor signature"
+                      className="h-14 max-w-[200px] object-contain mx-auto mb-1"
+                    />
+                  )}
                   <p className="text-sm font-medium">Dr. {cert.doctorName}</p>
                   <p className="text-xs text-muted-foreground">Signature &amp; Stamp</p>
                 </div>

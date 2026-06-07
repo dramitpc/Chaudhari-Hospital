@@ -14,6 +14,8 @@ export interface Certificate {
   doctorId: string;
   doctorName?: string;
   /** @nullable */
+  doctorSignatureData?: string | null;
+  /** @nullable */
   consultationId?: string | null;
   type: CertificateType;
   issuedDate: string;

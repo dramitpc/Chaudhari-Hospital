@@ -338,6 +338,8 @@ export interface Prescription {
   /** @nullable */
   doctorConsultingHours?: string | null;
   /** @nullable */
+  doctorSignatureData?: string | null;
+  /** @nullable */
   consultationId?: string | null;
   visitDate: string;
   /** @nullable */
@@ -417,6 +419,8 @@ export interface Certificate {
   patientName?: string;
   doctorId: string;
   doctorName?: string;
+  /** @nullable */
+  doctorSignatureData?: string | null;
   /** @nullable */
   consultationId?: string | null;
   type: CertificateType;
