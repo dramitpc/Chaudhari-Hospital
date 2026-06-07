@@ -243,7 +243,7 @@ export default function PrescriptionDetailPage() {
     <div>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4 print:hidden">
-        <Button variant="ghost" size="icon" onClick={() => setLocation("/prescriptions")}>
+        <Button variant="ghost" size="icon" onClick={() => setLocation(prescription?.consultationId ? `/consultations/${prescription.consultationId}` : "/prescriptions")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex flex-wrap items-center gap-2">
