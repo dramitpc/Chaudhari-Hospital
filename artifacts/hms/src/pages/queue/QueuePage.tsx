@@ -430,11 +430,6 @@ export default function QueuePage() {
                 </div>
                 {/* Action buttons — full-width row below on all sizes */}
                 <div className="flex flex-wrap gap-2 mt-2.5 justify-end items-center">
-                  {invoicedPatientIds.has(token.patientId) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700 animate-pulse">
-                      <Receipt className="h-3 w-3" /> Invoice ✓
-                    </span>
-                  )}
                   {token.status === "waiting" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
