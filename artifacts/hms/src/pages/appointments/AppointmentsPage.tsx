@@ -27,7 +27,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AppointmentsPage() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
   const [date, setDate] = useState(today);
   const [doctorId, setDoctorId] = useState<string>("");
   const [showBooking, setShowBooking] = useState(false);

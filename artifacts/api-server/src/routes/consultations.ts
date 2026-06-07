@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
+import { localDateStr } from "../lib/date";
 
 const router = Router();
 
@@ -76,7 +77,7 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const visitDate = new Date().toISOString().split("T")[0];
+  const visitDate = localDateStr();
   const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
   res.status(201).json(await formatConsultation(c));

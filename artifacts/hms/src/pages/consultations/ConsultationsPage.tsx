@@ -22,7 +22,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ConsultationsPage() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
   const [date, setDate] = useState(today);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState("");

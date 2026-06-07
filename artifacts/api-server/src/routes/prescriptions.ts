@@ -14,6 +14,7 @@ import {
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
+import { localDateStr } from "../lib/date";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
@@ -130,7 +131,7 @@ router.post("/prescriptions", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const visitDate = new Date().toISOString().split("T")[0];
+  const visitDate = localDateStr();
   const [p] = await db.insert(prescriptionsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_PRESCRIPTION", "prescriptions", p.id);
   res.status(201).json(await formatPrescription(p));

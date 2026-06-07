@@ -16,8 +16,8 @@ import {
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 export default function ReportsPage() {
-  const today = new Date().toISOString().split("T")[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toLocaleDateString("en-CA");
 
   const [opdDate, setOpdDate] = useState(today);
   const [revenueStart, setRevenueStart] = useState(thirtyDaysAgo);

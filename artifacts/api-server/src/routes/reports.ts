@@ -2,11 +2,12 @@ import { Router } from "express";
 import { eq, and, sql } from "drizzle-orm";
 import { db, patientsTable, queueTokensTable, invoicesTable, consultationsTable, prescriptionsTable, certificatesTable, usersTable, chargeTypesTable } from "@workspace/db";
 import { authenticate, requireRole } from "../middlewares/authenticate";
+import { localDateStr } from "../lib/date";
 
 const router = Router();
 
 router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> => {
-  const date = req.query.date as string ?? new Date().toISOString().split("T")[0];
+  const date = req.query.date as string ?? localDateStr();
   const doctorId = req.query.doctorId as string | undefined;
 
   let tokenQuery = db.select().from(queueTokensTable).where(eq(queueTokensTable.queueDate, date)).$dynamic();
@@ -97,8 +98,8 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
 });
 
 router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => {
-  const startDate = req.query.startDate as string ?? new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
-  const endDate = req.query.endDate as string ?? new Date().toISOString().split("T")[0];
+  const startDate = req.query.startDate as string ?? localDateStr(new Date(Date.now() - 30 * 86400000));
+  const endDate = req.query.endDate as string ?? localDateStr();
 
   const invoices = await db.select().from(invoicesTable)
     .where(sql`date(created_at) between ${startDate} and ${endDate}`);
@@ -151,8 +152,8 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
 });
 
 router.get("/reports/doctor-productivity", authenticate, async (req, res): Promise<void> => {
-  const startDate = req.query.startDate as string ?? new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
-  const endDate = req.query.endDate as string ?? new Date().toISOString().split("T")[0];
+  const startDate = req.query.startDate as string ?? localDateStr(new Date(Date.now() - 30 * 86400000));
+  const endDate = req.query.endDate as string ?? localDateStr();
   const filterDoctorId = req.query.doctorId as string | undefined;
 
   let doctorsQuery = db.select().from(usersTable).where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true))).$dynamic();

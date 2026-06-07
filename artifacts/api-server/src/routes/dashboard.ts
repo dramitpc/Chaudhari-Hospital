@@ -10,11 +10,12 @@ import {
   usersTable,
 } from "@workspace/db";
 import { authenticate } from "../middlewares/authenticate";
+import { localDateStr } from "../lib/date";
 
 const router = Router();
 
 router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> => {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateStr();
   const monthStart = `${today.slice(0, 7)}-01`;
 
   const [
@@ -50,7 +51,7 @@ router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> =
 });
 
 router.get("/dashboard/queue-status", authenticate, async (req, res): Promise<void> => {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateStr();
   const doctors = await db.select().from(usersTable).where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)));
 
   const statuses = await Promise.all(doctors.map(async (doc) => {
@@ -88,7 +89,7 @@ router.get("/dashboard/revenue-chart", authenticate, async (req, res): Promise<v
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
     const result = await db.select({
       total: sql<number>`coalesce(sum(total), 0)`,
       count: sql<number>`count(*)`,
@@ -104,7 +105,7 @@ router.get("/dashboard/patient-trends", authenticate, async (req, res): Promise<
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
     const total = await db.select({ count: sql<number>`count(*)` }).from(queueTokensTable).where(eq(queueTokensTable.queueDate, dateStr));
     const newP = await db.select({ count: sql<number>`count(*)` }).from(patientsTable).where(sql`date(created_at) = ${dateStr}`);
     points.push({ date: dateStr, count: Number(total[0]?.count ?? 0), newPatients: Number(newP[0]?.count ?? 0) });

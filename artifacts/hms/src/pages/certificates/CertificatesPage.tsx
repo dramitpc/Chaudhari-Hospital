@@ -164,7 +164,7 @@ export default function CertificatesPage() {
     patientId: "",
     doctorId: user?.role === "doctor" ? user?.id ?? "" : "",
     type: "sick_leave",
-    issuedDate: new Date().toISOString().split("T")[0],
+    issuedDate: new Date().toLocaleDateString("en-CA"),
     fromDate: "",
     toDate: "",
     diagnosis: "",

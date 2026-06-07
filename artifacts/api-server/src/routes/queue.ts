@@ -9,6 +9,7 @@ import {
   CallNextPatientBody,
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
+import { localDateStr } from "../lib/date";
 
 const router = Router();
 
@@ -62,7 +63,7 @@ const FALLBACK_DURATION = 8; // minutes, used when no completed consultations ye
 
 router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const params = GetQueueQueryParams.safeParse(req.query);
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateStr();
   const date = (params.success && params.data.date) ? params.data.date : today;
   const doctorId = params.success ? params.data.doctorId : undefined;
   const visitType = params.success ? (params.data as Record<string, unknown>).visitType as string | undefined : undefined;
@@ -146,7 +147,7 @@ router.post("/queue/tokens", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const today = parsed.data.date ?? new Date().toISOString().split("T")[0];
+  const today = parsed.data.date ?? localDateStr();
   const existing = await db.select().from(queueTokensTable)
     .where(and(eq(queueTokensTable.queueDate, today), eq(queueTokensTable.doctorId, parsed.data.doctorId)));
   const nextToken = existing.length + 1;
@@ -196,7 +197,7 @@ router.post("/queue/next", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateStr();
   await db.update(queueTokensTable)
     .set({ status: "completed", consultationEndedAt: new Date() })
     .where(and(eq(queueTokensTable.doctorId, parsed.data.doctorId), eq(queueTokensTable.status, "in_consultation"), eq(queueTokensTable.queueDate, today)));
