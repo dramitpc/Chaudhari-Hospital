@@ -37,6 +37,7 @@ export const LoginResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 })
@@ -63,6 +64,7 @@ export const RefreshTokenResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 })
@@ -82,6 +84,7 @@ export const GetMeResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 })
@@ -110,6 +113,7 @@ export const ListDoctorsResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 }))
@@ -137,6 +141,7 @@ export const ListUsersResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 })),
@@ -158,7 +163,8 @@ export const CreateUserBody = zod.object({
   "phone": zod.string().optional(),
   "registrationNumber": zod.string().optional(),
   "specialization": zod.string().optional(),
-  "consultingHours": zod.string().optional()
+  "consultingHours": zod.string().optional(),
+  "signatureData": zod.string().optional()
 })
 
 
@@ -179,6 +185,7 @@ export const GetUserResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 })
@@ -198,6 +205,7 @@ export const UpdateUserBody = zod.object({
   "registrationNumber": zod.string().optional(),
   "specialization": zod.string().optional(),
   "consultingHours": zod.string().optional(),
+  "signatureData": zod.string().optional(),
   "role": zod.enum(['admin', 'doctor', 'staff', 'radiographer']).optional(),
   "isActive": zod.boolean().optional()
 })
@@ -212,6 +220,7 @@ export const UpdateUserResponse = zod.object({
   "registrationNumber": zod.string().nullish(),
   "specialization": zod.string().nullish(),
   "consultingHours": zod.string().nullish(),
+  "signatureData": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.string()
 })

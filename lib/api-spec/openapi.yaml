@@ -1586,6 +1586,8 @@ components:
           type: ["string", "null"]
         consultingHours:
           type: ["string", "null"]
+        signatureData:
+          type: ["string", "null"]
         isActive:
           type: boolean
         createdAt:
@@ -1614,6 +1616,8 @@ components:
           type: string
         consultingHours:
           type: string
+        signatureData:
+          type: string
 
     UserUpdate:
       type: object
@@ -1629,6 +1633,8 @@ components:
         specialization:
           type: string
         consultingHours:
+          type: string
+        signatureData:
           type: string
         role:
           type: string

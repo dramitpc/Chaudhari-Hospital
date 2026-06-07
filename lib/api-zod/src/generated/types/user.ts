@@ -22,6 +22,8 @@ export interface User {
   specialization?: string | null;
   /** @nullable */
   consultingHours?: string | null;
+  /** @nullable */
+  signatureData?: string | null;
   isActive: boolean;
   createdAt: string;
 }

@@ -17,4 +17,5 @@ export interface UserInput {
   registrationNumber?: string;
   specialization?: string;
   consultingHours?: string;
+  signatureData?: string;
 }

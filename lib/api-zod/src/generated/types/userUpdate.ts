@@ -14,6 +14,7 @@ export interface UserUpdate {
   registrationNumber?: string;
   specialization?: string;
   consultingHours?: string;
+  signatureData?: string;
   role?: UserUpdateRole;
   isActive?: boolean;
 }

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserPlus, KeyRound, Trash2, Pencil } from "lucide-react";
+import { SignaturePad } from "@/components/SignaturePad";
 
 const roleColors: Record<string, string> = {
   admin:         "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
@@ -32,6 +33,7 @@ type EditForm = {
   registrationNumber: string;
   specialization: string;
   consultingHours: string;
+  signatureData: string;
 };
 
 function blankEdit(u: User): EditForm {
@@ -43,6 +45,7 @@ function blankEdit(u: User): EditForm {
     registrationNumber: u.registrationNumber ?? "",
     specialization:     u.specialization ?? "",
     consultingHours:    u.consultingHours ?? "",
+    signatureData:      u.signatureData ?? "",
   };
 }
 
@@ -60,7 +63,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [form, setForm] = useState({
     username: "", password: "", role: "doctor",
-    fullName: "", email: "", phone: "", registrationNumber: "", specialization: "", consultingHours: "",
+    fullName: "", email: "", phone: "", registrationNumber: "", specialization: "", consultingHours: "", signatureData: "",
   });
 
   const { data, isLoading } = useListUsers(
@@ -80,7 +83,7 @@ export default function UsersPage() {
         toast({ title: "User created" });
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
         setShowCreate(false);
-        setForm({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "", consultingHours: "" });
+        setForm({ username: "", password: "", role: "doctor", fullName: "", email: "", phone: "", registrationNumber: "", specialization: "", consultingHours: "", signatureData: "" });
       },
       onError: (err: unknown) => {
         const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -307,6 +310,16 @@ export default function UsersPage() {
                     />
                   </div>
                 )}
+                {editForm.role === "doctor" && (
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label>Doctor Signature</Label>
+                    <p className="text-xs text-muted-foreground">Used on prescriptions and certificates</p>
+                    <SignaturePad
+                      value={editForm.signatureData}
+                      onChange={v => setEditForm(f => f && ({ ...f, signatureData: v }))}
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2 pt-1">
                 <Button variant="outline" onClick={() => { setEditTarget(null); setEditForm(null); }}>Cancel</Button>
@@ -371,6 +384,16 @@ export default function UsersPage() {
                     placeholder="e.g. Mon–Fri 9am–5pm, Sat 9am–1pm"
                     value={form.consultingHours}
                     onChange={e => setForm(f => ({ ...f, consultingHours: e.target.value }))}
+                  />
+                </div>
+              )}
+              {form.role === "doctor" && (
+                <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                  <Label>Doctor Signature</Label>
+                  <p className="text-xs text-muted-foreground">Used on prescriptions and certificates</p>
+                  <SignaturePad
+                    value={form.signatureData}
+                    onChange={v => setForm(f => ({ ...f, signatureData: v }))}
                   />
                 </div>
               )}

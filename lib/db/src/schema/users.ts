@@ -15,6 +15,7 @@ export const usersTable = pgTable("users", {
   registrationNumber: text("registration_number"),
   specialization: text("specialization"),
   consultingHours: text("consulting_hours"),
+  signatureData: text("signature_data"),
   refreshToken: text("refresh_token"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
