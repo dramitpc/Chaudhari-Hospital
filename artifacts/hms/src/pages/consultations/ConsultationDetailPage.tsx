@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, PlusCircle, RefreshCw, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
@@ -323,8 +323,7 @@ export default function ConsultationDetailPage() {
     t.name || t.items.filter(i => i.drugName).map(i => i.drugName).join(", ").slice(0, 50) || "Untitled";
   // ──────────────────────────────────────────────────────────────────────────
 
-  // ── SOAP per-field favourites & recent ───────────────────────────────────
-  type SoapEntry = { id: string; name: string; value: string; savedAt: number };
+  // ── SOAP per-field state ──────────────────────────────────────────────────
   const SOAP_FIELDS = ["soapSubjective", "soapObjective", "soapAssessment", "soapPlan"] as const;
   type SoapField = typeof SOAP_FIELDS[number];
 
@@ -332,9 +331,6 @@ export default function ConsultationDetailPage() {
     soapSubjective: "", soapObjective: "", soapAssessment: "", soapPlan: ""
   });
   const [soapInitialized, setSoapInitialized] = useState(false);
-  const [activeFieldPanel, setActiveFieldPanel] = useState<SoapField | null>(null);
-  const [fieldFavName, setFieldFavName] = useState("");
-  const [, forceRefresh] = useState(0);
 
   useEffect(() => {
     if (consultation && !soapInitialized) {
@@ -348,52 +344,13 @@ export default function ConsultationDetailPage() {
     }
   }, [consultation, soapInitialized]);
 
-  const lsFavKey    = (f: SoapField) => `clinicos_soap_fav_${f}`;
-  const lsRecentKey = (f: SoapField) => `clinicos_soap_recent_${f}`;
-  const getFieldFavs    = (f: SoapField): SoapEntry[] => JSON.parse(localStorage.getItem(lsFavKey(f))    ?? "[]");
-  const getFieldRecent  = (f: SoapField): SoapEntry[] => JSON.parse(localStorage.getItem(lsRecentKey(f)) ?? "[]");
-  const persistFieldFav    = (f: SoapField, list: SoapEntry[]) => { localStorage.setItem(lsFavKey(f),    JSON.stringify(list)); forceRefresh(n => n + 1); };
-  const persistFieldRecent = (f: SoapField, list: SoapEntry[]) => { localStorage.setItem(lsRecentKey(f), JSON.stringify(list)); forceRefresh(n => n + 1); };
-
   const handleSoapChange = (field: SoapField, value: string) =>
     setSoapValues(prev => ({ ...prev, [field]: value }));
 
   const handleSoapBlur = (field: SoapField, value: string) => {
     handleBlur(field, value);
-    if (!value.trim()) return;
-    const deduped = getFieldRecent(field).filter(r => r.value !== value).slice(0, 8);
-    persistFieldRecent(field, [{ id: Date.now().toString(), name: "", value, savedAt: Date.now() }, ...deduped]);
+    trackFieldRecent(`clinicos_soap_${field}`, value);
   };
-
-  const applyFieldValue = (field: SoapField, value: string) => {
-    setSoapValues(prev => {
-      const existing = prev[field].trim();
-      const combined = existing ? `${existing}\n${value}` : value;
-      handleBlur(field, combined);
-      return { ...prev, [field]: combined };
-    });
-    toast({ title: "Added" });
-  };
-
-  const replaceFieldValue = (field: SoapField, value: string) => {
-    setSoapValues(prev => ({ ...prev, [field]: value }));
-    handleBlur(field, value);
-    setActiveFieldPanel(null);
-    toast({ title: "Replaced" });
-  };
-
-  const saveFieldFavourite = (field: SoapField) => {
-    if (!fieldFavName.trim()) return;
-    const value = soapValues[field];
-    if (!value.trim()) { toast({ title: "Nothing to save — field is empty", variant: "destructive" }); return; }
-    persistFieldFav(field, [...getFieldFavs(field), { id: Date.now().toString(), name: fieldFavName.trim(), value, savedAt: Date.now() }]);
-    setFieldFavName("");
-    toast({ title: "Saved to favourites" });
-  };
-
-  const deleteFieldFav    = (f: SoapField, id: string) => persistFieldFav(f,    getFieldFavs(f).filter(e => e.id !== id));
-  const deleteFieldRecent = (f: SoapField, id: string) => persistFieldRecent(f, getFieldRecent(f).filter(e => e.id !== id));
-  const entryLabel = (e: SoapEntry) => e.name || (e.value.slice(0, 50) + (e.value.length > 50 ? "…" : ""));
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── Order Investigation state ──────────────────────────────────────────────
@@ -904,104 +861,19 @@ export default function ConsultationDetailPage() {
                   soapAssessment: "Diagnosis, differential",
                   soapPlan:       "Treatment, investigations, follow-up",
                 };
-                const isOpen = activeFieldPanel === field;
-                const favs   = getFieldFavs(field);
-                const recent = getFieldRecent(field);
-
                 return (
                   <div key={field} className="space-y-1">
-                    {/* Label row with toggle button */}
-                    <div className="flex items-center justify-between">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-2 items-center">
                       <div>
                         <span className="text-xs font-semibold">{labels[field]}</span>
                         <span className="text-xs text-muted-foreground ml-1">— {sublabels[field]}</span>
                       </div>
-                      <Button
-                        size="sm" variant={isOpen ? "secondary" : "ghost"}
-                        className="h-6 gap-1 px-2 text-xs"
-                        onClick={() => { setActiveFieldPanel(isOpen ? null : field); setFieldFavName(""); }}
-                      >
-                        <BookMarked className="h-3 w-3" />
-                        {favs.length > 0 || recent.length > 0
-                          ? `${favs.length} fav · ${recent.length} recent`
-                          : "Favourites & Recent"}
-                      </Button>
+                      <FieldFavPanel
+                        lsKey={`clinicos_soap_${field}`}
+                        currentValue={soapValues[field]}
+                        onApply={v => { setSoapValues(prev => ({ ...prev, [field]: v })); handleBlur(field, v); }}
+                      />
                     </div>
-
-                    {/* Per-field panel */}
-                    {isOpen && (
-                      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-xs">
-                        {favs.length === 0 && recent.length === 0 && (
-                          <p className="text-muted-foreground text-center py-1">
-                            No entries yet — type in the field below and it will appear here automatically.
-                          </p>
-                        )}
-
-                        {favs.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
-                              <Star className="h-3 w-3" /> Favourites
-                            </p>
-                            {favs.map(e => (
-                              <div key={e.id} className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1">
-                                <span className="truncate flex-1 font-medium">{entryLabel(e)}</span>
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-primary" onClick={() => applyFieldValue(field, e.value)}>
-                                  <PlusCircle className="h-3 w-3 mr-1" />Add
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-muted-foreground" onClick={() => replaceFieldValue(field, e.value)}>
-                                  <RefreshCw className="h-3 w-3" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => deleteFieldFav(field, e.id)}>
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {recent.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
-                              <Clock className="h-3 w-3" /> Recently Used
-                            </p>
-                            {recent.map(e => (
-                              <div key={e.id} className="flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1">
-                                <div className="flex-1 min-w-0">
-                                  <span className="truncate block">{entryLabel(e)}</span>
-                                  <span className="text-muted-foreground text-[10px]">
-                                    {fmtDateTime(e.savedAt)}
-                                  </span>
-                                </div>
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-primary" onClick={() => applyFieldValue(field, e.value)}>
-                                  <PlusCircle className="h-3 w-3 mr-1" />Add
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs shrink-0 text-muted-foreground" onClick={() => replaceFieldValue(field, e.value)}>
-                                  <RefreshCw className="h-3 w-3" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => deleteFieldRecent(field, e.id)}>
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Save current as favourite */}
-                        <div className="flex gap-1.5 pt-1 border-t border-border">
-                          <Input
-                            className="h-7 text-xs flex-1"
-                            value={fieldFavName}
-                            onChange={e => setFieldFavName(e.target.value)}
-                            placeholder="Name this favourite…"
-                            onKeyDown={e => e.key === "Enter" && saveFieldFavourite(field)}
-                          />
-                          <Button size="sm" className="h-7 px-3 text-xs" onClick={() => saveFieldFavourite(field)}>
-                            <Star className="h-3 w-3 mr-1" /> Save
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
                     <Textarea
                       value={soapValues[field]}
                       onChange={e => handleSoapChange(field, e.target.value)}
