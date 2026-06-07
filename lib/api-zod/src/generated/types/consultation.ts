@@ -44,6 +44,8 @@ export interface Consultation {
   /** @nullable */
   advice?: string | null;
   /** @nullable */
+  referenceTo?: string | null;
+  /** @nullable */
   followUpDate?: string | null;
   /** @nullable */
   followUpNotes?: string | null;

@@ -2123,6 +2123,8 @@ components:
           type: ["string", "null"]
         advice:
           type: ["string", "null"]
+        referenceTo:
+          type: ["string", "null"]
         followUpDate:
           type: ["string", "null"]
         followUpNotes:
@@ -2181,6 +2183,8 @@ components:
         icd10Code:
           type: string
         advice:
+          type: string
+        referenceTo:
           type: string
         followUpDate:
           type: string

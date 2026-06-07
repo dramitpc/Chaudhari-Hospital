@@ -283,6 +283,8 @@ export interface Consultation {
   /** @nullable */
   advice?: string | null;
   /** @nullable */
+  referenceTo?: string | null;
+  /** @nullable */
   followUpDate?: string | null;
   /** @nullable */
   followUpNotes?: string | null;
@@ -664,6 +666,7 @@ export interface ConsultationUpdate {
   diagnosis?: string;
   icd10Code?: string;
   advice?: string;
+  referenceTo?: string;
   followUpDate?: string;
   followUpNotes?: string;
   investigationOrders?: string;

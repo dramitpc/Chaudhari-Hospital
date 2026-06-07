@@ -29,6 +29,7 @@ export const consultationsTable = pgTable("consultations", {
   diagnosis: text("diagnosis"),
   icd10Code: text("icd10_code"),
   advice: text("advice"),
+  referenceTo: text("reference_to"),
   followUpDate: text("follow_up_date"),
   followUpNotes: text("follow_up_notes"),
   investigationOrders: text("investigation_orders"),

@@ -140,12 +140,14 @@ export default function ConsultationDetailPage() {
   // ── Diagnosis & Advice controlled state ───────────────────────────────────
   const [diagnosisValue, setDiagnosisValue] = useState("");
   const [adviceValue, setAdviceValue] = useState("");
+  const [referenceToValue, setReferenceToValue] = useState("");
   const [diagAdvInit, setDiagAdvInit] = useState(false);
 
   useEffect(() => {
     if (consultation && !diagAdvInit) {
       setDiagnosisValue(consultation.diagnosis ?? "");
       setAdviceValue(consultation.advice ?? "");
+      setReferenceToValue(consultation.referenceTo ?? "");
       setDiagAdvInit(true);
     }
   }, [consultation, diagAdvInit]);
@@ -1368,6 +1370,21 @@ export default function ConsultationDetailPage() {
                     onBlur={e => { handleBlur("advice", e.target.value); trackFieldRecent("clinicos_advice", e.target.value); }}
                     rows={4}
                     placeholder="Advice and instructions..."
+                  />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 items-center">
+                  <Label className="text-xs">Reference To</Label>
+                  <FieldFavPanel
+                    lsKey="clinicos_reference_to"
+                    currentValue={referenceToValue}
+                    onApply={v => { setReferenceToValue(v); handleBlur("referenceTo", v); }}
+                  />
+                  <Input
+                    className="col-span-full"
+                    value={referenceToValue}
+                    onChange={e => setReferenceToValue(e.target.value)}
+                    onBlur={e => { handleBlur("referenceTo", e.target.value); trackFieldRecent("clinicos_reference_to_recent", e.target.value); }}
+                    placeholder="Dr. Name / Hospital / Speciality"
                   />
                 </div>
               </div>
