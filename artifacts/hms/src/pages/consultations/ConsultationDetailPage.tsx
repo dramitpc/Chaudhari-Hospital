@@ -719,7 +719,14 @@ export default function ConsultationDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">{consultation.patientName}</h1>
+            <h1 className="text-xl font-bold flex items-baseline gap-2">
+              {consultation.patientName}
+              {patient && (patient.age || patient.gender) && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  {[patient.age, patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : ""].filter(Boolean).join(" · ")}
+                </span>
+              )}
+            </h1>
             <p className="text-sm text-muted-foreground">{consultation.doctorName} · {consultation.visitDate}</p>
           </div>
           <Badge variant={consultation.status === "completed" ? "secondary" : "default"}>
