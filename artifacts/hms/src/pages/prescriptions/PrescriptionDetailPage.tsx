@@ -43,6 +43,7 @@ type RxFormat = {
   showInvestigations: boolean;
   showAdvice: boolean;
   showFollowUp: boolean;
+  showReferenceTo: boolean;
   showGenericName: boolean;
   showInstructions: boolean;
   drugStyle: "table" | "list";
@@ -58,6 +59,7 @@ const DEFAULT_FORMAT: RxFormat = {
   showInvestigations: false,
   showAdvice: true,
   showFollowUp: true,
+  showReferenceTo: true,
   showGenericName: true,
   showInstructions: true,
   drugStyle: "table",
@@ -312,6 +314,7 @@ export default function PrescriptionDetailPage() {
                   { key: "showInstructions",    label: "Instructions column" },
                   { key: "showAdvice",          label: "Advice"              },
                   { key: "showFollowUp",        label: "Follow-up date"      },
+                  { key: "showReferenceTo",     label: "Reference to"        },
                 ] as { key: keyof RxFormat; label: string }[]).map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between">
                     <Label className="text-sm font-normal cursor-pointer" htmlFor={`fmt-${key}`}>{label}</Label>
@@ -579,9 +582,17 @@ export default function PrescriptionDetailPage() {
 
         {/* Follow-up */}
         {fmt.showFollowUp && prescription.followUpDate && (
-          <div className="mb-6">
+          <div className="mb-4">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Follow-up</p>
             <p className="text-sm">{fmtDate(prescription.followUpDate)}</p>
+          </div>
+        )}
+
+        {/* Reference To */}
+        {fmt.showReferenceTo && prescription.referenceTo && (
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reference To</p>
+            <p className="text-sm">{prescription.referenceTo}</p>
           </div>
         )}
 

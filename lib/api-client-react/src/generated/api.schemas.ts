@@ -348,6 +348,8 @@ export interface Prescription {
   advice?: string | null;
   /** @nullable */
   followUpDate?: string | null;
+  /** @nullable */
+  referenceTo?: string | null;
   items: PrescriptionItem[];
   /** @nullable */
   notes?: string | null;

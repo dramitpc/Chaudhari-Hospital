@@ -34,6 +34,7 @@ async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
         soapAssessment:    consultationsTable.soapAssessment,
         soapPlan:          consultationsTable.soapPlan,
         investigationOrders: consultationsTable.investigationOrders,
+        referenceTo:       consultationsTable.referenceTo,
       }).from(consultationsTable).where(eq(consultationsTable.id, p.consultationId)))[0]
     : null;
   return {
@@ -59,6 +60,7 @@ async function formatPrescription(p: typeof prescriptionsTable.$inferSelect) {
     soapAssessment:     consultation?.soapAssessment     ?? null,
     soapPlan:           consultation?.soapPlan           ?? null,
     investigationOrders: consultation?.investigationOrders ?? null,
+    referenceTo: consultation?.referenceTo ?? null,
     patientLanguage: p.patientLanguage ?? "en",
     translations: (p.translations ?? null) as Record<string, unknown> | null,
     createdAt: p.createdAt.toISOString(),

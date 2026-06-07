@@ -484,6 +484,7 @@ export const GetPatientHistoryResponse = zod.object({
   "diagnosis": zod.string().nullish(),
   "advice": zod.string().nullish(),
   "followUpDate": zod.string().nullish(),
+  "referenceTo": zod.string().nullish(),
   "items": zod.array(zod.object({
   "drugId": zod.string().nullish(),
   "drugName": zod.string(),
@@ -1037,6 +1038,7 @@ export const ListPrescriptionsResponse = zod.object({
   "diagnosis": zod.string().nullish(),
   "advice": zod.string().nullish(),
   "followUpDate": zod.string().nullish(),
+  "referenceTo": zod.string().nullish(),
   "items": zod.array(zod.object({
   "drugId": zod.string().nullish(),
   "drugName": zod.string(),
@@ -1112,6 +1114,7 @@ export const GetPrescriptionResponse = zod.object({
   "diagnosis": zod.string().nullish(),
   "advice": zod.string().nullish(),
   "followUpDate": zod.string().nullish(),
+  "referenceTo": zod.string().nullish(),
   "items": zod.array(zod.object({
   "drugId": zod.string().nullish(),
   "drugName": zod.string(),
@@ -1176,6 +1179,7 @@ export const UpdatePrescriptionResponse = zod.object({
   "diagnosis": zod.string().nullish(),
   "advice": zod.string().nullish(),
   "followUpDate": zod.string().nullish(),
+  "referenceTo": zod.string().nullish(),
   "items": zod.array(zod.object({
   "drugId": zod.string().nullish(),
   "drugName": zod.string(),
@@ -1230,6 +1234,7 @@ export const TranslatePrescriptionResponse = zod.object({
   "diagnosis": zod.string().nullish(),
   "advice": zod.string().nullish(),
   "followUpDate": zod.string().nullish(),
+  "referenceTo": zod.string().nullish(),
   "items": zod.array(zod.object({
   "drugId": zod.string().nullish(),
   "drugName": zod.string(),

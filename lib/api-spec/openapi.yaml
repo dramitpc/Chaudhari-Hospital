@@ -2280,6 +2280,8 @@ components:
           type: ["string", "null"]
         followUpDate:
           type: ["string", "null"]
+        referenceTo:
+          type: ["string", "null"]
         items:
           type: array
           items:
