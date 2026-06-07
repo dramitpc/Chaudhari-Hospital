@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
-  useListPrescriptions, useCreatePrescription, useListDrugs,
+  useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
   useCreateInvestigation, useUpdateInvestigation, useListInvestigations,
@@ -105,6 +105,7 @@ export default function ConsultationDetailPage() {
   const updateMutation = useUpdateConsultation();
   const completeMutation = useCompleteConsultation();
   const createPrescriptionMutation = useCreatePrescription();
+  const updatePrescriptionMutation = useUpdatePrescription();
   const updatePatientMutation = useUpdatePatient();
   const createInvestigationMutation = useCreateInvestigation();
   const createInvoiceMutation = useCreateInvoice();
@@ -127,6 +128,7 @@ export default function ConsultationDetailPage() {
 
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [editRxId, setEditRxId] = useState<string | null>(null);
   const [showRxPreview, setShowRxPreview] = useState(false);
   const [selectedDrugIds, setSelectedDrugIds] = useState<Set<string>>(new Set());
   const [drugPickerSearch, setDrugPickerSearch] = useState("");
@@ -633,31 +635,51 @@ export default function ConsultationDetailPage() {
   const handleAddPrescription = (andPrint = false) => {
     if (!consultation) return;
     trackRxRecent();
-    createPrescriptionMutation.mutate({ data: buildPrescriptionPayload() }, {
-      onSuccess: (rx) => {
-        toast({ title: "Prescription created" });
-        queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
-        setShowPrescriptionModal(false);
-        setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
-        if (andPrint) navigate(`/prescriptions/${rx.id}?print=1`);
-      },
-      onError: (err: unknown) => {
-        const status = (err as { status?: number })?.status;
-        if (status === 401) {
-          toast({
-            title: "Session expired",
-            description: "Your session expired. Please log in again — your prescription data is preserved on this page.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Failed to save prescription",
-            description: (err as Error)?.message ?? "An unexpected error occurred. Please try again.",
-            variant: "destructive",
-          });
+    const payload = buildPrescriptionPayload();
+    const onError = (err: unknown) => {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
+        toast({
+          title: "Session expired",
+          description: "Your session expired. Please log in again — your prescription data is preserved on this page.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed to save prescription",
+          description: (err as Error)?.message ?? "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (editRxId) {
+      updatePrescriptionMutation.mutate(
+        { id: editRxId, data: { diagnosis: payload.diagnosis, advice: payload.advice, followUpDate: payload.followUpDate, items: payload.items } },
+        {
+          onSuccess: () => {
+            toast({ title: "Prescription updated" });
+            queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
+            setShowPrescriptionModal(false);
+            setEditRxId(null);
+            setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
+            if (andPrint) navigate(`/prescriptions/${editRxId}?print=1`);
+          },
+          onError,
         }
-      },
-    });
+      );
+    } else {
+      createPrescriptionMutation.mutate({ data: payload }, {
+        onSuccess: (rx) => {
+          toast({ title: "Prescription created" });
+          queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
+          setShowPrescriptionModal(false);
+          setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
+          if (andPrint) navigate(`/prescriptions/${rx.id}?print=1`);
+        },
+        onError,
+      });
+    }
   };
 
   const handleAddSelectedDrugs = () => {
@@ -1342,15 +1364,37 @@ export default function ConsultationDetailPage() {
               ) : (
                 <div className="space-y-2">
                   {prescriptions.map(p => (
-                    <Link key={p.id} href={`/prescriptions/${p.id}`}>
-                      <div className="rounded-lg border border-border p-3 hover:bg-muted/30 cursor-pointer flex items-center justify-between">
-                        <div>
+                    <div key={p.id} className="rounded-lg border border-border p-3 flex items-center justify-between gap-2">
+                      <Link href={`/prescriptions/${p.id}`} className="flex-1 min-w-0">
+                        <div className="hover:opacity-70 transition-opacity">
                           <p className="text-sm font-medium">{p.items.length} medication{p.items.length !== 1 ? "s" : ""}</p>
                           <p className="text-xs text-muted-foreground">{p.visitDate}</p>
                         </div>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm" variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setDrugItems(
+                              (p.items as DrugItem[]).length > 0
+                                ? (p.items as DrugItem[]).map(i => ({ ...i }))
+                                : [{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]
+                            );
+                            setEditRxId(p.id);
+                            setShowRxPreview(false);
+                            setShowPrescriptionModal(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Link href={`/prescriptions/${p.id}`}>
+                          <Button size="icon" variant="ghost" className="h-7 w-7">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </Link>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}
@@ -1787,11 +1831,11 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) setShowRxPreview(false); }}>
+      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
-              <DialogTitle>{showRxPreview ? "Preview Prescription" : "Add Prescription"}</DialogTitle>
+              <DialogTitle>{showRxPreview ? "Preview Prescription" : editRxId ? "Edit Prescription" : "Add Prescription"}</DialogTitle>
               {!showRxPreview && (
                 <Button
                   type="button" size="sm"
@@ -2152,7 +2196,7 @@ export default function ConsultationDetailPage() {
                   <Plus className="h-3 w-3 mr-1" /> Add Row Manually
                 </Button>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowPrescriptionModal(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); }}>Cancel</Button>
                   <Button variant="outline" onClick={() => setShowRxPreview(true)}>
                     <FileText className="mr-2 h-4 w-4" />
                     Preview
@@ -2160,13 +2204,16 @@ export default function ConsultationDetailPage() {
                   <Button
                     variant="outline"
                     onClick={() => handleAddPrescription(true)}
-                    disabled={createPrescriptionMutation.isPending}
+                    disabled={createPrescriptionMutation.isPending || updatePrescriptionMutation.isPending}
                   >
                     <Printer className="mr-2 h-4 w-4" />
                     Save &amp; Print
                   </Button>
-                  <Button onClick={() => handleAddPrescription(false)} disabled={createPrescriptionMutation.isPending}>
-                    Save Prescription
+                  <Button
+                    onClick={() => handleAddPrescription(false)}
+                    disabled={createPrescriptionMutation.isPending || updatePrescriptionMutation.isPending}
+                  >
+                    {editRxId ? "Update Prescription" : "Save Prescription"}
                   </Button>
                 </div>
               </div>
