@@ -472,7 +472,7 @@ export default function QueuePage() {
                   >
                     <DollarSign className="h-3.5 w-3.5 mr-1" />Pay
                   </Button>
-                  {pendingPatientIds.has(token.patientId) && token.status !== "consultation_done" ? (
+                  {pendingPatientIds.has(token.patientId) ? (
                     <Button
                       size="sm"
                       className="animate-pulse bg-orange-500 hover:bg-orange-600 text-white border-0"
