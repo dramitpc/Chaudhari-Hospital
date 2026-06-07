@@ -664,7 +664,11 @@ export default function ConsultationDetailPage() {
   };
 
   const handleAddSelectedDrugs = () => {
-    const toAdd = drugs.filter(d => selectedDrugIds.has(d.id));
+    // Iterate the Set (which preserves insertion/click order) rather than filtering
+    // the drugs array (which is sorted by frequency and ignores selection order).
+    const toAdd = [...selectedDrugIds]
+      .map(id => drugs.find(d => d.id === id))
+      .filter((d): d is NonNullable<typeof d> => !!d);
     if (!toAdd.length) return;
     trackDrugFreq(toAdd.map(d => d.id));
     const newRows: DrugItem[] = toAdd.map(d => ({
