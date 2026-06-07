@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import {
-  useListConsultations, useCreateConsultation, useListUsers, useListPatients,
-  getListConsultationsQueryKey, getListUsersQueryKey, getListPatientsQueryKey
+  useListConsultations, useListUsers,
+  getListConsultationsQueryKey, getListUsersQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { Stethoscope, Plus } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
@@ -24,37 +18,15 @@ const statusColors: Record<string, string> = {
 export default function ConsultationsPage() {
   const today = new Date().toLocaleDateString("en-CA");
   const [date, setDate] = useState(today);
-  const [showCreate, setShowCreate] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState("");
-  const [selectedDoctor, setSelectedDoctor] = useState("");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data, isLoading } = useListConsultations(
     { date, limit: 500 },
     { query: { queryKey: getListConsultationsQueryKey({ date, limit: 500 }) } }
   );
   const { data: users } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
-  const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });
-
-  const createMutation = useCreateConsultation();
 
   const consultations = data?.data ?? [];
   const doctors = users?.data ?? [];
-
-  const handleCreate = () => {
-    if (!selectedPatient || !selectedDoctor) return;
-    createMutation.mutate({ data: { patientId: selectedPatient, doctorId: selectedDoctor } }, {
-      onSuccess: () => {
-        toast({ title: "Consultation started" });
-        queryClient.invalidateQueries({ queryKey: getListConsultationsQueryKey() });
-        setShowCreate(false);
-        setSelectedPatient("");
-        setSelectedDoctor("");
-      },
-      onError: () => toast({ title: "Error", variant: "destructive" }),
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -63,10 +35,6 @@ export default function ConsultationsPage() {
           <h1 className="text-2xl font-bold">Consultations</h1>
           <p className="text-sm text-muted-foreground">{consultations.length} consultations</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} data-testid="btn-start-consultation">
-          <Plus className="mr-2 h-4 w-4" />
-          Start Consultation
-        </Button>
       </div>
 
       <div className="flex items-center gap-3">
@@ -116,38 +84,6 @@ export default function ConsultationsPage() {
           </tbody>
         </table>
       </div>
-
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Start Consultation</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Patient</Label>
-              <Select onValueChange={setSelectedPatient}>
-                <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                <SelectContent>
-                  {(patients?.data ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Doctor</Label>
-              <Select onValueChange={setSelectedDoctor}>
-                <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                <SelectContent>
-                  {doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.fullName}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={!selectedPatient || !selectedDoctor || createMutation.isPending}>
-                Start
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
