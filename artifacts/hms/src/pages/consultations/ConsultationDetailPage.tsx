@@ -1854,7 +1854,7 @@ export default function ConsultationDetailPage() {
       </Dialog>
 
       <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
               <DialogTitle>{showRxPreview ? "Preview Prescription" : editRxId ? "Edit Prescription" : "Add Prescription"}</DialogTitle>
@@ -1874,7 +1874,7 @@ export default function ConsultationDetailPage() {
 
           {/* ── PREVIEW MODE ── */}
           {showRxPreview ? (
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
               {/* Letterhead */}
               <div className="border-b-2 border-primary pb-3 flex items-start justify-between gap-4">
                 <div className="flex-1">
@@ -2022,10 +2022,9 @@ export default function ConsultationDetailPage() {
               </div>
             </div>
           ) : (
-            <>
-              {/* Template panel */}
-
-              <div className="space-y-4">
+            <div className="flex-1 flex gap-0 overflow-hidden min-h-0">
+              {/* LEFT: Drug Picker */}
+              <div className="w-[340px] shrink-0 flex flex-col gap-2 overflow-hidden border-r border-border pr-4 mr-4">
                 {/* ── Drug Picker ── */}
                 {(() => {
                   const freq = getDrugFreq();
@@ -2073,8 +2072,8 @@ export default function ConsultationDetailPage() {
                   );
 
                   return (
-                    <div className="rounded-lg border border-border bg-muted/20 p-2 space-y-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-col flex-1 overflow-hidden gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <Input
                           className="h-7 text-xs flex-1"
                           placeholder="Search drugs…"
@@ -2083,11 +2082,11 @@ export default function ConsultationDetailPage() {
                         />
                         {selectedDrugIds.size > 0 && (
                           <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleAddSelectedDrugs}>
-                            <Plus className="h-3 w-3 mr-1" /> Add {selectedDrugIds.size} selected
+                            <Plus className="h-3 w-3 mr-1" /> Add {selectedDrugIds.size}
                           </Button>
                         )}
                       </div>
-                      <div className="max-h-44 overflow-y-auto space-y-0.5 pr-0.5">
+                      <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
                         {filtered.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-3">No drugs match your search</p>
                         )}
@@ -2104,8 +2103,11 @@ export default function ConsultationDetailPage() {
                   );
                 })()}
 
+              </div>
+              {/* RIGHT: Drug Table + Footer */}
+              <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
                 {/* ── Editable drug rows ── */}
-                <div className="overflow-x-auto">
+                <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-muted-foreground">
@@ -2148,32 +2150,37 @@ export default function ConsultationDetailPage() {
                     </tbody>
                   </table>
                 </div>
-                <Button variant="outline" size="sm" onClick={addDrugRow}>
-                  <Plus className="h-3 w-3 mr-1" /> Add Row Manually
-                </Button>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); }}>Cancel</Button>
-                  <Button variant="outline" onClick={() => setShowRxPreview(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Preview
+                {/* ── Footer ── */}
+                <div className="shrink-0 flex items-center justify-between gap-2 pt-2 border-t border-border">
+                  <Button variant="outline" size="sm" onClick={addDrugRow}>
+                    <Plus className="h-3 w-3 mr-1" /> Add Row
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleAddPrescription(true)}
-                    disabled={createPrescriptionMutation.isPending || updatePrescriptionMutation.isPending}
-                  >
-                    <Printer className="mr-2 h-4 w-4" />
-                    Save &amp; Print
-                  </Button>
-                  <Button
-                    onClick={() => handleAddPrescription(false)}
-                    disabled={createPrescriptionMutation.isPending || updatePrescriptionMutation.isPending}
-                  >
-                    {editRxId ? "Update Prescription" : "Save Prescription"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); }}>Cancel</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowRxPreview(true)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Preview
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddPrescription(true)}
+                      disabled={createPrescriptionMutation.isPending || updatePrescriptionMutation.isPending}
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Save &amp; Print
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddPrescription(false)}
+                      disabled={createPrescriptionMutation.isPending || updatePrescriptionMutation.isPending}
+                    >
+                      {editRxId ? "Update Prescription" : "Save Prescription"}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
