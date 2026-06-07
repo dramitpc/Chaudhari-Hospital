@@ -133,6 +133,20 @@ export default function QueuePage() {
     } catch { return new Set<string>(); }
   });
 
+  // Fetch all pending/partial invoices to know which patients owe money
+  const { data: pendingInvoicesData } = useListInvoices(
+    { status: "pending", limit: 500 },
+    { query: { queryKey: getListInvoicesQueryKey({ status: "pending", limit: 500 }) } }
+  );
+  const { data: partialInvoicesData } = useListInvoices(
+    { status: "partial", limit: 500 },
+    { query: { queryKey: getListInvoicesQueryKey({ status: "partial", limit: 500 }) } }
+  );
+  const pendingPatientIds = new Set<string>([
+    ...(pendingInvoicesData?.data ?? []).map(inv => inv.patientId),
+    ...(partialInvoicesData?.data ?? []).map(inv => inv.patientId),
+  ]);
+
   // Payment dialog state
   const [paymentPatientId, setPaymentPatientId] = useState<string | null>(null);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string>("");
@@ -458,9 +472,19 @@ export default function QueuePage() {
                   >
                     <DollarSign className="h-3.5 w-3.5 mr-1" />Pay
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
-                    <Receipt className="h-3.5 w-3.5 mr-1" />Invoice
-                  </Button>
+                  {pendingPatientIds.has(token.patientId) ? (
+                    <Button
+                      size="sm"
+                      className="animate-pulse bg-orange-500 hover:bg-orange-600 text-white border-0"
+                      onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}
+                    >
+                      <Receipt className="h-3.5 w-3.5 mr-1" />Invoice Pending
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
+                      <Receipt className="h-3.5 w-3.5 mr-1" />Invoice
+                    </Button>
+                  )}
                 </div>
               </div>
             ))
@@ -593,6 +617,8 @@ export default function QueuePage() {
                       onSuccess: () => {
                         toast({ title: "Payment recorded" });
                         queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: paymentPatientId ?? "", limit: 20 }) });
+                        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ status: "pending", limit: 500 }) });
+                        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ status: "partial", limit: 500 }) });
                         setPaymentPatientId(null);
                       },
                       onError: () => toast({ title: "Failed to record payment", variant: "destructive" }),
