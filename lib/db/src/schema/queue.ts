@@ -6,7 +6,7 @@ import { patientsTable } from "./patients";
 import { appointmentsTable } from "./appointments";
 
 export const queueStatusEnum = pgEnum("queue_status", [
-  "waiting", "called", "in_consultation", "completed", "skipped", "cancelled"
+  "waiting", "called", "in_consultation", "consultation_done", "completed", "skipped", "cancelled"
 ]);
 
 export const visitTypeEnum = pgEnum("visit_type", ["new", "followup"]);
