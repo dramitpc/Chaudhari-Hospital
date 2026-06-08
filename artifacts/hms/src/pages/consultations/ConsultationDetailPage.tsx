@@ -1,4 +1,4 @@
-import { useRoute, useLocation, Link } from "wouter";
+import { useRoute, useLocation, useSearch, Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import {
@@ -101,6 +101,8 @@ export default function ConsultationDetailPage() {
   const [, params] = useRoute("/consultations/:id");
   const id = params?.id ?? "";
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const initialTab = new URLSearchParams(search).get("tab") ?? "soap";
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -813,7 +815,7 @@ export default function ConsultationDetailPage() {
         </div>
 
         <div>
-          <Tabs defaultValue="soap">
+          <Tabs defaultValue={initialTab}>
             <TabsList className="w-full h-auto flex-wrap gap-px p-1">
               {/* Row 1 */}
               <TabsTrigger value="soap" className="flex-[1_1_25%]">SOAP Notes</TabsTrigger>
