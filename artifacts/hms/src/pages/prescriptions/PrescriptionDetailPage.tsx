@@ -468,12 +468,18 @@ export default function PrescriptionDetailPage() {
           </div>
         )}
 
-        {/* Diagnosis — always English */}
+        {/* Diagnosis */}
         {fmt.showDiagnosis && prescription.diagnosis && (
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
-            <p className="text-sm whitespace-pre-wrap">{prescription.diagnosis}</p>
-          </div>
+          isBilingual ? (
+            <BilingualField label="Diagnosis" en={prescription.diagnosis} translated={translatedData?.diagnosis} />
+          ) : (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Diagnosis</p>
+              <p className="text-sm whitespace-pre-wrap" style={showTranslated ? { fontFamily: "'Noto Sans', sans-serif" } : {}}>
+                {showTranslated ? (translatedData?.diagnosis ?? prescription.diagnosis) : prescription.diagnosis}
+              </p>
+            </div>
+          )
         )}
 
         {/* Drug list */}
