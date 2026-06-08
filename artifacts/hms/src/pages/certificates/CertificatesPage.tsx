@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useSearch } from "wouter";
 import {
   useListCertificates, useCreateCertificate, useListPatients, useListUsers, useGetClinicSettings,
   getListCertificatesQueryKey, getListPatientsQueryKey, getListUsersQueryKey, getGetClinicSettingsQueryKey
@@ -159,10 +159,15 @@ export default function CertificatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showCreate, setShowCreate] = useState(false);
+  const search = useSearch();
+  const urlParams = new URLSearchParams(search);
+  const urlPatientId = urlParams.get("patientId") ?? "";
+  const urlDoctorId  = urlParams.get("doctorId")  ?? "";
+
+  const [showCreate, setShowCreate] = useState(() => !!(urlPatientId || urlDoctorId));
   const [form, setForm] = useState({
-    patientId: "",
-    doctorId: user?.role === "doctor" ? user?.id ?? "" : "",
+    patientId: urlPatientId,
+    doctorId: urlDoctorId || (user?.role === "doctor" ? user?.id ?? "" : ""),
     type: "sick_leave",
     issuedDate: new Date().toLocaleDateString("en-CA"),
     fromDate: "",
@@ -195,6 +200,13 @@ export default function CertificatesPage() {
   const selectedDoctor = (doctors?.data ?? []).find(d => d.id === form.doctorId);
   const patientName = selectedPatient?.fullName ?? "";
   const doctorName = selectedDoctor?.fullName ?? (user?.role === "doctor" ? (user as unknown as { fullName?: string }).fullName ?? "" : "");
+
+  // Once patients load, populate the search box display text for a URL-pre-filled patient
+  useEffect(() => {
+    if (urlPatientId && selectedPatient && !patientSearch) {
+      setPatientSearch(`${selectedPatient.fullName} · ${selectedPatient.patientId}${selectedPatient.phone ? ` · ${selectedPatient.phone}` : ""}`);
+    }
+  }, [selectedPatient, urlPatientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetPatientSearch = () => {
     setPatientSearch("");

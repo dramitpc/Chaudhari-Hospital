@@ -776,7 +776,7 @@ export default function ConsultationDetailPage() {
               </span>
             )}
           </Button>
-          <Link href={`/certificates`}>
+          <Link href={`/certificates?patientId=${consultation?.patientId ?? ""}&doctorId=${consultation?.doctorId ?? ""}`}>
             <Button size="sm" variant="outline">
               <FileText className="mr-1.5 h-3 w-3" /> Generate Certificate
             </Button>
