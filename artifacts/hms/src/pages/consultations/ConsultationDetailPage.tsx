@@ -650,6 +650,10 @@ export default function ConsultationDetailPage() {
       }
     };
 
+    const printSuffix = andPrint
+      ? `?print=1${previewTranslation && previewLang !== "en" ? `&lang=${previewLang}&mode=${previewDisplayMode}` : ""}`
+      : "";
+
     if (editRxId) {
       updatePrescriptionMutation.mutate(
         { id: editRxId, data: { diagnosis: payload.diagnosis, advice: payload.advice, followUpDate: payload.followUpDate, items: payload.items } },
@@ -660,7 +664,7 @@ export default function ConsultationDetailPage() {
             setShowPrescriptionModal(false);
             setEditRxId(null);
             setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
-            if (andPrint) navigate(`/prescriptions/${editRxId}?print=1`);
+            if (andPrint) navigate(`/prescriptions/${editRxId}${printSuffix}`);
           },
           onError,
         }
@@ -672,7 +676,7 @@ export default function ConsultationDetailPage() {
           queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
           setShowPrescriptionModal(false);
           setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
-          if (andPrint) navigate(`/prescriptions/${rx.id}?print=1`);
+          if (andPrint) navigate(`/prescriptions/${rx.id}${printSuffix}`);
         },
         onError,
       });

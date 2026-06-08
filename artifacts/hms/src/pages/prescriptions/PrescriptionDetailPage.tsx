@@ -133,23 +133,34 @@ export default function PrescriptionDetailPage() {
   const { data: consultation } = useGetConsultation(consultationId, {
     query: { enabled: !!consultationId, queryKey: getGetConsultationQueryKey(consultationId) }
   });
-  const [fmt, setFmt] = useState<RxFormat>(loadFormat);
+  // Parse URL params once (search is a stable string from wouter)
+  const urlLang = new URLSearchParams(search).get("lang") ?? "";
+  const urlMode = (new URLSearchParams(search).get("mode") ?? "") as RxFormat["displayMode"] | "";
+  const isPrintFlow = new URLSearchParams(search).get("print") === "1";
+
+  const [fmt, setFmt] = useState<RxFormat>(() => {
+    const base = loadFormat();
+    return urlMode ? { ...base, displayMode: urlMode as RxFormat["displayMode"] } : base;
+  });
   const [showShare, setShowShare] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("en");
+  const [selectedLang, setSelectedLang] = useState(() => (urlLang && urlLang !== "en") ? urlLang : "en");
   const translateMutation = useTranslatePrescription();
+  const didAutoPrint = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(fmt));
   }, [fmt]);
 
   // Auto-populate language from patient preference or existing translation
+  // (URL lang param takes priority — skip when coming from print flow)
   useEffect(() => {
+    if (urlLang) return;
     if (prescription?.patientLanguage && prescription.patientLanguage !== "en") {
       setSelectedLang(prescription.patientLanguage);
     } else if (patient?.preferredLanguage && patient.preferredLanguage !== "en") {
       setSelectedLang(patient.preferredLanguage);
     }
-  }, [prescription?.patientLanguage, patient?.preferredLanguage]);
+  }, [prescription?.patientLanguage, patient?.preferredLanguage, urlLang]);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -177,13 +188,27 @@ export default function PrescriptionDetailPage() {
     };
   }, []);
 
+  // Auto-print: translate first when a lang was passed, then print
   useEffect(() => {
-    if (!isLoading && prescription && new URLSearchParams(search).get("print") === "1") {
-      const timer = setTimeout(() => window.print(), 300);
-      return () => clearTimeout(timer);
+    if (!isLoading && prescription && isPrintFlow && !didAutoPrint.current) {
+      didAutoPrint.current = true;
+      if (urlLang && urlLang !== "en") {
+        translateMutation.mutate(
+          { id, data: { language: urlLang, displayMode: (urlMode || "bilingual") as RxFormat["displayMode"] } },
+          {
+            onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
+              setTimeout(() => window.print(), 400);
+            },
+            onError: () => setTimeout(() => window.print(), 400),
+          }
+        );
+      } else {
+        setTimeout(() => window.print(), 300);
+      }
     }
-    return undefined;
-  }, [isLoading, prescription, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, prescription]);
 
   const handleTranslate = () => {
     if (!id || !selectedLang || selectedLang === "en") return;
