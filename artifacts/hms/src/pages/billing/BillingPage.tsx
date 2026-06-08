@@ -95,7 +95,7 @@ export default function BillingPage() {
                   </span>
                 </td>
                 <td className="px-3 py-3">
-                  <Link href={`/billing/${inv.id}`}>
+                  <Link href={`/billing/${inv.id}?from=billing`}>
                     <Button size="sm" variant="outline">View</Button>
                   </Link>
                 </td>
