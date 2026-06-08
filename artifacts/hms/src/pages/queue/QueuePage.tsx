@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PlusCircle, ChevronRight, RefreshCw, Receipt, DollarSign } from "lucide-react";
+import { PlusCircle, ChevronRight, RefreshCw, Receipt, DollarSign, Pencil } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   waiting: "border-amber-400 bg-amber-50 dark:bg-amber-900/20",
@@ -430,6 +430,13 @@ export default function QueuePage() {
                 </div>
                 {/* Action buttons — full-width row below on all sizes */}
                 <div className="flex flex-wrap gap-2 mt-2.5 justify-end items-center">
+                  <Button
+                    size="sm" variant="ghost"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => navigate(`/patients/${token.patientId}/edit`)}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />Edit Patient
+                  </Button>
                   {token.status === "waiting" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
