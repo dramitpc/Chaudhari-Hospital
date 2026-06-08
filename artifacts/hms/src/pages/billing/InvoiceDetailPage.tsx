@@ -123,7 +123,7 @@ export default function InvoiceDetailPage() {
     <div>
       <div className="flex items-center justify-between mb-4 print:hidden">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/billing")}>
+          <Button variant="ghost" size="icon" onClick={() => setLocation(`/patients/${invoice.patientId}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
