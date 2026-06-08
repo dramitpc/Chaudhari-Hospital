@@ -143,7 +143,7 @@ export default function ConsultationDetailPage() {
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [editRxId, setEditRxId] = useState<string | null>(null);
   const [showRxPreview, setShowRxPreview] = useState(false);
-  const [previewLang, setPreviewLang] = useState("mr");
+  const [previewLang, setPreviewLang] = useState("en");
   const [previewTranslation, setPreviewTranslation] = useState<{ languageName?: string; advice?: string | null; items?: { dosage?: string; frequency?: string; duration?: string; instructions?: string }[] } | null>(null);
   const [previewDisplayMode, setPreviewDisplayMode] = useState<"english" | "translated" | "bilingual">("bilingual");
   const translatePreviewMutation = useTranslatePreviewPrescription();
@@ -359,24 +359,6 @@ export default function ConsultationDetailPage() {
       setSoapInitialized(true);
     }
   }, [consultation, soapInitialized]);
-
-  // Auto-translate preview whenever it opens or the language changes
-  useEffect(() => {
-    if (!showRxPreview || previewLang === "en") {
-      if (previewLang === "en") setPreviewTranslation(null);
-      return;
-    }
-    const filledItems = drugItems.filter(i => i.drugName);
-    const advice = adviceValue || consultation?.advice || undefined;
-    translatePreviewMutation.mutate(
-      { data: { language: previewLang, advice, items: filledItems.map(i => ({ dosage: i.dosage, frequency: i.frequency, duration: i.duration, instructions: i.instructions ?? undefined })) } },
-      {
-        onSuccess: (data) => { setPreviewTranslation(data); setPreviewDisplayMode("bilingual"); },
-        onError: () => toast({ title: "Translation failed", variant: "destructive" }),
-      }
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRxPreview, previewLang]);
 
   const handleSoapChange = (field: SoapField, value: string) =>
     setSoapValues(prev => ({ ...prev, [field]: value }));
@@ -1780,7 +1762,7 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("mr"); } }}>
+      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("en"); } }}>
         <DialogContent className="max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
@@ -1806,8 +1788,8 @@ export default function ConsultationDetailPage() {
               <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-border">
                 <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1">
                   <Languages className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                  <Select value={previewLang} onValueChange={v => { setPreviewLang(v); setPreviewTranslation(null); }}>
-                    <SelectTrigger className="border-0 h-7 text-xs p-0 focus:ring-0 w-36">
+                  <Select value={previewLang} onValueChange={setPreviewLang}>
+                    <SelectTrigger className="border-0 h-7 text-xs p-0 focus:ring-0 w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1816,7 +1798,22 @@ export default function ConsultationDetailPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {translatePreviewMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                  <Button
+                    size="sm" variant="ghost" className="h-7 text-xs px-2"
+                    disabled={previewLang === "en" || translatePreviewMutation.isPending}
+                    onClick={() => {
+                      const filledItems = drugItems.filter(i => i.drugName);
+                      translatePreviewMutation.mutate(
+                        { data: { language: previewLang, advice: adviceValue || consultation?.advice || undefined, items: filledItems.map(i => ({ dosage: i.dosage, frequency: i.frequency, duration: i.duration, instructions: i.instructions ?? undefined })) } },
+                        {
+                          onSuccess: (data) => { setPreviewTranslation(data); setPreviewDisplayMode("bilingual"); toast({ title: `Translated to ${data.languageName}` }); },
+                          onError: () => toast({ title: "Translation failed", variant: "destructive" }),
+                        }
+                      );
+                    }}
+                  >
+                    {translatePreviewMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Translate"}
+                  </Button>
                 </div>
                 {previewTranslation && (
                   <div className="flex items-center gap-1 border border-border rounded-md p-0.5">
@@ -1826,7 +1823,7 @@ export default function ConsultationDetailPage() {
                         onClick={() => setPreviewDisplayMode(mode)}
                         className={`text-xs px-2 py-0.5 rounded transition-colors font-medium ${previewDisplayMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        {mode === "english" ? "EN" : mode === "translated" ? (previewTranslation.languageName ?? "Translated") : "Bilingual"}
+                        {mode === "english" ? "EN" : mode === "translated" ? (previewTranslation.languageName?.slice(0, 2).toUpperCase() ?? "TR") : "Bilingual"}
                       </button>
                     ))}
                   </div>
@@ -1999,7 +1996,7 @@ export default function ConsultationDetailPage() {
 
               {/* Footer actions */}
               <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <Button variant="outline" onClick={() => { setShowRxPreview(false); setPreviewTranslation(null); }}>← Back to Edit</Button>
+                <Button variant="outline" onClick={() => { setShowRxPreview(false); setPreviewTranslation(null); setPreviewLang("en"); }}>← Back to Edit</Button>
                 <Button
                   variant="outline"
                   onClick={() => handleAddPrescription(true)}
