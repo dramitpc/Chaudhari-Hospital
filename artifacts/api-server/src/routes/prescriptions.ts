@@ -157,7 +157,6 @@ router.post("/prescriptions/:id/translate", authenticate, async (req, res): Prom
   const items = (p.items as PrescriptionItem[]) ?? [];
 
   const fieldsToTranslate: Record<string, string> = {};
-  if (p.diagnosis) fieldsToTranslate.diagnosis = p.diagnosis;
   if (p.advice) fieldsToTranslate.advice = p.advice;
   if (p.notes) fieldsToTranslate.notes = p.notes;
   items.forEach((item, i) => {
@@ -214,7 +213,7 @@ Rules:
   const translations = {
     language: targetLang,
     languageName: langName,
-    diagnosis: translated.diagnosis ?? null,
+    diagnosis: null,
     advice: translated.advice ?? null,
     notes: translated.notes ?? null,
     items: translatedItems,
