@@ -123,7 +123,7 @@ export default function QueuePage() {
   const [newGender, setNewGender] = useState<"male" | "female" | "other" | "">("");
   const [newPhone, setNewPhone] = useState("");
   const [newAge, setNewAge] = useState("");
-  const [newDob, setNewDob] = useState("");
+  const [newAddress, setNewAddress] = useState("");
 
   // Read invoice-created flags from sessionStorage (set by ConsultationDetailPage after creating an invoice)
   const [invoicedPatientIds] = useState<Set<string>>(() => {
@@ -235,7 +235,7 @@ export default function QueuePage() {
     setNewGender("");
     setNewPhone("");
     setNewAge("");
-    setNewDob("");
+    setNewAddress("");
   };
 
   const handleGenerateToken = () => {
@@ -259,7 +259,7 @@ export default function QueuePage() {
   const handleRegisterAndQueue = () => {
     if (!newName || !newGender || !selectedDoctorId) return;
     registerPatientMutation.mutate(
-      { data: { salutation: newSalutation || undefined, fullName: newName, gender: newGender, phone: newPhone || undefined, age: newAge || undefined, dateOfBirth: newDob || undefined } },
+      { data: { salutation: newSalutation || undefined, fullName: newName, gender: newGender, phone: newPhone || undefined, age: newAge || undefined, address: newAddress || undefined } },
       {
         onSuccess: (patient) => {
           generateTokenMutation.mutate(
@@ -857,11 +857,12 @@ export default function QueuePage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Date of Birth</Label>
+                    <Label className="text-xs">Address</Label>
                     <Input
-                      type="date"
-                      value={newDob}
-                      onChange={e => setNewDob(e.target.value)}
+                      type="text"
+                      value={newAddress}
+                      onChange={e => setNewAddress(e.target.value)}
+                      placeholder="Street, City"
                     />
                   </div>
                 </div>
