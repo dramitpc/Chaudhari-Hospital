@@ -53,10 +53,10 @@ export default function PrescriptionsPage() {
                 <td className="px-4 py-3 max-w-[180px] truncate text-muted-foreground">{p.diagnosis ?? "—"}</td>
                 <td className="px-4 py-3">{p.items.length} drug{p.items.length !== 1 ? "s" : ""}</td>
                 <td className="px-4 py-3 flex gap-2">
-                  <Link href={`/prescriptions/${p.id}`}>
+                  <Link href={`/prescriptions/${p.id}?from=prescriptions`}>
                     <Button size="sm" variant="outline">View</Button>
                   </Link>
-                  <Link href={`/prescriptions/${p.id}`}>
+                  <Link href={`/prescriptions/${p.id}?from=prescriptions&print=1`}>
                     <Button size="sm" variant="ghost">Print</Button>
                   </Link>
                 </td>
