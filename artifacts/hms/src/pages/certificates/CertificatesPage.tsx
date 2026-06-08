@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import {
   useListCertificates, useCreateCertificate, useListPatients, useListUsers, useGetClinicSettings,
@@ -171,18 +171,35 @@ export default function CertificatesPage() {
     content: "",
   });
 
+  const [patientSearch, setPatientSearch] = useState("");
+  const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
+
   const { data, isLoading } = useListCertificates({}, {
     query: { queryKey: getListCertificatesQueryKey({}) }
   });
-  const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });
+  const { data: patients } = useListPatients({ limit: 500 }, { query: { queryKey: getListPatientsQueryKey({ limit: 500 }) } });
   const { data: doctors } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
   const createMutation = useCreateCertificate();
+
+  const filteredPatients = useMemo(() => {
+    const q = patientSearch.toLowerCase();
+    return (patients?.data ?? []).filter(p =>
+      p.fullName.toLowerCase().includes(q) ||
+      p.patientId.toLowerCase().includes(q) ||
+      (p.phone ?? "").includes(q)
+    );
+  }, [patients?.data, patientSearch]);
 
   const selectedPatient = (patients?.data ?? []).find(p => p.id === form.patientId);
   const selectedDoctor = (doctors?.data ?? []).find(d => d.id === form.doctorId);
   const patientName = selectedPatient?.fullName ?? "";
   const doctorName = selectedDoctor?.fullName ?? (user?.role === "doctor" ? (user as unknown as { fullName?: string }).fullName ?? "" : "");
+
+  const resetPatientSearch = () => {
+    setPatientSearch("");
+    setPatientDropdownOpen(false);
+  };
 
   const handleCreate = () => {
     if (!form.patientId || !form.doctorId) return;
@@ -192,6 +209,7 @@ export default function CertificatesPage() {
         queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
         setShowCreate(false);
         setForm(f => ({ ...f, patientId: "", diagnosis: "", content: "", fromDate: "", toDate: "" }));
+        resetPatientSearch();
       },
       onError: () => toast({ title: "Error", variant: "destructive" }),
     });
@@ -255,7 +273,7 @@ export default function CertificatesPage() {
         </table>
       </div>
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <Dialog open={showCreate} onOpenChange={v => { setShowCreate(v); if (!v) { resetPatientSearch(); setForm(f => ({ ...f, patientId: "" })); } }}>
         <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0">
           <div className="grid grid-cols-1 md:grid-cols-[420px_1fr]">
             {/* ── Form panel ── */}
@@ -266,12 +284,41 @@ export default function CertificatesPage() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label>Patient</Label>
-                  <Select onValueChange={v => setForm(f => ({ ...f, patientId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                    <SelectContent>
-                      {(patients?.data ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search by name, ID or mobile…"
+                      value={patientSearch}
+                      onChange={e => {
+                        setPatientSearch(e.target.value);
+                        setPatientDropdownOpen(true);
+                        if (!e.target.value) setForm(f => ({ ...f, patientId: "" }));
+                      }}
+                      onFocus={() => setPatientDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setPatientDropdownOpen(false), 150)}
+                    />
+                    {patientDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                        {filteredPatients.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">No patients found</p>
+                        ) : filteredPatients.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-baseline gap-2"
+                            onMouseDown={() => {
+                              setForm(f => ({ ...f, patientId: p.id }));
+                              setPatientSearch(`${p.fullName} · ${p.patientId}${p.phone ? ` · ${p.phone}` : ""}`);
+                              setPatientDropdownOpen(false);
+                            }}
+                          >
+                            <span className="font-medium">{p.fullName}</span>
+                            <span className="text-xs text-muted-foreground">{p.patientId}</span>
+                            {p.phone && <span className="text-xs text-muted-foreground">{p.phone}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {user?.role !== "doctor" && (
                   <div className="space-y-1.5">
