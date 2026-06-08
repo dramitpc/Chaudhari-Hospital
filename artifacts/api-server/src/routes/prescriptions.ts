@@ -140,6 +140,57 @@ router.post("/prescriptions", authenticate, async (req, res): Promise<void> => {
   res.status(201).json(await formatPrescription(p));
 });
 
+router.post("/prescriptions/translate-preview", authenticate, async (req, res): Promise<void> => {
+  const body = req.body as { language?: string; advice?: string; items?: { dosage?: string; frequency?: string; duration?: string; instructions?: string }[] };
+  if (!body.language) { res.status(400).json({ error: "language is required" }); return; }
+  const targetLang = body.language;
+  const langName = LANGUAGE_NAMES[targetLang] ?? targetLang;
+  const items = body.items ?? [];
+
+  const fieldsToTranslate: Record<string, string> = {};
+  if (body.advice) fieldsToTranslate.advice = body.advice;
+  items.forEach((item, i) => {
+    if (item.dosage) fieldsToTranslate[`item_${i}_dosage`] = item.dosage;
+    if (item.frequency) fieldsToTranslate[`item_${i}_frequency`] = item.frequency;
+    if (item.duration) fieldsToTranslate[`item_${i}_duration`] = item.duration;
+    if (item.instructions) fieldsToTranslate[`item_${i}_instructions`] = item.instructions;
+  });
+
+  if (!Object.keys(fieldsToTranslate).length) { res.json({ languageName: langName, items: [] }); return; }
+
+  const systemPrompt = `You are a medical prescription translator. Translate the given medical text from English to ${langName}.
+Rules:
+- Keep medicine/drug names exactly as written (do NOT translate brand or generic drug names)
+- Translate dosage instructions, frequency, duration, and advice into natural patient-friendly ${langName}
+- Return ONLY a valid JSON object with the same keys, values translated. No commentary.`;
+  const userPrompt = `Translate these prescription fields to ${langName}:\n${JSON.stringify(fieldsToTranslate, null, 2)}`;
+
+  let translated: Record<string, string> = {};
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      max_completion_tokens: 4096,
+      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+    });
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const jsonStr = raw.replace(/^```json\n?|\n?```$/g, "").trim();
+    translated = JSON.parse(jsonStr) as Record<string, string>;
+  } catch (err) {
+    req.log.error({ err }, "Preview translation failed");
+    res.status(502).json({ error: "Translation failed. Please try again." });
+    return;
+  }
+
+  const translatedItems = items.map((item, i) => ({
+    dosage: translated[`item_${i}_dosage`] ?? item.dosage ?? "",
+    frequency: translated[`item_${i}_frequency`] ?? item.frequency ?? "",
+    duration: translated[`item_${i}_duration`] ?? item.duration ?? "",
+    instructions: translated[`item_${i}_instructions`] ?? item.instructions ?? "",
+  }));
+
+  res.json({ languageName: langName, advice: translated.advice ?? null, items: translatedItems });
+});
+
 router.post("/prescriptions/:id/translate", authenticate, async (req, res): Promise<void> => {
   const params = TranslatePrescriptionParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }

@@ -847,6 +847,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Prescription"
 
+  /prescriptions/translate-preview:
+    post:
+      operationId: translatePreviewPrescription
+      tags: [prescriptions]
+      summary: Translate raw prescription fields using AI (no saved prescription needed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslatePreviewInput"
+      responses:
+        "200":
+          description: Translated fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslatePreviewResponse"
+
   /prescriptions/templates:
     get:
       operationId: listPrescriptionTemplates
@@ -2307,6 +2326,41 @@ components:
           description: Translated content keyed by field name
         createdAt:
           type: string
+
+    TranslatePreviewInput:
+      type: object
+      required: [language, items]
+      properties:
+        language:
+          type: string
+        advice:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              dosage: { type: string }
+              frequency: { type: string }
+              duration: { type: string }
+              instructions: { type: string }
+
+    TranslatePreviewResponse:
+      type: object
+      properties:
+        languageName:
+          type: string
+        advice:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              dosage: { type: string }
+              frequency: { type: string }
+              duration: { type: string }
+              instructions: { type: string }
 
     PrescriptionTranslateInput:
       type: object

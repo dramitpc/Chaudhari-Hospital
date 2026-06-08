@@ -98,6 +98,8 @@ import type {
   TimelineEvent,
   TokenInput,
   TokenStatusUpdate,
+  TranslatePreviewInput,
+  TranslatePreviewResponse,
   TrendPoint,
   User,
   UserInput,
@@ -3031,6 +3033,77 @@ export const useTranslatePrescription = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getTranslatePrescriptionMutationOptions(options));
+    }
+
+export const getTranslatePreviewPrescriptionUrl = () => {
+
+
+
+
+  return `/api/prescriptions/translate-preview`
+}
+
+/**
+ * @summary Translate raw prescription fields using AI (no saved prescription needed)
+ */
+export const translatePreviewPrescription = async (translatePreviewInput: TranslatePreviewInput, options?: RequestInit): Promise<TranslatePreviewResponse> => {
+
+  return customFetch<TranslatePreviewResponse>(getTranslatePreviewPrescriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      translatePreviewInput,)
+  }
+);}
+
+
+
+
+export const getTranslatePreviewPrescriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof translatePreviewPrescription>>, TError,{data: BodyType<TranslatePreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof translatePreviewPrescription>>, TError,{data: BodyType<TranslatePreviewInput>}, TContext> => {
+
+const mutationKey = ['translatePreviewPrescription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof translatePreviewPrescription>>, {data: BodyType<TranslatePreviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  translatePreviewPrescription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TranslatePreviewPrescriptionMutationResult = NonNullable<Awaited<ReturnType<typeof translatePreviewPrescription>>>
+    export type TranslatePreviewPrescriptionMutationBody = BodyType<TranslatePreviewInput>
+    export type TranslatePreviewPrescriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Translate raw prescription fields using AI (no saved prescription needed)
+ */
+export const useTranslatePreviewPrescription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof translatePreviewPrescription>>, TError,{data: BodyType<TranslatePreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof translatePreviewPrescription>>,
+        TError,
+        {data: BodyType<TranslatePreviewInput>},
+        TContext
+      > => {
+      return useMutation(getTranslatePreviewPrescriptionMutationOptions(options));
     }
 
 export const getListPrescriptionTemplatesUrl = (params?: ListPrescriptionTemplatesParams,) => {

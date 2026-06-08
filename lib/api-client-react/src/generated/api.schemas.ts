@@ -696,6 +696,32 @@ export interface ConsultationListResponse {
   limit: number;
 }
 
+export type TranslatePreviewInputItemsItem = {
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  instructions?: string;
+};
+
+export interface TranslatePreviewInput {
+  language: string;
+  advice?: string;
+  items: TranslatePreviewInputItemsItem[];
+}
+
+export type TranslatePreviewResponseItemsItem = {
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  instructions?: string;
+};
+
+export interface TranslatePreviewResponse {
+  languageName?: string;
+  advice?: string;
+  items?: TranslatePreviewResponseItemsItem[];
+}
+
 export type PrescriptionTranslateInputDisplayMode = typeof PrescriptionTranslateInputDisplayMode[keyof typeof PrescriptionTranslateInputDisplayMode];
 
 

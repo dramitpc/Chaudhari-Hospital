@@ -7,6 +7,7 @@ import {
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
   useCreateInvestigation, useUpdateInvestigation, useListInvestigations,
+  useTranslatePreviewPrescription,
   getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey, getListChargeTypesQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2 } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
@@ -83,6 +84,17 @@ const INV_STATUS_COLORS: Record<string, string> = {
 const INV_STATUS_LABELS: Record<string, string> = {
   pending: "Pending", in_progress: "In Progress", completed: "Completed", cancelled: "Cancelled",
 };
+const RX_PREVIEW_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "hi", label: "हिन्दी (Hindi)" },
+  { code: "mr", label: "मराठी (Marathi)" },
+  { code: "gu", label: "ગુજરાતી (Gujarati)" },
+  { code: "ta", label: "தமிழ் (Tamil)" },
+  { code: "te", label: "తెలుగు (Telugu)" },
+  { code: "kn", label: "ಕನ್ನಡ (Kannada)" },
+  { code: "pa", label: "ਪੰਜਾਬੀ (Punjabi)" },
+  { code: "bn", label: "বাংলা (Bengali)" },
+];
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ConsultationDetailPage() {
@@ -131,6 +143,10 @@ export default function ConsultationDetailPage() {
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [editRxId, setEditRxId] = useState<string | null>(null);
   const [showRxPreview, setShowRxPreview] = useState(false);
+  const [previewLang, setPreviewLang] = useState("en");
+  const [previewTranslation, setPreviewTranslation] = useState<{ languageName?: string; advice?: string | null; items?: { dosage?: string; frequency?: string; duration?: string; instructions?: string }[] } | null>(null);
+  const [previewDisplayMode, setPreviewDisplayMode] = useState<"english" | "translated" | "bilingual">("bilingual");
+  const translatePreviewMutation = useTranslatePreviewPrescription();
   const [selectedDrugIds, setSelectedDrugIds] = useState<Set<string>>(new Set());
   const [drugPickerSearch, setDrugPickerSearch] = useState("");
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
@@ -1746,7 +1762,7 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); } }}>
+      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("en"); } }}>
         <DialogContent className="max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
@@ -1768,6 +1784,52 @@ export default function ConsultationDetailPage() {
           {/* ── PREVIEW MODE ── */}
           {showRxPreview ? (
             <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {/* Translation controls */}
+              <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-border">
+                <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1">
+                  <Languages className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <Select value={previewLang} onValueChange={setPreviewLang}>
+                    <SelectTrigger className="border-0 h-7 text-xs p-0 focus:ring-0 w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RX_PREVIEW_LANGUAGES.map(l => (
+                        <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm" variant="ghost" className="h-7 text-xs px-2"
+                    disabled={previewLang === "en" || translatePreviewMutation.isPending}
+                    onClick={() => {
+                      const filledItems = drugItems.filter(i => i.drugName);
+                      translatePreviewMutation.mutate(
+                        { data: { language: previewLang, advice: adviceValue || consultation?.advice || undefined, items: filledItems.map(i => ({ dosage: i.dosage, frequency: i.frequency, duration: i.duration, instructions: i.instructions ?? undefined })) } },
+                        {
+                          onSuccess: (data) => { setPreviewTranslation(data); setPreviewDisplayMode("bilingual"); toast({ title: `Translated to ${data.languageName}` }); },
+                          onError: () => toast({ title: "Translation failed", variant: "destructive" }),
+                        }
+                      );
+                    }}
+                  >
+                    {translatePreviewMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Translate"}
+                  </Button>
+                </div>
+                {previewTranslation && (
+                  <div className="flex items-center gap-1 border border-border rounded-md p-0.5">
+                    {(["english", "bilingual", "translated"] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setPreviewDisplayMode(mode)}
+                        className={`text-xs px-2 py-0.5 rounded transition-colors font-medium ${previewDisplayMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {mode === "english" ? "EN" : mode === "translated" ? (previewTranslation.languageName?.slice(0, 2).toUpperCase() ?? "TR") : "Bilingual"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Letterhead */}
               <div className="border-b-2 border-primary pb-3 flex items-start justify-between gap-4">
                 <div className="flex-1">
@@ -1848,45 +1910,79 @@ export default function ConsultationDetailPage() {
               )}
 
               {/* Rx drugs */}
-              {drugItems.filter(i => i.drugName).length > 0 ? (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Rx — Medications</p>
-                  <table className="w-full text-xs border border-border rounded overflow-hidden">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left py-1.5 px-2">#</th>
-                        <th className="text-left py-1.5 px-2">Drug</th>
-                        <th className="text-left py-1.5 px-2">Dosage</th>
-                        <th className="text-left py-1.5 px-2">Frequency</th>
-                        <th className="text-left py-1.5 px-2">Duration</th>
-                        <th className="text-left py-1.5 px-2">Instructions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {drugItems.filter(i => i.drugName).map((item, idx) => (
-                        <tr key={idx} className="border-t border-border">
-                          <td className="py-1.5 px-2 text-muted-foreground">{idx + 1}</td>
-                          <td className="py-1.5 px-2 font-medium">{item.drugName}</td>
-                          <td className="py-1.5 px-2">{item.dosage || "—"}</td>
-                          <td className="py-1.5 px-2">{item.frequency || "—"}</td>
-                          <td className="py-1.5 px-2">{item.duration || "—"}</td>
-                          <td className="py-1.5 px-2 text-muted-foreground">{item.instructions || "—"}</td>
+              {(() => {
+                const filledItems = drugItems.filter(i => i.drugName);
+                const showEn = previewDisplayMode !== "translated" || !previewTranslation;
+                const showTr = previewDisplayMode !== "english" && !!previewTranslation;
+                const isBilingual = previewDisplayMode === "bilingual" && !!previewTranslation;
+                return filledItems.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Rx — Medications</p>
+                    <table className="w-full text-xs border border-border rounded overflow-hidden">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left py-1.5 px-2">#</th>
+                          <th className="text-left py-1.5 px-2">Drug</th>
+                          <th className="text-left py-1.5 px-2">Dosage</th>
+                          <th className="text-left py-1.5 px-2">Frequency</th>
+                          <th className="text-left py-1.5 px-2">Duration</th>
+                          <th className="text-left py-1.5 px-2">Instructions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No medications added.</p>
-              )}
+                      </thead>
+                      <tbody>
+                        {filledItems.map((item, idx) => {
+                          const tr = previewTranslation?.items?.[idx];
+                          return (
+                            <tr key={idx} className="border-t border-border">
+                              <td className="py-1.5 px-2 text-muted-foreground">{idx + 1}</td>
+                              <td className="py-1.5 px-2 font-medium">{item.drugName}</td>
+                              <td className="py-1.5 px-2">
+                                {showEn && <span>{item.dosage || "—"}</span>}
+                                {isBilingual && tr?.dosage && tr.dosage !== item.dosage && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.dosage}</span>}
+                                {!showEn && showTr && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.dosage || item.dosage || "—"}</span>}
+                              </td>
+                              <td className="py-1.5 px-2">
+                                {showEn && <span>{item.frequency || "—"}</span>}
+                                {isBilingual && tr?.frequency && tr.frequency !== item.frequency && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.frequency}</span>}
+                                {!showEn && showTr && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.frequency || item.frequency || "—"}</span>}
+                              </td>
+                              <td className="py-1.5 px-2">
+                                {showEn && <span>{item.duration || "—"}</span>}
+                                {isBilingual && tr?.duration && tr.duration !== item.duration && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.duration}</span>}
+                                {!showEn && showTr && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.duration || item.duration || "—"}</span>}
+                              </td>
+                              <td className="py-1.5 px-2 text-muted-foreground">
+                                {showEn && <span>{item.instructions || "—"}</span>}
+                                {isBilingual && tr?.instructions && tr.instructions !== item.instructions && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.instructions}</span>}
+                                {!showEn && showTr && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.instructions || item.instructions || "—"}</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No medications added.</p>
+                );
+              })()}
 
               {/* Advice */}
-              {(adviceValue || consultation?.advice) && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Advice</p>
-                  <p className="text-sm whitespace-pre-wrap">{adviceValue || consultation?.advice}</p>
-                </div>
-              )}
+              {(adviceValue || consultation?.advice) && (() => {
+                const enAdvice = adviceValue || consultation?.advice;
+                const trAdvice = previewTranslation?.advice;
+                const showEn = previewDisplayMode !== "translated" || !trAdvice;
+                const showTr = previewDisplayMode !== "english" && !!trAdvice;
+                const isBilingual = previewDisplayMode === "bilingual" && !!trAdvice;
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Advice</p>
+                    {showEn && <p className="text-sm whitespace-pre-wrap">{enAdvice}</p>}
+                    {isBilingual && trAdvice && trAdvice !== enAdvice && <p className="text-sm whitespace-pre-wrap mt-0.5 text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{trAdvice}</p>}
+                    {!showEn && showTr && <p className="text-sm whitespace-pre-wrap" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{trAdvice}</p>}
+                  </div>
+                );
+              })()}
 
               {/* Follow-up */}
               {consultation?.followUpDate && (
@@ -1900,7 +1996,7 @@ export default function ConsultationDetailPage() {
 
               {/* Footer actions */}
               <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <Button variant="outline" onClick={() => setShowRxPreview(false)}>← Back to Edit</Button>
+                <Button variant="outline" onClick={() => { setShowRxPreview(false); setPreviewTranslation(null); setPreviewLang("en"); }}>← Back to Edit</Button>
                 <Button
                   variant="outline"
                   onClick={() => handleAddPrescription(true)}

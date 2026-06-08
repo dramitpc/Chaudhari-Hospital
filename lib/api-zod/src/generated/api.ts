@@ -1261,6 +1261,32 @@ export const TranslatePrescriptionResponse = zod.object({
 
 
 /**
+ * @summary Translate raw prescription fields using AI (no saved prescription needed)
+ */
+export const TranslatePreviewPrescriptionBody = zod.object({
+  "language": zod.string(),
+  "advice": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "dosage": zod.string().optional(),
+  "frequency": zod.string().optional(),
+  "duration": zod.string().optional(),
+  "instructions": zod.string().optional()
+}))
+})
+
+export const TranslatePreviewPrescriptionResponse = zod.object({
+  "languageName": zod.string().optional(),
+  "advice": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "dosage": zod.string().optional(),
+  "frequency": zod.string().optional(),
+  "duration": zod.string().optional(),
+  "instructions": zod.string().optional()
+})).optional()
+})
+
+
+/**
  * @summary List prescription templates/macros
  */
 export const ListPrescriptionTemplatesQueryParams = zod.object({
