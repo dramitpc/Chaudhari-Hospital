@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, useSearch } from "wouter";
 import { useGetPatient, useUpdatePatient, getGetPatientQueryKey } from "@workspace/api-client-react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ export default function EditPatientPage() {
   const [, params] = useRoute("/patients/:id/edit");
   const id = params?.id ?? "";
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const backTo = new URLSearchParams(search).get("from") === "queue" ? "/queue" : `/patients/${id}`;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -62,7 +64,7 @@ export default function EditPatientPage() {
       onSuccess: () => {
         toast({ title: "Patient updated" });
         queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
-        setLocation(`/patients/${id}`);
+        setLocation(backTo);
       },
       onError: () => toast({ title: "Error", description: "Failed to update patient", variant: "destructive" }),
     });
@@ -73,7 +75,7 @@ export default function EditPatientPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => setLocation(`/patients/${id}`)}>
+        <Button variant="ghost" size="icon" onClick={() => setLocation(backTo)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
@@ -188,7 +190,7 @@ export default function EditPatientPage() {
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => setLocation(`/patients/${id}`)}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => setLocation(backTo)}>Cancel</Button>
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? "Saving..." : "Save Changes"}
           </Button>

@@ -433,7 +433,7 @@ export default function QueuePage() {
                   <Button
                     size="sm" variant="ghost"
                     className="text-muted-foreground hover:text-foreground"
-                    onClick={() => navigate(`/patients/${token.patientId}/edit`)}
+                    onClick={() => navigate(`/patients/${token.patientId}/edit?from=queue`)}
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" />Edit Patient
                   </Button>
