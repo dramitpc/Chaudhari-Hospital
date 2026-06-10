@@ -668,7 +668,6 @@ export default function ConsultationDetailPage() {
         { id: editRxId, data: { diagnosis: payload.diagnosis, advice: payload.advice, followUpDate: payload.followUpDate, items: payload.items } },
         {
           onSuccess: () => {
-            toast({ title: "Prescription updated" });
             queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
             setShowPrescriptionModal(false);
             setEditRxId(null);
@@ -681,7 +680,6 @@ export default function ConsultationDetailPage() {
     } else {
       createPrescriptionMutation.mutate({ data: payload }, {
         onSuccess: (rx) => {
-          toast({ title: "Prescription created" });
           queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
           setShowPrescriptionModal(false);
           setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
