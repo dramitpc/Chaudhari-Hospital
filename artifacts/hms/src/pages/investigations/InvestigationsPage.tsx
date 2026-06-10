@@ -4,6 +4,8 @@ import {
   useListInvestigations,
   useUpdateInvestigation,
   getListInvestigationsQueryKey,
+  useListConsultations,
+  getListConsultationsQueryKey,
   type Investigation,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   CheckCircle, Clock, ScanLine, AlertCircle, Filter,
-  Paperclip, X, ImageIcon, FileText,
+  Paperclip, X, ImageIcon, FileText, ClipboardList,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -155,6 +157,13 @@ export default function InvestigationsPage() {
   const { data, isLoading } = useListInvestigations(params, {
     query: { queryKey: getListInvestigationsQueryKey(params), refetchInterval: 30000 },
   });
+
+  // ── Consultation investigation orders ─────────────────────────────────────
+  const consultParams = { date: localToday, limit: 100 };
+  const { data: consultData } = useListConsultations(consultParams, {
+    query: { queryKey: getListConsultationsQueryKey(consultParams), refetchInterval: 30000 },
+  });
+  const consultOrders = (consultData?.data ?? []).filter(c => c.investigationOrders?.trim());
 
   const updateMutation = useUpdateInvestigation();
 
@@ -315,6 +324,39 @@ export default function InvestigationsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Consultation investigation orders for today */}
+      {consultOrders.length > 0 && (
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm">Investigation Orders from Today's Consultations</h2>
+            <span className="ml-auto text-xs text-muted-foreground">{consultOrders.length} consultation{consultOrders.length > 1 ? "s" : ""}</span>
+          </div>
+          <div className="divide-y divide-border">
+            {consultOrders.map(c => (
+              <div key={c.id} className="px-4 py-3 flex gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <Link href={`/patients/${c.patientId}`}>
+                      <span className="font-medium text-sm text-primary hover:underline cursor-pointer">
+                        {c.patientName ?? c.patientId}
+                      </span>
+                    </Link>
+                    {c.doctorName && (
+                      <span className="text-xs text-muted-foreground">· {c.doctorName}</span>
+                    )}
+                    <Link href={`/consultations/${c.id}`}>
+                      <span className="text-xs text-muted-foreground hover:underline cursor-pointer">View consultation →</span>
+                    </Link>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap text-foreground">{c.investigationOrders}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
