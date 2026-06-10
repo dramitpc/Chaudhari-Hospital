@@ -151,7 +151,8 @@ export default function ReportsPage() {
                               <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Qty</th>
                               <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Unit Price</th>
                               <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Disc (₹)</th>
-                              <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Amount</th>
+                              <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Billed</th>
+                              <th className="px-4 py-2.5 text-right text-xs font-medium text-green-700 dark:text-green-400">Amt Received</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -172,13 +173,16 @@ export default function ReportsPage() {
                                     {item.discount ? `₹${item.discount.toFixed(2)}` : "—"}
                                   </td>
                                   <td className="px-4 py-2.5 text-right tabular-nums font-medium">₹{item.total.toFixed(2)}</td>
+                                  <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-green-700 dark:text-green-400">
+                                    {li === 0 ? `₹${(inv.amountPaid ?? 0).toFixed(2)}` : ""}
+                                  </td>
                                 </tr>
                               ))
                             )}
                           </tbody>
                           <tfoot className="border-t-2 border-border bg-muted/20">
                             <tr>
-                              <td colSpan={7} className="px-4 py-2.5 text-xs font-medium text-muted-foreground text-right">Collected Revenue</td>
+                              <td colSpan={8} className="px-4 py-2.5 text-xs font-medium text-muted-foreground text-right">Collected Revenue</td>
                               <td className="px-4 py-2.5 text-right font-bold tabular-nums text-green-700 dark:text-green-400">
                                 ₹{(opdReport.revenueList ?? []).reduce((s, inv) => s + (inv.amountPaid ?? inv.total), 0).toFixed(2)}
                               </td>
