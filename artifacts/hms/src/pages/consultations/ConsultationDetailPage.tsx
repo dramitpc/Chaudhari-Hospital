@@ -1721,6 +1721,28 @@ export default function ConsultationDetailPage() {
                 setInvBodyPart(bodyPart);
                 setInvNotes(notes);
               }}
+              onApplyMultiple={async (entries) => {
+                if (!consultation) return;
+                for (const entry of entries) {
+                  await createInvestigationMutation.mutateAsync({
+                    data: {
+                      patientId: consultation.patientId,
+                      patientName: consultation.patientName ?? undefined,
+                      consultationId: id,
+                      requestedById: consultation.doctorId,
+                      requestedByName: consultation.doctorName ?? undefined,
+                      type: entry.type,
+                      bodyPart: entry.bodyPart || undefined,
+                      notes: entry.notes || undefined,
+                    },
+                  });
+                  trackInvestigationRecent(entry);
+                }
+                toast({ title: `${entries.length} investigations ordered` });
+                queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
+                setShowInvestigationModal(false);
+                setInvType(""); setInvBodyPart(""); setInvNotes("");
+              }}
             />
             <div className="space-y-1.5">
               <Label>Investigation Type <span className="text-destructive">*</span></Label>

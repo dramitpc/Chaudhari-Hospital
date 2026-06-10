@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookMarked, Star, Clock, X } from "lucide-react";
+import { BookMarked, Star, Clock, X, Check } from "lucide-react";
 import { fmtDateTime } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [favName, setFavName] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [, forceRefresh] = useState(0);
 
   const favKey    = `${lsKey}_fav`;
@@ -29,11 +30,21 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
     forceRefresh(n => n + 1);
   };
 
-  const applyEntry = (entry: FavEntry) => {
-    const combined = currentValue.trim() ? `${currentValue.trim()}\n${entry.value}` : entry.value;
+  const toggle = (id: string) =>
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const applySelected = () => {
+    const all = [...getFavs(), ...getRecent()];
+    const vals = [...selected]
+      .map(id => all.find(e => e.id === id)?.value ?? "")
+      .filter(Boolean)
+      .join("\n");
+    if (!vals) return;
+    const combined = currentValue.trim() ? `${currentValue.trim()}\n${vals}` : vals;
     onApply(combined);
     setIsOpen(false);
-    toast({ title: "Added to field" });
+    setSelected(new Set());
+    toast({ title: `${selected.size} item${selected.size > 1 ? "s" : ""} added to field` });
   };
 
   const saveFav = () => {
@@ -50,30 +61,77 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
     toast({ title: "Saved to favourites" });
   };
 
-  const deleteFav    = (id: string) => persist(favKey,    getFavs().filter(e => e.id !== id));
-  const deleteRecent = (id: string) => persist(recentKey, getRecent().filter(e => e.id !== id));
+  const deleteFav    = (id: string) => { persist(favKey,    getFavs().filter(e => e.id !== id));    setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
+  const deleteRecent = (id: string) => { persist(recentKey, getRecent().filter(e => e.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
   const entryLabel   = (e: FavEntry) => e.name || (e.value.slice(0, 60) + (e.value.length > 60 ? "…" : ""));
 
   const favs   = getFavs();
   const recent = getRecent();
   const total  = favs.length + recent.length;
 
+  const EntryRow = ({ e, onDelete }: { e: FavEntry; onDelete: () => void }) => {
+    const isSelected = selected.has(e.id);
+    return (
+      <div
+        className={`flex items-center gap-2.5 rounded-md border px-3 py-2 cursor-pointer transition-colors text-xs
+          ${isSelected ? "border-primary bg-primary/8 ring-1 ring-primary/30" : "border-border hover:bg-muted/50"}`}
+        onClick={() => toggle(e.id)}
+      >
+        <div className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors
+          ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+          {isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+        </div>
+        <span className="flex-1 min-w-0 break-words font-medium leading-snug">{entryLabel(e)}</span>
+        <Button
+          type="button" size="sm" variant="ghost"
+          className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+          onClick={ev => { ev.stopPropagation(); onDelete(); }}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  };
+
+  const RecentRow = ({ e, onDelete }: { e: FavEntry; onDelete: () => void }) => {
+    const isSelected = selected.has(e.id);
+    return (
+      <div
+        className={`flex items-center gap-2.5 rounded-md border px-3 py-2 cursor-pointer transition-colors text-xs
+          ${isSelected ? "border-primary bg-primary/8 ring-1 ring-primary/30" : "border-border hover:bg-muted/50"}`}
+        onClick={() => toggle(e.id)}
+      >
+        <div className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors
+          ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+          {isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="block break-words leading-snug">{entryLabel(e)}</span>
+          <span className="text-muted-foreground text-[10px]">{fmtDateTime(e.savedAt)}</span>
+        </div>
+        <Button
+          type="button" size="sm" variant="ghost"
+          className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+          onClick={ev => { ev.stopPropagation(); onDelete(); }}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <>
       <Button
-        type="button"
-        size="sm"
-        variant="ghost"
+        type="button" size="sm" variant="ghost"
         className="h-6 gap-1 px-2 text-xs shrink-0"
-        onClick={() => { setIsOpen(true); setFavName(""); }}
+        onClick={() => { setIsOpen(true); setFavName(""); setSelected(new Set()); }}
       >
         <BookMarked className="h-3 w-3" />
-        {total > 0
-          ? `${favs.length} fav · ${recent.length} recent`
-          : "Favourites & Recent"}
+        {total > 0 ? `${favs.length} fav · ${recent.length} recent` : "Favourites & Recent"}
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={open => { setIsOpen(open); if (!open) setSelected(new Set()); }}>
         <DialogContent className="max-w-lg w-full flex flex-col gap-0 p-0 max-h-[85vh]">
           <DialogHeader className="px-4 pt-4 pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-sm">
@@ -94,24 +152,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
                 <p className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 py-1 sticky top-0 bg-background z-10">
                   <Star className="h-3.5 w-3.5" /> Favourites
                 </p>
-                {favs.map(e => (
-                  <div
-                    key={e.id}
-                    className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-primary/5 hover:border-primary transition-colors text-xs"
-                    onClick={() => applyEntry(e)}
-                  >
-                    <span className="flex-1 min-w-0 break-words font-medium leading-snug">{entryLabel(e)}</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={ev => { ev.stopPropagation(); deleteFav(e.id); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+                {favs.map(e => <EntryRow key={e.id} e={e} onDelete={() => deleteFav(e.id)} />)}
               </div>
             )}
 
@@ -120,32 +161,26 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
                 <p className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 py-1 sticky top-0 bg-background z-10">
                   <Clock className="h-3.5 w-3.5" /> Recently Used
                 </p>
-                {recent.map(e => (
-                  <div
-                    key={e.id}
-                    className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-primary/5 hover:border-primary transition-colors text-xs"
-                    onClick={() => applyEntry(e)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <span className="block break-words leading-snug">{entryLabel(e)}</span>
-                      <span className="text-muted-foreground text-[10px]">{fmtDateTime(e.savedAt)}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={ev => { ev.stopPropagation(); deleteRecent(e.id); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+                {recent.map(e => <RecentRow key={e.id} e={e} onDelete={() => deleteRecent(e.id)} />)}
               </div>
             )}
           </div>
 
-          <div className="shrink-0 border-t border-border px-4 py-3">
+          <div className="shrink-0 border-t border-border px-4 py-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground flex-1">
+                {selected.size > 0 ? `${selected.size} selected` : "Click entries to select"}
+              </span>
+              <Button
+                type="button" size="sm" className="h-7 px-3 text-xs"
+                disabled={selected.size === 0}
+                onClick={applySelected}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Add to field{selected.size > 0 ? ` (${selected.size})` : ""}
+              </Button>
+            </div>
+
             <div className="flex gap-1.5">
               <Input
                 className="h-7 text-xs flex-1"
