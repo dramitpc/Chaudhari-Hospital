@@ -3,9 +3,8 @@ import { Link } from "wouter";
 import { useListInvoices, getListInvoicesQueryKey } from "@workspace/api-client-react";
 import { fmtDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
@@ -18,26 +17,46 @@ const statusColors: Record<string, string> = {
 
 const statusList = ["all", "pending", "paid", "partial", "draft", "cancelled"];
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function shiftDate(iso: string, days: number) {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtPickerDate(iso: string) {
+  const today = todayIso();
+  const yesterday = shiftDate(today, -1);
+  if (iso === today) return "Today";
+  if (iso === yesterday) return "Yesterday";
+  return fmtDate(iso + "T00:00:00");
+}
+
 export default function BillingPage() {
   const [activeStatus, setActiveStatus] = useState("all");
   const [page, setPage] = useState(1);
+  const [selectedDate, setSelectedDate] = useState(todayIso());
   const limit = 20;
 
   const { data, isLoading } = useListInvoices(
-    { status: activeStatus === "all" ? undefined : activeStatus, page, limit },
-    { query: { queryKey: getListInvoicesQueryKey({ status: activeStatus === "all" ? undefined : activeStatus, page, limit }) } }
+    { status: activeStatus === "all" ? undefined : activeStatus, date: selectedDate, page, limit },
+    { query: { queryKey: getListInvoicesQueryKey({ status: activeStatus === "all" ? undefined : activeStatus, date: selectedDate, page, limit }) } }
   );
 
   const invoices = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
+  const isToday = selectedDate === todayIso();
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Billing</h1>
-          <p className="text-sm text-muted-foreground">{total} invoices</p>
+          <p className="text-sm text-muted-foreground">{total} invoice{total !== 1 ? "s" : ""}</p>
         </div>
         <Link href="/billing/new">
           <Button data-testid="btn-new-invoice">
@@ -47,6 +66,46 @@ export default function BillingPage() {
         </Link>
       </div>
 
+      {/* Date picker row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center border border-border rounded-md bg-background shadow-sm overflow-hidden">
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-r border-border"
+            onClick={() => { setSelectedDate(d => shiftDate(d, -1)); setPage(1); }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="relative flex items-center">
+            <CalendarDays className="absolute left-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="date"
+              value={selectedDate}
+              max={todayIso()}
+              onChange={e => { if (e.target.value) { setSelectedDate(e.target.value); setPage(1); } }}
+              className="h-9 pl-8 pr-2 text-sm bg-transparent focus:outline-none min-w-[130px] cursor-pointer"
+            />
+          </div>
+          <span className={`px-2 text-xs font-medium border-l border-border h-9 flex items-center ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+            {fmtPickerDate(selectedDate)}
+          </span>
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-l border-border"
+            disabled={isToday}
+            onClick={() => { setSelectedDate(d => shiftDate(d, 1)); setPage(1); }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {!isToday && (
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => { setSelectedDate(todayIso()); setPage(1); }}>
+            <X className="h-3.5 w-3.5" />Today
+          </Button>
+        )}
+      </div>
+
+      {/* Status filter */}
       <div className="flex flex-wrap gap-1 bg-muted/30 rounded-lg p-1">
         {statusList.map(s => (
           <button
@@ -80,7 +139,7 @@ export default function BillingPage() {
                 {Array.from({ length: 5 }).map((__, j) => <td key={j} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>)}
               </tr>
             )) : invoices.length === 0 ? (
-              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">No invoices found</td></tr>
+              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">No invoices for {fmtPickerDate(selectedDate)}</td></tr>
             ) : invoices.map(inv => (
               <tr key={inv.id} className="border-b border-border hover:bg-muted/20">
                 <td className="px-3 py-3 font-mono text-xs text-primary">{inv.invoiceNumber}</td>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, lt, and } from "drizzle-orm";
 import { db, invoicesTable, chargeTypesTable, patientsTable, usersTable } from "@workspace/db";
 import {
   ListInvoicesQueryParams,
@@ -60,8 +60,9 @@ router.get("/billing/invoices", authenticate, async (req, res): Promise<void> =>
   if (params.success && params.data.patientId) query = query.where(eq(invoicesTable.patientId, params.data.patientId));
   if (params.success && params.data.status) query = query.where(eq(invoicesTable.status, params.data.status as "draft" | "pending" | "paid" | "partial" | "cancelled" | "refunded"));
   if (params.success && params.data.date) {
-    // Filter by date (created_at date portion — we store full timestamps)
-    // Simple string comparison works for ISO date strings
+    const dayStart = new Date(params.data.date + "T00:00:00.000Z");
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+    query = query.where(and(gte(invoicesTable.createdAt, dayStart), lt(invoicesTable.createdAt, dayEnd)));
   }
 
   const all = await query.orderBy(desc(invoicesTable.createdAt));
