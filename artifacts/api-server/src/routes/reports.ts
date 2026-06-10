@@ -52,8 +52,8 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
   const fullInvoices = await db.select().from(invoicesTable)
     .where(and(gte(invoicesTable.createdAt, dayStart), lt(invoicesTable.createdAt, dayEnd)));
 
-  const paidInvoices    = fullInvoices.filter(i => i.status === "paid");
-  const pendingInvoices = fullInvoices.filter(i => i.status !== "paid");
+  const paidInvoices    = fullInvoices.filter(i => i.status === "paid" || i.status === "partial");
+  const pendingInvoices = fullInvoices.filter(i => i.status === "pending" || i.status === "partial");
 
   const totalRevenue = paidInvoices.reduce((s, r) => s + r.amountPaid, 0);
 
