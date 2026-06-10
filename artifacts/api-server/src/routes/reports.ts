@@ -2,22 +2,9 @@ import { Router } from "express";
 import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { db, patientsTable, queueTokensTable, invoicesTable, consultationsTable, prescriptionsTable, certificatesTable, usersTable, chargeTypesTable } from "@workspace/db";
 import { authenticate, requireRole } from "../middlewares/authenticate";
-import { localDateStr } from "../lib/date";
+import { localDateStr, dayBounds, rangeBounds } from "../lib/date";
 
 const router = Router();
-
-function dayBounds(dateStr: string): [Date, Date] {
-  const start = new Date(dateStr + "T00:00:00.000Z");
-  const end   = new Date(start.getTime() + 86_400_000);
-  return [start, end];
-}
-
-function rangeBounds(startDate: string, endDate: string): [Date, Date] {
-  const start = new Date(startDate + "T00:00:00.000Z");
-  const end   = new Date(endDate   + "T00:00:00.000Z" );
-  end.setTime(end.getTime() + 86_400_000);
-  return [start, end];
-}
 
 router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> => {
   const date = req.query.date as string ?? localDateStr();

@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { authenticate, requireRole } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
+import { dayBounds } from "../lib/date";
 
 const router = Router();
 
@@ -60,8 +61,7 @@ router.get("/billing/invoices", authenticate, async (req, res): Promise<void> =>
   if (params.success && params.data.patientId) query = query.where(eq(invoicesTable.patientId, params.data.patientId));
   if (params.success && params.data.status) query = query.where(eq(invoicesTable.status, params.data.status as "draft" | "pending" | "paid" | "partial" | "cancelled" | "refunded"));
   if (params.success && params.data.date) {
-    const dayStart = new Date(params.data.date + "T00:00:00.000Z");
-    const dayEnd = new Date(dayStart.getTime() + 86400000);
+    const [dayStart, dayEnd] = dayBounds(params.data.date);
     query = query.where(and(gte(invoicesTable.createdAt, dayStart), lt(invoicesTable.createdAt, dayEnd)));
   }
 
@@ -218,7 +218,7 @@ router.patch("/billing/charge-types/:id", authenticate, requireRole("admin"), as
   }
   const [ct] = await db.update(chargeTypesTable)
     .set(parsed.data as Partial<typeof chargeTypesTable.$inferInsert>)
-    .where(eq(chargeTypesTable.id, req.params.id))
+    .where(eq(chargeTypesTable.id, String(req.params.id)))
     .returning();
   if (!ct) { res.status(404).json({ error: "Not found" }); return; }
   await logAudit(req, (req as { user?: { id: string } }).user?.id ?? "", "update", "charge_type", ct.id);
@@ -228,7 +228,7 @@ router.patch("/billing/charge-types/:id", authenticate, requireRole("admin"), as
 router.delete("/billing/charge-types/:id", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
   const [ct] = await db.update(chargeTypesTable)
     .set({ isActive: false })
-    .where(eq(chargeTypesTable.id, req.params.id))
+    .where(eq(chargeTypesTable.id, String(req.params.id)))
     .returning();
   if (!ct) { res.status(404).json({ error: "Not found" }); return; }
   await logAudit(req, (req as { user?: { id: string } }).user?.id ?? "", "delete", "charge_type", ct.id);
