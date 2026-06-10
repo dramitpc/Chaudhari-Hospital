@@ -16,7 +16,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PlusCircle, ChevronRight, RefreshCw, Receipt, DollarSign, Pencil } from "lucide-react";
+import { PlusCircle, ChevronLeft, ChevronRight, CalendarDays, X, RefreshCw, Receipt, DollarSign, Pencil } from "lucide-react";
+
+function shiftDate(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString("en-CA");
+}
+
+function fmtQueueDate(iso: string, today: string): string {
+  if (iso === today) return "Today";
+  if (iso === shiftDate(today, -1)) return "Yesterday";
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
 
 const statusColors: Record<string, string> = {
   waiting: "border-amber-400 bg-amber-50 dark:bg-amber-900/20",
@@ -83,6 +95,9 @@ export default function QueuePage() {
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [visitTypeFilter, setVisitTypeFilter] = useState<VisitTypeFilter>("");
+  const localToday = new Date().toLocaleDateString("en-CA");
+  const [selectedDate, setSelectedDate] = useState(localToday);
+  const isToday = selectedDate === localToday;
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenPatientId, setTokenPatientId] = useState("");
   const [tokenVisitType, setTokenVisitType] = useState<"new" | "followup">("new");
@@ -99,12 +114,9 @@ export default function QueuePage() {
     }
   }, [doctors, user, selectedDoctorId]);
 
-  // Use the browser's local date so UTC offset (e.g. IST +5:30) doesn't shift the day
-  const localToday = new Date().toLocaleDateString("en-CA"); // → "YYYY-MM-DD" in local tz
-
   const { data: queueData, isLoading, refetch } = useGetQueue(
-    { doctorId: selectedDoctorId || undefined, date: localToday },
-    { query: { enabled: !!selectedDoctorId, queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: localToday }) } }
+    { doctorId: selectedDoctorId || undefined, date: selectedDate },
+    { query: { enabled: !!selectedDoctorId, queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: selectedDate }) } }
   );
 
   const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });
@@ -181,11 +193,12 @@ export default function QueuePage() {
   };
 
   useEffect(() => {
+    if (!isToday) return;
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: localToday }) });
+      queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: selectedDate }) });
     }, 30000);
     return () => clearInterval(interval);
-  }, [selectedDoctorId, localToday, queryClient]);
+  }, [selectedDoctorId, selectedDate, isToday, queryClient]);
 
   const handleCallNext = () => {
     if (!selectedDoctorId) return;
@@ -297,25 +310,30 @@ export default function QueuePage() {
         <div>
           <h1 className="text-2xl font-bold">OPD Queue</h1>
           <p className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-            {" · "}Today only · Auto-refreshes every 30 seconds
+            {isToday ? "Today" : fmtQueueDate(selectedDate, localToday)}
+            {isToday && " · Auto-refreshes every 30 seconds"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="btn-refresh-queue">
             <RefreshCw className="h-4 w-4 mr-1" /> Refresh
           </Button>
-          <Button variant="outline" onClick={() => setShowTokenModal(true)} data-testid="btn-generate-token">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Generate Token
-          </Button>
-          <Button onClick={handleCallNext} disabled={callNextMutation.isPending || waiting.length === 0} data-testid="btn-call-next">
-            <ChevronRight className="mr-2 h-4 w-4" />
-            Call Next
-          </Button>
+          {isToday && (
+            <Button variant="outline" onClick={() => setShowTokenModal(true)} data-testid="btn-generate-token">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Generate Token
+            </Button>
+          )}
+          {isToday && (
+            <Button onClick={handleCallNext} disabled={callNextMutation.isPending || waiting.length === 0} data-testid="btn-call-next">
+              <ChevronRight className="mr-2 h-4 w-4" />
+              Call Next
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Doctor selector + Date picker */}
       <div className="flex flex-wrap items-center gap-3">
         <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
           <SelectTrigger className="w-full sm:w-64" data-testid="select-doctor">
@@ -325,7 +343,43 @@ export default function QueuePage() {
             {doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.fullName}</SelectItem>)}
           </SelectContent>
         </Select>
-        <span className="text-xs text-muted-foreground hidden sm:inline">Auto-refreshes every 30 seconds</span>
+
+        {/* Date picker */}
+        <div className="flex items-center border border-border rounded-md bg-background shadow-sm overflow-hidden">
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-r border-border"
+            onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="relative flex items-center">
+            <CalendarDays className="absolute left-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="date"
+              value={selectedDate}
+              max={localToday}
+              onChange={e => { if (e.target.value) setSelectedDate(e.target.value); }}
+              className="h-9 pl-8 pr-2 text-sm bg-transparent focus:outline-none min-w-[130px] cursor-pointer"
+            />
+          </div>
+          <span className={`px-2 text-xs font-medium border-l border-border h-9 flex items-center ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+            {fmtQueueDate(selectedDate, localToday)}
+          </span>
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-l border-border"
+            disabled={isToday}
+            onClick={() => setSelectedDate(d => shiftDate(d, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {!isToday && (
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setSelectedDate(localToday)}>
+            <X className="h-3.5 w-3.5" />Today
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -442,13 +496,13 @@ export default function QueuePage() {
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" />Edit Patient
                   </Button>
-                  {token.status === "waiting" && (
+                  {isToday && token.status === "waiting" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
                     </>
                   )}
-                  {token.status === "called" && (
+                  {isToday && token.status === "called" && (
                     <Button
                       size="sm"
                       onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
@@ -462,7 +516,7 @@ export default function QueuePage() {
                       Open Consultation
                     </Button>
                   )}
-                  {token.status === "consultation_done" && (
+                  {isToday && token.status === "consultation_done" && (
                     <Button
                       size="sm"
                       className="bg-purple-600 hover:bg-purple-700 text-white"
