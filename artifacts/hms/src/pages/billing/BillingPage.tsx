@@ -18,13 +18,13 @@ const statusColors: Record<string, string> = {
 const statusList = ["all", "pending", "paid", "partial", "draft", "cancelled"];
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("en-CA");
 }
 
 function shiftDate(iso: string, days: number) {
   const d = new Date(iso + "T00:00:00");
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return d.toLocaleDateString("en-CA");
 }
 
 function fmtPickerDate(iso: string) {
