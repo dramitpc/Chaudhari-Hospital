@@ -6,9 +6,10 @@ import {
   useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
-  useTranslatePreviewPrescription, useGetQueue,
+  useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation,
   getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey
 } from "@workspace/api-client-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,6 +107,7 @@ export default function ConsultationDetailPage() {
 
   const { data: drugsData } = useListDrugs({}, { query: { queryKey: getListDrugsQueryKey({}) } });
 
+  const { user } = useAuth();
   const updateMutation = useUpdateConsultation();
   const completeMutation = useCompleteConsultation();
   const createPrescriptionMutation = useCreatePrescription();
@@ -114,6 +116,7 @@ export default function ConsultationDetailPage() {
   const createInvoiceMutation = useCreateInvoice();
   const updateInvoiceMutation = useUpdateInvoice();
   const recordPaymentMutation = useRecordPayment();
+  const createInvestigationMutation = useCreateInvestigation();
   const { data: chargeTypes } = useListChargeTypes({ query: { queryKey: getListChargeTypesQueryKey() } });
 
   const patientId = consultation?.patientId ?? "";
@@ -391,7 +394,19 @@ export default function ConsultationDetailPage() {
     if (!invType.trim()) return;
     trackInvestigationRecent({ type: invType, bodyPart: invBodyPart, notes: invNotes });
     appendInvToField([formatInvLine(invType, invBodyPart, invNotes)]);
-    toast({ title: "Investigation added to field" });
+    if (patientId && user?.id) {
+      createInvestigationMutation.mutate({ data: {
+        patientId,
+        patientName: patient?.fullName ?? undefined,
+        consultationId: id,
+        requestedById: user.id,
+        requestedByName: user.fullName ?? undefined,
+        type: invType.trim(),
+        bodyPart: invBodyPart.trim() || undefined,
+        notes: invNotes.trim() || undefined,
+      }});
+    }
+    toast({ title: "Investigation ordered" });
     setShowInvestigationModal(false);
     setInvType(""); setInvBodyPart(""); setInvNotes("");
   };
@@ -1562,7 +1577,19 @@ export default function ConsultationDetailPage() {
               onApplyMultiple={(entries) => {
                 entries.forEach(e => trackInvestigationRecent(e));
                 appendInvToField(entries.map(e => formatInvLine(e.type, e.bodyPart, e.notes)));
-                toast({ title: `${entries.length} investigations added to field` });
+                if (patientId && user?.id) {
+                  entries.forEach(e => createInvestigationMutation.mutate({ data: {
+                    patientId,
+                    patientName: patient?.fullName ?? undefined,
+                    consultationId: id,
+                    requestedById: user.id,
+                    requestedByName: user.fullName ?? undefined,
+                    type: e.type.trim(),
+                    bodyPart: e.bodyPart.trim() || undefined,
+                    notes: e.notes.trim() || undefined,
+                  }}));
+                }
+                toast({ title: `${entries.length} investigation${entries.length > 1 ? "s" : ""} ordered` });
                 setShowInvestigationModal(false);
                 setInvType(""); setInvBodyPart(""); setInvNotes("");
               }}
