@@ -6,9 +6,8 @@ import {
   useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
-  useCreateInvestigation, useUpdateInvestigation, useListInvestigations,
   useTranslatePreviewPrescription, useGetQueue,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -74,16 +73,6 @@ function openInNewTab(dataUrl: string) {
   }
 }
 
-const INV_STATUS_COLORS: Record<string, string> = {
-  pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  completed:   "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  cancelled:   "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-};
-
-const INV_STATUS_LABELS: Record<string, string> = {
-  pending: "Pending", in_progress: "In Progress", completed: "Completed", cancelled: "Cancelled",
-};
 const RX_PREVIEW_LANGUAGES = [
   { code: "en", label: "English" },
   { code: "hi", label: "हिन्दी (Hindi)" },
@@ -122,7 +111,6 @@ export default function ConsultationDetailPage() {
   const createPrescriptionMutation = useCreatePrescription();
   const updatePrescriptionMutation = useUpdatePrescription();
   const updatePatientMutation = useUpdatePatient();
-  const createInvestigationMutation = useCreateInvestigation();
   const createInvoiceMutation = useCreateInvoice();
   const updateInvoiceMutation = useUpdateInvoice();
   const recordPaymentMutation = useRecordPayment();
@@ -378,62 +366,34 @@ export default function ConsultationDetailPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   // ── Order Investigation state ──────────────────────────────────────────────
-  const updateInvestigationMutation = useUpdateInvestigation();
   const [showInvestigationModal, setShowInvestigationModal] = useState(false);
   const [invType, setInvType] = useState("");
   const [invBodyPart, setInvBodyPart] = useState("");
   const [invNotes, setInvNotes] = useState("");
-  // Inline notes editing per investigation card
-  const [editingInvId, setEditingInvId] = useState<string | null>(null);
-  const [editingInvNotes, setEditingInvNotes] = useState("");
 
-  const { data: existingInvestigations } = useListInvestigations(
-    { consultationId: id },
-    { query: { enabled: !!id, queryKey: getListInvestigationsQueryKey({ consultationId: id }) } }
-  );
+  const formatInvLine = (type: string, bodyPart: string, notes: string): string => {
+    let line = `• ${type}`;
+    if (bodyPart.trim()) line += ` — ${bodyPart.trim()}`;
+    if (notes.trim()) line += `\n  ${notes.trim()}`;
+    return line;
+  };
 
-  const handleSaveInvNotes = (invId: string) => {
-    updateInvestigationMutation.mutate(
-      { id: invId, data: { notes: editingInvNotes } },
-      {
-        onSuccess: () => {
-          toast({ title: "Notes updated" });
-          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
-          setEditingInvId(null);
-        },
-        onError: () => toast({ title: "Failed to save notes", variant: "destructive" }),
-      }
-    );
+  const appendInvToField = (lines: string[]) => {
+    const addition = lines.join("\n");
+    setInvestigationValue(prev => {
+      const next = prev.trim() ? `${prev.trim()}\n${addition}` : addition;
+      handleBlur("investigationOrders", next);
+      return next;
+    });
   };
 
   const handleOrderInvestigation = () => {
-    if (!consultation || !invType.trim()) return;
-    createInvestigationMutation.mutate(
-      {
-        data: {
-          patientId: consultation.patientId,
-          patientName: consultation.patientName ?? undefined,
-          consultationId: id,
-          requestedById: consultation.doctorId,
-          requestedByName: consultation.doctorName ?? undefined,
-          type: invType,
-          bodyPart: invBodyPart || undefined,
-          notes: invNotes || undefined,
-        },
-      },
-      {
-        onSuccess: () => {
-          trackInvestigationRecent({ type: invType, bodyPart: invBodyPart, notes: invNotes });
-          toast({ title: "Investigation ordered" });
-          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
-          setShowInvestigationModal(false);
-          setInvType("");
-          setInvBodyPart("");
-          setInvNotes("");
-        },
-        onError: () => toast({ title: "Failed to order investigation", variant: "destructive" }),
-      }
-    );
+    if (!invType.trim()) return;
+    trackInvestigationRecent({ type: invType, bodyPart: invBodyPart, notes: invNotes });
+    appendInvToField([formatInvLine(invType, invBodyPart, invNotes)]);
+    toast({ title: "Investigation added to field" });
+    setShowInvestigationModal(false);
+    setInvType(""); setInvBodyPart(""); setInvNotes("");
   };
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -790,11 +750,6 @@ export default function ConsultationDetailPage() {
             data-testid="btn-order-investigation"
           >
             <ScanLine className="mr-1.5 h-3 w-3" /> Order Investigation
-            {(existingInvestigations?.data?.length ?? 0) > 0 && (
-              <span className="ml-1.5 text-xs text-muted-foreground">
-                ({existingInvestigations!.data!.length})
-              </span>
-            )}
           </Button>
           <Link href={`/certificates?patientId=${consultation?.patientId ?? ""}&doctorId=${consultation?.doctorId ?? ""}`}>
             <Button size="sm" variant="outline">
@@ -1098,123 +1053,6 @@ export default function ConsultationDetailPage() {
                 );
               })()}
 
-              {/* Radiology job results */}
-              {(() => {
-                const jobs = existingInvestigations?.data ?? [];
-                if (jobs.length === 0) return null;
-                return (
-                  <div className="space-y-2">
-                    <Label className="text-xs flex items-center gap-1.5">
-                      <ScanLine className="h-3.5 w-3.5" /> Radiology Jobs ({jobs.length})
-                    </Label>
-                    <div className="space-y-2">
-                      {jobs.map(inv => {
-                        const atts = parseAttachments(inv.imageAttachment);
-                        return (
-                          <div
-                            key={inv.id}
-                            className="rounded-lg border border-border bg-card p-3 space-y-2"
-                          >
-                            {/* Header row */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {inv.type}
-                                  {inv.bodyPart ? <span className="text-muted-foreground font-normal"> — {inv.bodyPart}</span> : ""}
-                                </p>
-                              </div>
-                              <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${INV_STATUS_COLORS[inv.status]}`}>
-                                {INV_STATUS_LABELS[inv.status]}
-                              </span>
-                            </div>
-
-                            {/* Consultant notes — inline edit */}
-                            {editingInvId === inv.id ? (
-                              <div className="space-y-1.5">
-                                <p className="text-xs font-medium text-muted-foreground">Clinical Notes</p>
-                                <Textarea
-                                  autoFocus
-                                  className="text-sm"
-                                  rows={3}
-                                  value={editingInvNotes}
-                                  onChange={e => setEditingInvNotes(e.target.value)}
-                                  placeholder="Add clinical context, suspicion, urgency..."
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingInvId(null)}>Cancel</Button>
-                                  <Button size="sm" className="h-7 text-xs" onClick={() => handleSaveInvNotes(inv.id)} disabled={updateInvestigationMutation.isPending}>
-                                    Save Notes
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-start gap-2 min-h-[1.25rem]">
-                                <p className="text-xs text-muted-foreground flex-1 whitespace-pre-wrap">
-                                  {inv.notes || <span className="italic">No clinical notes</span>}
-                                </p>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 px-2 text-xs shrink-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() => { setEditingInvId(inv.id); setEditingInvNotes(inv.notes ?? ""); }}
-                                >
-                                  {inv.notes ? "Edit" : "+ Add"} Notes
-                                </Button>
-                              </div>
-                            )}
-
-                            {/* Completed results */}
-                            {inv.status === "completed" && (
-                              <div className="space-y-2 pt-1 border-t border-border">
-                                {inv.resultNotes && (
-                                  <div className="space-y-0.5">
-                                    <p className="text-xs font-medium text-muted-foreground">Result Notes</p>
-                                    <p className="text-sm whitespace-pre-wrap">{inv.resultNotes}</p>
-                                  </div>
-                                )}
-                                {atts.length > 0 && (
-                                  <div className="space-y-1">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                      <Paperclip className="h-3 w-3" />
-                                      {atts.length} attachment{atts.length > 1 ? "s" : ""}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                      {atts.map((att, idx) => (
-                                        isPdfData(att.data) ? (
-                                          <button
-                                            key={idx}
-                                            onClick={() => openInNewTab(att.data)}
-                                            className="flex items-center gap-1.5 rounded border border-border bg-red-50 dark:bg-red-950/30 px-2.5 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 hover:ring-2 hover:ring-red-400 transition"
-                                          >
-                                            <FileText className="h-3.5 w-3.5 shrink-0" />
-                                            {att.name.length > 20 ? att.name.slice(0, 18) + "…" : att.name}
-                                          </button>
-                                        ) : (
-                                          <button
-                                            key={idx}
-                                            onClick={() => setInvImagePreview({ open: true, src: att.data, label: att.name })}
-                                            className="block rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
-                                            title={att.name}
-                                          >
-                                            <img src={att.data} alt={att.name} className="h-16 w-16 object-cover" />
-                                          </button>
-                                        )
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {!inv.resultNotes && atts.length === 0 && (
-                                  <p className="text-xs text-muted-foreground italic">No result notes or attachments added by radiographer.</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
             </TabsContent>
 
             {/* ── Diagnosis & Advice tab ──────────────────────────────────── */}
@@ -1721,25 +1559,10 @@ export default function ConsultationDetailPage() {
                 setInvBodyPart(bodyPart);
                 setInvNotes(notes);
               }}
-              onApplyMultiple={async (entries) => {
-                if (!consultation) return;
-                for (const entry of entries) {
-                  await createInvestigationMutation.mutateAsync({
-                    data: {
-                      patientId: consultation.patientId,
-                      patientName: consultation.patientName ?? undefined,
-                      consultationId: id,
-                      requestedById: consultation.doctorId,
-                      requestedByName: consultation.doctorName ?? undefined,
-                      type: entry.type,
-                      bodyPart: entry.bodyPart || undefined,
-                      notes: entry.notes || undefined,
-                    },
-                  });
-                  trackInvestigationRecent(entry);
-                }
-                toast({ title: `${entries.length} investigations ordered` });
-                queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id }) });
+              onApplyMultiple={(entries) => {
+                entries.forEach(e => trackInvestigationRecent(e));
+                appendInvToField(entries.map(e => formatInvLine(e.type, e.bodyPart, e.notes)));
+                toast({ title: `${entries.length} investigations added to field` });
                 setShowInvestigationModal(false);
                 setInvType(""); setInvBodyPart(""); setInvNotes("");
               }}
@@ -1779,7 +1602,7 @@ export default function ConsultationDetailPage() {
             <Button variant="outline" onClick={() => setShowInvestigationModal(false)}>Cancel</Button>
             <Button
               onClick={handleOrderInvestigation}
-              disabled={!invType.trim() || createInvestigationMutation.isPending}
+              disabled={!invType.trim()}
             >
               <ScanLine className="mr-2 h-4 w-4" />
               Order
