@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
+import { CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtDate } from "@/lib/dateUtils";
 
@@ -169,6 +171,53 @@ function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress,
   );
 }
 
+function DatePickerField({
+  label, value, onChange, placeholder = "Pick a date",
+}: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? new Date(value + "T00:00:00") : undefined;
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left font-normal h-9 px-3"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+            {value ? (
+              <span>{fmtDate(value + "T00:00:00")}</span>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+            {value && (
+              <X
+                className="ml-auto h-3.5 w-3.5 text-muted-foreground hover:text-foreground shrink-0"
+                onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }}
+              />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={d => {
+              onChange(d ? d.toLocaleDateString("en-CA") : "");
+              setOpen(false);
+            }}
+            captionLayout="dropdown"
+            defaultMonth={selected ?? new Date()}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 export default function CertificatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -186,7 +235,7 @@ export default function CertificatesPage() {
     patientId: urlPatientId,
     doctorId: urlDoctorId || (user?.role === "doctor" ? user?.id ?? "" : ""),
     type: "sick_leave",
-    issuedDate: new Date().toLocaleDateString("en-CA"),
+    issuedDate: "",
     fromDate: "",
     toDate: "",
     diagnosis: "",
@@ -238,7 +287,7 @@ export default function CertificatesPage() {
         toast({ title: "Certificate issued" });
         queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
         setShowCreate(false);
-        setForm(f => ({ ...f, patientId: "", diagnosis: "", content: "", fromDate: "", toDate: "" }));
+        setForm(f => ({ ...f, patientId: "", issuedDate: "", diagnosis: "", content: "", fromDate: "", toDate: "" }));
         resetPatientSearch();
       },
       onError: () => toast({ title: "Error", variant: "destructive" }),
@@ -411,18 +460,24 @@ export default function CertificatesPage() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Issued Date</Label>
-                    <Input type="date" value={form.issuedDate} onChange={e => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">From Date</Label>
-                    <Input type="date" value={form.fromDate} onChange={e => setForm(f => ({ ...f, fromDate: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">To Date</Label>
-                    <Input type="date" value={form.toDate} onChange={e => setForm(f => ({ ...f, toDate: e.target.value }))} />
-                  </div>
+                  <DatePickerField
+                    label="Issued Date"
+                    value={form.issuedDate}
+                    onChange={v => setForm(f => ({ ...f, issuedDate: v }))}
+                    placeholder="Issue date"
+                  />
+                  <DatePickerField
+                    label="From Date"
+                    value={form.fromDate}
+                    onChange={v => setForm(f => ({ ...f, fromDate: v }))}
+                    placeholder="From"
+                  />
+                  <DatePickerField
+                    label="To Date"
+                    value={form.toDate}
+                    onChange={v => setForm(f => ({ ...f, toDate: v }))}
+                    placeholder="To"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Diagnosis</Label>
