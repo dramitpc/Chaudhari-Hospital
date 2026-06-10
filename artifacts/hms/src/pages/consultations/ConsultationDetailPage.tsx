@@ -372,9 +372,9 @@ export default function ConsultationDetailPage() {
   const [invNotes, setInvNotes] = useState("");
 
   const formatInvLine = (type: string, bodyPart: string, notes: string): string => {
-    let line = `• ${type}`;
-    if (bodyPart.trim()) line += ` — ${bodyPart.trim()}`;
-    if (notes.trim()) line += `\n  ${notes.trim()}`;
+    let line = type.trim();
+    if (bodyPart.trim()) line += ` - ${bodyPart.trim()}`;
+    if (notes.trim()) line += ` (${notes.trim()})`;
     return line;
   };
 
