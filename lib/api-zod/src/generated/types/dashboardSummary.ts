@@ -15,4 +15,6 @@ export interface DashboardSummary {
   completedConsultations: number;
   pendingBilling?: number;
   newPatientsThisMonth?: number;
+  /** Server date used for today's stats (YYYY-MM-DD) */
+  today?: string;
 }

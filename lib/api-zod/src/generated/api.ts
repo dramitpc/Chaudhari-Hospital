@@ -1808,7 +1808,8 @@ export const GetDashboardSummaryResponse = zod.object({
   "todayAppointments": zod.number(),
   "completedConsultations": zod.number(),
   "pendingBilling": zod.number().optional(),
-  "newPatientsThisMonth": zod.number().optional()
+  "newPatientsThisMonth": zod.number().optional(),
+  "today": zod.string().optional().describe('Server date used for today\'s stats (YYYY-MM-DD)')
 })
 
 

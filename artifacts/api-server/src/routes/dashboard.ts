@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, gte, and, sql } from "drizzle-orm";
+import { eq, desc, gte, lt, and, sql } from "drizzle-orm";
 import {
   db,
   patientsTable,
@@ -14,9 +14,17 @@ import { localDateStr } from "../lib/date";
 
 const router = Router();
 
+function dayBounds(dateStr: string): [Date, Date] {
+  const start = new Date(dateStr + "T00:00:00.000Z");
+  const end   = new Date(start.getTime() + 86_400_000);
+  return [start, end];
+}
+
 router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> => {
   const today = localDateStr();
   const monthStart = `${today.slice(0, 7)}-01`;
+  const [todayStart, todayEnd] = dayBounds(today);
+  const monthStartDate = new Date(monthStart + "T00:00:00.000Z");
 
   const [
     totalPatientsResult,
@@ -31,11 +39,11 @@ router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> =
     db.select({ count: sql<number>`count(*)` }).from(patientsTable),
     db.select({ count: sql<number>`count(*)` }).from(queueTokensTable).where(eq(queueTokensTable.queueDate, today)),
     db.select({ count: sql<number>`count(*)` }).from(queueTokensTable).where(and(eq(queueTokensTable.queueDate, today), eq(queueTokensTable.status, "waiting"))),
-    db.select({ total: sql<number>`coalesce(sum(total), 0)` }).from(invoicesTable).where(sql`date(created_at) = ${today}`),
+    db.select({ total: sql<number>`coalesce(sum(total), 0)` }).from(invoicesTable).where(and(gte(invoicesTable.createdAt, todayStart), lt(invoicesTable.createdAt, todayEnd))),
     db.select({ count: sql<number>`count(*)` }).from(appointmentsTable).where(eq(appointmentsTable.appointmentDate, today)),
     db.select({ count: sql<number>`count(*)` }).from(consultationsTable).where(and(eq(consultationsTable.visitDate, today), eq(consultationsTable.status, "completed"))),
     db.select({ count: sql<number>`count(*)` }).from(invoicesTable).where(eq(invoicesTable.status, "pending")),
-    db.select({ count: sql<number>`count(*)` }).from(patientsTable).where(sql`date(created_at) >= ${monthStart}`),
+    db.select({ count: sql<number>`count(*)` }).from(patientsTable).where(gte(patientsTable.createdAt, monthStartDate)),
   ]);
 
   res.json({
@@ -47,6 +55,7 @@ router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> =
     completedConsultations: Number(todayConsultationsResult[0]?.count ?? 0),
     pendingBilling: Number(pendingBillingResult[0]?.count ?? 0),
     newPatientsThisMonth: Number(newPatientsMonthResult[0]?.count ?? 0),
+    today,
   });
 });
 
@@ -90,10 +99,11 @@ router.get("/dashboard/revenue-chart", authenticate, async (req, res): Promise<v
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = localDateStr(d);
+    const [dayStart, dayEnd] = dayBounds(dateStr);
     const result = await db.select({
       total: sql<number>`coalesce(sum(total), 0)`,
       count: sql<number>`count(*)`,
-    }).from(invoicesTable).where(sql`date(created_at) = ${dateStr}`);
+    }).from(invoicesTable).where(and(gte(invoicesTable.createdAt, dayStart), lt(invoicesTable.createdAt, dayEnd)));
     points.push({ date: dateStr, revenue: Number(result[0]?.total ?? 0), count: Number(result[0]?.count ?? 0) });
   }
   res.json(points);
@@ -106,8 +116,9 @@ router.get("/dashboard/patient-trends", authenticate, async (req, res): Promise<
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = localDateStr(d);
+    const [dayStart, dayEnd] = dayBounds(dateStr);
     const total = await db.select({ count: sql<number>`count(*)` }).from(queueTokensTable).where(eq(queueTokensTable.queueDate, dateStr));
-    const newP = await db.select({ count: sql<number>`count(*)` }).from(patientsTable).where(sql`date(created_at) = ${dateStr}`);
+    const newP = await db.select({ count: sql<number>`count(*)` }).from(patientsTable).where(and(gte(patientsTable.createdAt, dayStart), lt(patientsTable.createdAt, dayEnd)));
     points.push({ date: dateStr, count: Number(total[0]?.count ?? 0), newPatients: Number(newP[0]?.count ?? 0) });
   }
   res.json(points);

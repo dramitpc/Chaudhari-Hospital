@@ -2864,6 +2864,9 @@ components:
           type: integer
         newPatientsThisMonth:
           type: integer
+        today:
+          type: string
+          description: Server date used for today's stats (YYYY-MM-DD)
 
     DoctorQueueStatus:
       type: object

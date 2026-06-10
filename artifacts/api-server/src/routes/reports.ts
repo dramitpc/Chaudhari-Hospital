@@ -1,27 +1,46 @@
 import { Router } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { db, patientsTable, queueTokensTable, invoicesTable, consultationsTable, prescriptionsTable, certificatesTable, usersTable, chargeTypesTable } from "@workspace/db";
 import { authenticate, requireRole } from "../middlewares/authenticate";
 import { localDateStr } from "../lib/date";
 
 const router = Router();
 
+function dayBounds(dateStr: string): [Date, Date] {
+  const start = new Date(dateStr + "T00:00:00.000Z");
+  const end   = new Date(start.getTime() + 86_400_000);
+  return [start, end];
+}
+
+function rangeBounds(startDate: string, endDate: string): [Date, Date] {
+  const start = new Date(startDate + "T00:00:00.000Z");
+  const end   = new Date(endDate   + "T00:00:00.000Z" );
+  end.setTime(end.getTime() + 86_400_000);
+  return [start, end];
+}
+
 router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> => {
   const date = req.query.date as string ?? localDateStr();
   const doctorId = req.query.doctorId as string | undefined;
+  const [dayStart, dayEnd] = dayBounds(date);
 
   let tokenQuery = db.select().from(queueTokensTable).where(eq(queueTokensTable.queueDate, date)).$dynamic();
   if (doctorId) tokenQuery = tokenQuery.where(eq(queueTokensTable.doctorId, doctorId));
   const tokens = await tokenQuery;
 
   const totalPatients = tokens.length;
-  const newPatients = await db.select({ count: sql<number>`count(*)` }).from(patientsTable).where(sql`date(created_at) = ${date}`);
+  const newPatients = await db.select({ count: sql<number>`count(*)` }).from(patientsTable)
+    .where(and(gte(patientsTable.createdAt, dayStart), lt(patientsTable.createdAt, dayEnd)));
 
   const doctors = await db.select().from(usersTable).where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)));
   const byDoctor = await Promise.all(doctors.map(async (doc) => {
     const docTokens = tokens.filter(t => t.doctorId === doc.id);
     const docInvoices = await db.select({ total: sql<number>`coalesce(sum(total),0)` }).from(invoicesTable)
-      .where(and(sql`date(created_at) = ${date}`, eq(invoicesTable.doctorId, doc.id)));
+      .where(and(
+        gte(invoicesTable.createdAt, dayStart),
+        lt(invoicesTable.createdAt, dayEnd),
+        eq(invoicesTable.doctorId, doc.id),
+      ));
     return {
       doctorId: doc.id,
       doctorName: doc.fullName,
@@ -30,16 +49,14 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
     };
   }));
 
-  const fullInvoices = await db.select().from(invoicesTable).where(sql`date(invoices.created_at) = ${date}`);
+  const fullInvoices = await db.select().from(invoicesTable)
+    .where(and(gte(invoicesTable.createdAt, dayStart), lt(invoicesTable.createdAt, dayEnd)));
 
-  // Split paid vs pending (pending = any status that isn't fully paid)
   const paidInvoices    = fullInvoices.filter(i => i.status === "paid");
   const pendingInvoices = fullInvoices.filter(i => i.status !== "paid");
 
-  // Collected revenue = paid invoices only
   const totalRevenue = paidInvoices.reduce((s, r) => s + r.amountPaid, 0);
 
-  // Payment-mode breakdown — only from paid invoices
   const modeMap: Record<string, { amount: number; count: number }> = {};
   for (const r of paidInvoices) {
     const mode = r.paymentMode ?? "unknown";
@@ -49,7 +66,6 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
   }
   const byPaymentMode = Object.entries(modeMap).map(([mode, v]) => ({ mode, ...v }));
 
-  // Revenue list — per invoice with patient name + line item breakdown
   const allPatients = await db.select({ id: patientsTable.id, fullName: patientsTable.fullName }).from(patientsTable);
   const patientMap: Record<string, string> = {};
   for (const p of allPatients) patientMap[p.id] = p.fullName;
@@ -100,15 +116,15 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
 router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => {
   const startDate = req.query.startDate as string ?? localDateStr(new Date(Date.now() - 30 * 86400000));
   const endDate = req.query.endDate as string ?? localDateStr();
+  const [rangeStart, rangeEnd] = rangeBounds(startDate, endDate);
 
   const invoices = await db.select().from(invoicesTable)
-    .where(sql`date(created_at) between ${startDate} and ${endDate}`);
+    .where(and(gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd)));
 
   const totalRevenue = invoices.reduce((s, i) => s + i.total, 0);
   const collected = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amountPaid, 0);
   const pending = invoices.filter(i => i.status === "pending" || i.status === "partial").reduce((s, i) => s + i.balance, 0);
 
-  // Daily breakdown
   const dailyMap: Record<string, { revenue: number; count: number }> = {};
   for (const inv of invoices) {
     const d = inv.createdAt.toISOString().split("T")[0];
@@ -118,14 +134,13 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   }
   const daily = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date, ...v }));
 
-  // Charge-type breakdown — parse JSONB items from each invoice
   const allChargeTypes = await db.select().from(chargeTypesTable);
   const ctMap: Record<string, { name: string; category: string }> = {};
   for (const ct of allChargeTypes) ctMap[ct.id] = { name: ct.name, category: ct.category };
 
   type BreakRow = { name: string; category: string; total: number; count: number };
   const byTypeMap: Record<string, BreakRow> = {};
-  const byCatMap: Record<string, BreakRow> = {};
+  const byCatMap:  Record<string, BreakRow> = {};
 
   for (const inv of invoices) {
     const items = (inv.items as unknown as { chargeTypeId?: string; description?: string; total?: number }[]) ?? [];
@@ -155,6 +170,7 @@ router.get("/reports/doctor-productivity", authenticate, async (req, res): Promi
   const startDate = req.query.startDate as string ?? localDateStr(new Date(Date.now() - 30 * 86400000));
   const endDate = req.query.endDate as string ?? localDateStr();
   const filterDoctorId = req.query.doctorId as string | undefined;
+  const [rangeStart, rangeEnd] = rangeBounds(startDate, endDate);
 
   let doctorsQuery = db.select().from(usersTable).where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true))).$dynamic();
   if (filterDoctorId) doctorsQuery = doctorsQuery.where(eq(usersTable.id, filterDoctorId));
@@ -166,11 +182,11 @@ router.get("/reports/doctor-productivity", authenticate, async (req, res): Promi
     const consultations = await db.select().from(consultationsTable)
       .where(and(eq(consultationsTable.doctorId, doc.id), sql`visit_date between ${startDate} and ${endDate}`));
     const invoices = await db.select({ total: sql<number>`coalesce(sum(total),0)` }).from(invoicesTable)
-      .where(and(eq(invoicesTable.doctorId, doc.id), sql`date(created_at) between ${startDate} and ${endDate}`));
+      .where(and(eq(invoicesTable.doctorId, doc.id), gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd)));
     const prescriptions = await db.select({ count: sql<number>`count(*)` }).from(prescriptionsTable)
       .where(and(eq(prescriptionsTable.doctorId, doc.id), sql`visit_date between ${startDate} and ${endDate}`));
     const certs = await db.select({ count: sql<number>`count(*)` }).from(certificatesTable)
-      .where(and(eq(certificatesTable.doctorId, doc.id), sql`date(created_at) between ${startDate} and ${endDate}`));
+      .where(and(eq(certificatesTable.doctorId, doc.id), gte(certificatesTable.createdAt, rangeStart), lt(certificatesTable.createdAt, rangeEnd)));
 
     return {
       doctorId: doc.id,

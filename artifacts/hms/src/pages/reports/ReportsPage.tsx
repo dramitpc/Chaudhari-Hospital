@@ -293,7 +293,7 @@ export default function ReportsPage() {
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={revenueReport.daily ?? []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d: string) => { const [,m,day] = d.split("-"); return `${day}/${m}`; }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${v}`} />
                     <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} />
                     <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} dot={false} />
