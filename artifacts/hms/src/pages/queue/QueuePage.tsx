@@ -96,8 +96,10 @@ export default function QueuePage() {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [visitTypeFilter, setVisitTypeFilter] = useState<VisitTypeFilter>("");
   const localToday = new Date().toLocaleDateString("en-CA");
+  const localYesterday = shiftDate(localToday, -1);
   const [selectedDate, setSelectedDate] = useState(localToday);
   const isToday = selectedDate === localToday;
+  const isServable = isToday || selectedDate === localYesterday; // today + yesterday can be acted on
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenPatientId, setTokenPatientId] = useState("");
   const [tokenVisitType, setTokenVisitType] = useState<"new" | "followup">("new");
@@ -324,7 +326,7 @@ export default function QueuePage() {
               Generate Token
             </Button>
           )}
-          {isToday && (
+          {isServable && (
             <Button onClick={handleCallNext} disabled={callNextMutation.isPending || waiting.length === 0} data-testid="btn-call-next">
               <ChevronRight className="mr-2 h-4 w-4" />
               Call Next
@@ -496,13 +498,13 @@ export default function QueuePage() {
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" />Edit Patient
                   </Button>
-                  {isToday && token.status === "waiting" && (
+                  {isServable && token.status === "waiting" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "called")}>Call</Button>
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
                     </>
                   )}
-                  {isToday && token.status === "called" && (
+                  {isServable && token.status === "called" && (
                     <Button
                       size="sm"
                       onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
@@ -516,7 +518,7 @@ export default function QueuePage() {
                       Open Consultation
                     </Button>
                   )}
-                  {isToday && token.status === "consultation_done" && (
+                  {isServable && token.status === "consultation_done" && (
                     <Button
                       size="sm"
                       className="bg-purple-600 hover:bg-purple-700 text-white"
