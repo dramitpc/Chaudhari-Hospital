@@ -1281,7 +1281,7 @@ export default function ConsultationDetailPage() {
                     className="col-span-full"
                     value={referenceToValue}
                     onChange={e => setReferenceToValue(e.target.value)}
-                    onBlur={e => { handleBlur("referenceTo", e.target.value); trackFieldRecent("clinicos_reference_to_recent", e.target.value); }}
+                    onBlur={e => { handleBlur("referenceTo", e.target.value); trackFieldRecent("clinicos_reference_to", e.target.value); }}
                     placeholder="Dr. Name / Hospital / Speciality"
                   />
                 </div>
