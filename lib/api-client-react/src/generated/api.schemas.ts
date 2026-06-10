@@ -577,6 +577,11 @@ export interface QueueToken {
   id: string;
   tokenNumber: number;
   patientId: string;
+  /**
+     * Human-readable patient ID (e.g. P-0001)
+     * @nullable
+     */
+  patientNumber?: string | null;
   patientName?: string;
   /** @nullable */
   patientPhone?: string | null;

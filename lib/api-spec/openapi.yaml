@@ -2026,6 +2026,9 @@ components:
           type: integer
         patientId:
           type: string
+        patientNumber:
+          type: ["string", "null"]
+          description: Human-readable patient ID (e.g. P-0001)
         patientName:
           type: string
         patientPhone:

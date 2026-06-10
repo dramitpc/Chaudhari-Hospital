@@ -27,6 +27,7 @@ function deriveAge(dob?: string | null, ageText?: string | null): string | null 
 
 async function formatToken(t: typeof queueTokensTable.$inferSelect) {
   const [patient] = await db.select({
+    patientId: patientsTable.patientId,
     salutation: patientsTable.salutation,
     fullName: patientsTable.fullName,
     phone: patientsTable.phone,
@@ -40,6 +41,7 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
     id: t.id,
     tokenNumber: t.tokenNumber,
     patientId: t.patientId,
+    patientNumber: patient?.patientId ?? null,
     patientName: [patient?.salutation, patient?.fullName].filter(Boolean).join(" ") || "",
     patientPhone: patient?.phone ?? null,
     patientAge: deriveAge(patient?.dateOfBirth, patient?.age),

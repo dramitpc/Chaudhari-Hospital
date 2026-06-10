@@ -480,6 +480,9 @@ export default function QueuePage() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {token.patientNumber && (
+                        <span className="font-mono font-medium text-foreground/70 mr-1.5">{token.patientNumber}</span>
+                      )}
                       {token.patientPhone ?? "No phone"}
                       <span className="mx-1.5 opacity-40">·</span>
                       <span title="Token generated at">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
