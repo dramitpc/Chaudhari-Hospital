@@ -20,6 +20,8 @@ export const queueTokensTable = pgTable("queue_tokens", {
   status: queueStatusEnum("status").notNull().default("waiting"),
   visitType: visitTypeEnum("visit_type").notNull().default("new"),
   priority: integer("priority").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
+  skippedCount: integer("skipped_count").notNull().default(0),
   queueDate: text("queue_date").notNull(),
   consultationStartedAt: timestamp("consultation_started_at", { withTimezone: true }),
   consultationEndedAt: timestamp("consultation_ended_at", { withTimezone: true }),

@@ -36,4 +36,6 @@ export interface QueueToken {
   consultationStartedAt?: string | null;
   /** @nullable */
   consultationEndedAt?: string | null;
+  /** How many times this token has been skipped and re-queued */
+  skippedCount?: number;
 }

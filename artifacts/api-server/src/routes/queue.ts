@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, isNotNull, sql } from "drizzle-orm";
 import { db, queueTokensTable, patientsTable, usersTable, consultationsTable } from "@workspace/db";
 import {
   GetQueueQueryParams,
@@ -51,6 +51,7 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
     status: t.status,
     visitType: t.visitType,
     priority: t.priority,
+    skippedCount: t.skippedCount,
     estimatedWaitMinutes: null as number | null,
     queueDate: t.queueDate,
     createdAt: t.createdAt.toISOString(),
@@ -68,14 +69,14 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const doctorId = params.success ? params.data.doctorId : undefined;
   const visitType = params.success ? (params.data as Record<string, unknown>).visitType as string | undefined : undefined;
 
-  // Fetch ALL tokens (no visitType filter at DB level) so wait math is correct
   const whereClause = doctorId
     ? and(eq(queueTokensTable.queueDate, date), eq(queueTokensTable.doctorId, doctorId))
     : eq(queueTokensTable.queueDate, date);
 
+  // Sort by sortOrder (respects skip re-insertion) then tokenNumber as tiebreak
   const tokens = await db.select().from(queueTokensTable)
     .where(whereClause)
-    .orderBy(queueTokensTable.tokenNumber);
+    .orderBy(asc(queueTokensTable.sortOrder), asc(queueTokensTable.tokenNumber));
   const formatted = await Promise.all(tokens.map(t => formatToken(t)));
 
   // ── Rolling average of last 10 completed consultation durations ───────────
@@ -113,7 +114,6 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const rollingAvg = avgConsultationDuration ?? FALLBACK_DURATION;
 
   // ── Assign estimated wait using: rollingAvg × (waitingPosition - 1) ───────
-  // Position 1 (first in waiting) = 0 min, Position 2 = 1×avg, etc.
   let waitingIndex = 0;
   formatted.forEach(token => {
     if (token.status === "waiting") {
@@ -124,7 +124,6 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
     }
   });
 
-  // Apply visitType filter after computing waits
   const result = visitType ? formatted.filter(t => t.visitType === visitType) : formatted;
   const waiting = formatted.filter(t => t.status === "waiting");
   const inProgress = formatted.find(t => t.status === "in_consultation" || t.status === "called");
@@ -150,15 +149,16 @@ router.post("/queue/tokens", authenticate, async (req, res): Promise<void> => {
   const today = parsed.data.date ?? localDateStr();
   const existing = await db.select().from(queueTokensTable)
     .where(and(eq(queueTokensTable.queueDate, today), eq(queueTokensTable.doctorId, parsed.data.doctorId)));
-  const nextToken = existing.length + 1;
+  const nextTokenNum = existing.length + 1;
 
   const [token] = await db.insert(queueTokensTable).values({
-    tokenNumber: nextToken,
+    tokenNumber: nextTokenNum,
     patientId: parsed.data.patientId,
     doctorId: parsed.data.doctorId,
     appointmentId: parsed.data.appointmentId,
     visitType: parsed.data.visitType ?? "new",
     priority: parsed.data.priority ?? 0,
+    sortOrder: nextTokenNum * 1000,
     queueDate: today,
     status: "waiting",
   }).returning();
@@ -177,10 +177,68 @@ router.patch("/queue/tokens/:id/status", authenticate, async (req, res): Promise
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // ── Special case: skip → re-queue 3 positions later ──────────────────────
+  if (parsed.data.status === "skipped") {
+    const [current] = await db.select().from(queueTokensTable).where(eq(queueTokensTable.id, params.data.id));
+    if (!current) {
+      res.status(404).json({ error: "Token not found" });
+      return;
+    }
+
+    // Fetch all waiting tokens for this doctor+date, ordered by current sortOrder
+    const waitingTokens = await db.select({ id: queueTokensTable.id, sortOrder: queueTokensTable.sortOrder })
+      .from(queueTokensTable)
+      .where(and(
+        eq(queueTokensTable.doctorId, current.doctorId),
+        eq(queueTokensTable.queueDate, current.queueDate),
+        eq(queueTokensTable.status, "waiting"),
+      ))
+      .orderBy(asc(queueTokensTable.sortOrder), asc(queueTokensTable.tokenNumber));
+
+    const currIdx = waitingTokens.findIndex(t => t.id === params.data.id);
+
+    // Compute new sortOrder: insert after 3 tokens ahead in the waiting list
+    let newSortOrder: number;
+    const afterIdx = currIdx + 3; // index in original list (including current token)
+
+    if (currIdx < 0 || afterIdx >= waitingTokens.length) {
+      // Fewer than 3 ahead — go to end
+      const last = waitingTokens[waitingTokens.length - 1];
+      newSortOrder = (last?.sortOrder ?? current.sortOrder) + 1000;
+    } else {
+      const afterToken  = waitingTokens[afterIdx];
+      const nextToken   = waitingTokens[afterIdx + 1];
+      if (nextToken) {
+        newSortOrder = Math.floor((afterToken.sortOrder + nextToken.sortOrder) / 2);
+        // Guard against sortOrder collision (e.g. repeated skips narrowing the gap)
+        if (newSortOrder <= afterToken.sortOrder) newSortOrder = afterToken.sortOrder + 1;
+      } else {
+        newSortOrder = afterToken.sortOrder + 1000;
+      }
+    }
+
+    const [token] = await db.update(queueTokensTable)
+      .set({
+        sortOrder: newSortOrder,
+        skippedCount: sql`${queueTokensTable.skippedCount} + 1`,
+      })
+      .where(eq(queueTokensTable.id, params.data.id))
+      .returning();
+
+    if (!token) {
+      res.status(404).json({ error: "Token not found" });
+      return;
+    }
+    res.json(await formatToken(token));
+    return;
+  }
+
+  // ── Normal status transitions ─────────────────────────────────────────────
   const updates: Partial<typeof queueTokensTable.$inferInsert> = { status: parsed.data.status };
   if (parsed.data.status === "in_consultation") {
     updates.consultationStartedAt = new Date();
-  } else if (parsed.data.status === "completed" || parsed.data.status === "skipped") {
+  } else if (parsed.data.status === "completed") {
     updates.consultationEndedAt = new Date();
   }
   const [token] = await db.update(queueTokensTable).set(updates).where(eq(queueTokensTable.id, params.data.id)).returning();
@@ -202,9 +260,10 @@ router.post("/queue/next", authenticate, async (req, res): Promise<void> => {
     .set({ status: "completed", consultationEndedAt: new Date() })
     .where(and(eq(queueTokensTable.doctorId, parsed.data.doctorId), eq(queueTokensTable.status, "in_consultation"), eq(queueTokensTable.queueDate, today)));
 
+  // Pick the next waiting token respecting sortOrder
   const waiting = await db.select().from(queueTokensTable)
     .where(and(eq(queueTokensTable.doctorId, parsed.data.doctorId), eq(queueTokensTable.status, "waiting"), eq(queueTokensTable.queueDate, today)))
-    .orderBy(desc(queueTokensTable.priority), queueTokensTable.tokenNumber)
+    .orderBy(desc(queueTokensTable.priority), asc(queueTokensTable.sortOrder), asc(queueTokensTable.tokenNumber))
     .limit(1);
 
   if (!waiting.length) {

@@ -417,6 +417,11 @@ export default function QueuePage() {
                       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
                         {token.status.replace("_", " ")}
                       </span>
+                      {(token.skippedCount ?? 0) > 0 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                          ↩ Skipped {token.skippedCount}×
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
                       {token.patientPhone ?? "No phone"}

@@ -719,7 +719,8 @@ export const GetQueueResponse = zod.object({
   "consultationId": zod.string().nullish(),
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
-  "consultationEndedAt": zod.string().nullish()
+  "consultationEndedAt": zod.string().nullish(),
+  "skippedCount": zod.number().optional().describe('How many times this token has been skipped and re-queued')
 })),
   "totalWaiting": zod.number(),
   "currentlyServing": zod.number().nullable(),
@@ -771,7 +772,8 @@ export const UpdateTokenStatusResponse = zod.object({
   "consultationId": zod.string().nullish(),
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
-  "consultationEndedAt": zod.string().nullish()
+  "consultationEndedAt": zod.string().nullish(),
+  "skippedCount": zod.number().optional().describe('How many times this token has been skipped and re-queued')
 })
 
 
@@ -801,7 +803,8 @@ export const CallNextPatientResponse = zod.object({
   "consultationId": zod.string().nullish(),
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
-  "consultationEndedAt": zod.string().nullish()
+  "consultationEndedAt": zod.string().nullish(),
+  "skippedCount": zod.number().optional().describe('How many times this token has been skipped and re-queued')
 })
 
 

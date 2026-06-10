@@ -2054,6 +2054,9 @@ components:
           type: ["string", "null"]
         consultationEndedAt:
           type: ["string", "null"]
+        skippedCount:
+          type: integer
+          description: How many times this token has been skipped and re-queued
 
     TokenInput:
       type: object
