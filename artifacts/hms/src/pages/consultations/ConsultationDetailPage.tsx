@@ -7,8 +7,8 @@ import {
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
   useCreateInvestigation, useUpdateInvestigation, useListInvestigations,
-  useTranslatePreviewPrescription,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey, getListChargeTypesQueryKey
+  useTranslatePreviewPrescription, useGetQueue,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListInvestigationsQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -132,6 +132,13 @@ export default function ConsultationDetailPage() {
   const { data: patient } = useGetPatient(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
+
+  const { data: queueData } = useGetQueue({}, { query: { queryKey: getGetQueueQueryKey({}) } });
+  const ACTIVE_STATUSES = ["waiting", "called", "in_consultation", "consultation_done"];
+  const isPatientInQueue = !!patientId && (queueData?.tokens ?? []).some(
+    t => t.patientId === patientId && ACTIVE_STATUSES.includes(t.status)
+  );
+  const backDestination = isPatientInQueue ? "/queue" : "/consultations";
   const { data: clinicSettings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
   const { data: patientHistory } = useGetPatientHistory(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientHistoryQueryKey(patientId) }
@@ -744,7 +751,7 @@ export default function ConsultationDetailPage() {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/consultations")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(backDestination)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
