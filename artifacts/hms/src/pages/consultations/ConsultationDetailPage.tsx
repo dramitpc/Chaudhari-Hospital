@@ -156,7 +156,6 @@ export default function ConsultationDetailPage() {
   const [previewTranslation, setPreviewTranslation] = useState<{ languageName?: string; advice?: string | null; items?: { dosage?: string; frequency?: string; duration?: string; instructions?: string }[] } | null>(null);
   const [previewDisplayMode, setPreviewDisplayMode] = useState<"english" | "translated" | "bilingual">("bilingual");
   const translatePreviewMutation = useTranslatePreviewPrescription();
-  const [selectedDrugIds, setSelectedDrugIds] = useState<Set<string>>(new Set());
   const [drugPickerSearch, setDrugPickerSearch] = useState("");
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
@@ -690,15 +689,9 @@ export default function ConsultationDetailPage() {
     }
   };
 
-  const handleAddSelectedDrugs = () => {
-    // Iterate the Set (which preserves insertion/click order) rather than filtering
-    // the drugs array (which is sorted by frequency and ignores selection order).
-    const toAdd = [...selectedDrugIds]
-      .map(id => drugs.find(d => d.id === id))
-      .filter((d): d is NonNullable<typeof d> => !!d);
-    if (!toAdd.length) return;
-    trackDrugFreq(toAdd.map(d => d.id));
-    const newRows: DrugItem[] = toAdd.map(d => ({
+  const addDrugInstant = (d: typeof drugs[0]) => {
+    trackDrugFreq([d.id]);
+    const newRow: DrugItem = {
       drugId: d.id,
       drugName: d.name,
       genericName: d.genericName ?? null,
@@ -706,12 +699,12 @@ export default function ConsultationDetailPage() {
       frequency: d.defaultFrequency ?? "",
       duration: d.defaultDuration ?? "",
       instructions: d.defaultInstructions ?? "",
-    }));
+    };
     setDrugItems(prev => {
       const nonEmpty = prev.filter(i => i.drugName.trim());
-      return [...nonEmpty, ...newRows];
+      if (nonEmpty.some(i => i.drugId === d.id || i.drugName.toLowerCase() === d.name.toLowerCase())) return prev;
+      return [...nonEmpty, newRow];
     });
-    setSelectedDrugIds(new Set());
   };
 
   const addDrugRow = () => setDrugItems(prev => [...prev, { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
@@ -2040,36 +2033,31 @@ export default function ConsultationDetailPage() {
                   const frequentDrugs = sorted.filter(d => (freq[d.id] ?? 0) > 0);
                   const otherDrugs = sorted.filter(d => (freq[d.id] ?? 0) === 0);
 
-                  const toggleDrug = (id: string) => {
-                    setSelectedDrugIds(prev => {
-                      const next = new Set(prev);
-                      next.has(id) ? next.delete(id) : next.add(id);
-                      return next;
-                    });
-                  };
+                  const addedIds = new Set(drugItems.map(i => i.drugId).filter(Boolean));
+                  const addedNames = new Set(drugItems.map(i => i.drugName.toLowerCase()).filter(Boolean));
 
-                  const renderRow = (d: typeof drugs[0]) => (
-                    <div
-                      key={d.id}
-                      onClick={() => toggleDrug(d.id)}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer select-none text-xs transition-colors ${
-                        selectedDrugIds.has(d.id)
-                          ? "bg-primary/10 border border-primary/30"
-                          : "hover:bg-muted/60 border border-transparent"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        readOnly
-                        checked={selectedDrugIds.has(d.id)}
-                        className="h-3 w-3 accent-primary pointer-events-none"
-                      />
-                      <span className="font-medium flex-1 truncate">{d.name}</span>
-                      {d.genericName && <span className="text-muted-foreground truncate max-w-[90px]">{d.genericName}</span>}
-                      {d.defaultDosage && <span className="text-muted-foreground shrink-0">{d.defaultDosage}</span>}
-                      {(freq[d.id] ?? 0) > 0 && <span className="shrink-0 text-amber-500" title={`Used ${freq[d.id]} time(s)`}>⭐</span>}
-                    </div>
-                  );
+                  const renderRow = (d: typeof drugs[0]) => {
+                    const alreadyAdded = addedIds.has(d.id) || addedNames.has(d.name.toLowerCase());
+                    return (
+                      <div
+                        key={d.id}
+                        onClick={() => !alreadyAdded && addDrugInstant(d)}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded select-none text-xs transition-colors ${
+                          alreadyAdded
+                            ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 cursor-default opacity-70"
+                            : "hover:bg-primary/10 hover:border-primary/30 border border-transparent cursor-pointer"
+                        }`}
+                      >
+                        <span className="shrink-0 w-3.5 text-center">
+                          {alreadyAdded ? <span className="text-green-600 dark:text-green-400 text-[10px]">✓</span> : <span className="text-muted-foreground text-[10px]">+</span>}
+                        </span>
+                        <span className="font-medium flex-1 truncate">{d.name}</span>
+                        {d.genericName && <span className="text-muted-foreground truncate max-w-[90px]">{d.genericName}</span>}
+                        {d.defaultDosage && <span className="text-muted-foreground shrink-0">{d.defaultDosage}</span>}
+                        {(freq[d.id] ?? 0) > 0 && <span className="shrink-0 text-amber-500" title={`Used ${freq[d.id]} time(s)`}>⭐</span>}
+                      </div>
+                    );
+                  };
 
                   return (
                     <div className="flex flex-col flex-1 overflow-hidden gap-2">
@@ -2080,11 +2068,6 @@ export default function ConsultationDetailPage() {
                           value={drugPickerSearch}
                           onChange={e => setDrugPickerSearch(e.target.value)}
                         />
-                        {selectedDrugIds.size > 0 && (
-                          <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleAddSelectedDrugs}>
-                            <Plus className="h-3 w-3 mr-1" /> Add {selectedDrugIds.size}
-                          </Button>
-                        )}
                       </div>
                       <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
                         {filtered.length === 0 && (
