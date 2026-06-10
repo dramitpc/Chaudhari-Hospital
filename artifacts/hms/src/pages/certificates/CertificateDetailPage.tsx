@@ -20,6 +20,12 @@ const certTitles: Record<string, string> = {
   referral_thank_you: "Thanking Letter",
 };
 
+function fmtDDMMYYYY(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("T")[0].split("-");
+  return `${d}/${m}/${y}`;
+}
+
 export default function CertificateDetailPage() {
   const [, params] = useRoute("/certificates/:id");
   const id = params?.id ?? "";
@@ -77,7 +83,7 @@ export default function CertificateDetailPage() {
       lines.push(`Dear Dr. ${patient?.referringDoctorName ?? "Doctor"},`);
       lines.push("");
       lines.push(`We sincerely thank you for referring ${cert.patientName} to our clinic.`);
-      lines.push(`The patient was seen on ${cert.issuedDate} by Dr. ${cert.doctorName}.`);
+      lines.push(`The patient was seen on ${fmtDDMMYYYY(cert.issuedDate)} by Dr. ${cert.doctorName}.`);
       if (cert.diagnosis) lines.push(`Diagnosis: ${cert.diagnosis}`);
       if (cert.content) { lines.push(""); lines.push(cert.content); }
       lines.push("");
@@ -89,10 +95,10 @@ export default function CertificateDetailPage() {
       if (settings?.address) lines.push(settings.address);
       lines.push("");
       lines.push(`Patient: ${cert.patientName}`);
-      lines.push(`Date: ${cert.issuedDate}`);
+      lines.push(`Date: ${fmtDDMMYYYY(cert.issuedDate)}`);
       lines.push(`Doctor: Dr. ${cert.doctorName}`);
       if (cert.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${cert.diagnosis}`); }
-      if (cert.fromDate && cert.toDate) lines.push(`Period: ${cert.fromDate} to ${cert.toDate}`);
+      if (cert.fromDate && cert.toDate) lines.push(`Period: ${fmtDDMMYYYY(cert.fromDate)} to ${fmtDDMMYYYY(cert.toDate)}`);
       if (cert.content) { lines.push(""); lines.push(cert.content); }
       if (cert.qrCode) { lines.push(""); lines.push(`Verification: ${cert.qrCode}`); }
       lines.push("");
@@ -142,7 +148,7 @@ export default function CertificateDetailPage() {
               <h2 className="text-xl font-bold uppercase tracking-widest border-b-2 border-foreground inline-block pb-1">
                 Thanking Letter
               </h2>
-              <p className="text-sm text-muted-foreground mt-2">Date: {cert.issuedDate}</p>
+              <p className="text-sm text-muted-foreground mt-2">Date: {fmtDDMMYYYY(cert.issuedDate)}</p>
             </div>
 
             <div className="space-y-4 text-sm leading-relaxed">
@@ -159,7 +165,7 @@ export default function CertificateDetailPage() {
               <p>
                 We sincerely thank you for referring{" "}
                 <strong>{cert.patientName}</strong> to our clinic. The patient was
-                examined and treated on <strong>{cert.issuedDate}</strong> by{" "}
+                examined and treated on <strong>{fmtDDMMYYYY(cert.issuedDate)}</strong> by{" "}
                 <strong>Dr. {cert.doctorName}</strong>.
               </p>
 
@@ -171,8 +177,8 @@ export default function CertificateDetailPage() {
 
               {cert.fromDate && cert.toDate && (
                 <p>
-                  Treatment period: <strong>{cert.fromDate}</strong> to{" "}
-                  <strong>{cert.toDate}</strong>
+                  Treatment period: <strong>{fmtDDMMYYYY(cert.fromDate)}</strong> to{" "}
+                  <strong>{fmtDDMMYYYY(cert.toDate)}</strong>
                 </p>
               )}
 
@@ -214,7 +220,7 @@ export default function CertificateDetailPage() {
               <h2 className="text-xl font-bold uppercase tracking-widest border-b-2 border-foreground inline-block pb-1">
                 {certTitle}
               </h2>
-              <p className="text-sm text-muted-foreground mt-2">Date: {cert.issuedDate}</p>
+              <p className="text-sm text-muted-foreground mt-2">Date: {fmtDDMMYYYY(cert.issuedDate)}</p>
             </div>
 
             <div className="space-y-4 text-sm leading-relaxed">
@@ -222,7 +228,7 @@ export default function CertificateDetailPage() {
                 This is to certify that <strong>{cert.patientName}</strong> has been examined and{" "}
                 {cert.type === "sick_leave" ? (
                   <>is found to be suffering from <strong>{cert.diagnosis ?? "illness"}</strong> and is advised rest from{" "}
-                  <strong>{cert.fromDate ?? cert.issuedDate}</strong> to <strong>{cert.toDate ?? cert.issuedDate}</strong>.</>
+                  <strong>{fmtDDMMYYYY(cert.fromDate ?? cert.issuedDate)}</strong> to <strong>{fmtDDMMYYYY(cert.toDate ?? cert.issuedDate)}</strong>.</>
                 ) : cert.type === "fitness" ? (
                   <>is found medically fit for duty/activities as of the date of this certificate.</>
                 ) : (
@@ -237,7 +243,7 @@ export default function CertificateDetailPage() {
               )}
 
               {cert.fromDate && cert.toDate && cert.type !== "sick_leave" && (
-                <p>Period: <strong>{cert.fromDate}</strong> to <strong>{cert.toDate}</strong></p>
+                <p>Period: <strong>{fmtDDMMYYYY(cert.fromDate)}</strong> to <strong>{fmtDDMMYYYY(cert.toDate)}</strong></p>
               )}
 
               {cert.content && cert.type !== "sick_leave" && cert.type !== "fitness" && (
