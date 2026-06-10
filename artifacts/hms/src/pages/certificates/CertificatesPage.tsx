@@ -143,7 +143,7 @@ function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress,
             {form.fromDate && form.toDate && form.type !== "sick_leave" && (
               <p>Period: <strong>{form.fromDate}</strong> to <strong>{form.toDate}</strong></p>
             )}
-            {form.content && form.type !== "sick_leave" && form.type !== "fitness" && (
+            {form.content && (
               <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
                 <p>{form.content}</p>
               </div>
