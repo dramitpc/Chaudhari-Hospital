@@ -344,7 +344,7 @@ export default function CertificatesPage() {
       </div>
 
       <Dialog open={showCreate} onOpenChange={v => { setShowCreate(v); if (!v) { resetPatientSearch(); setForm(f => ({ ...f, patientId: "" })); } }}>
-        <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0">
+        <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0" onInteractOutside={e => e.preventDefault()}>
           <div className="grid grid-cols-1 md:grid-cols-[420px_1fr]">
             {/* ── Form panel ── */}
             <div className="p-6 border-r border-border overflow-y-auto max-h-[85vh]">
