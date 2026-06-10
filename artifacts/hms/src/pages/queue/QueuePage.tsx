@@ -539,12 +539,12 @@ export default function QueuePage() {
                     <Button
                       size="sm"
                       className="animate-pulse bg-orange-500 hover:bg-orange-600 text-white border-0"
-                      onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}
+                      onClick={() => navigate(`/billing/new?patientId=${token.patientId}&from=queue`)}
                     >
                       <Receipt className="h-3.5 w-3.5 mr-1" />Invoice Pending
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}`)}>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/billing/new?patientId=${token.patientId}&from=queue`)}>
                       <Receipt className="h-3.5 w-3.5 mr-1" />Invoice
                     </Button>
                   )}

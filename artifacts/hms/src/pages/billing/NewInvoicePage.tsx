@@ -28,7 +28,10 @@ export default function NewInvoicePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const urlPatientId = new URLSearchParams(window.location.search).get("patientId");
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlPatientId = urlParams.get("patientId");
+  const fromQueue = urlParams.get("from") === "queue";
+  const backPath = fromQueue ? "/queue" : "/billing";
   const [patientId, setPatientId] = useState(urlPatientId ?? "");
   const [patientSearch, setPatientSearch] = useState("");
   const [discount, setDiscount] = useState(0);
@@ -100,7 +103,7 @@ export default function NewInvoicePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => setLocation("/billing")}>
+        <Button variant="ghost" size="icon" onClick={() => setLocation(backPath)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-2xl font-bold">New Invoice</h1>
@@ -245,7 +248,7 @@ export default function NewInvoicePage() {
       </div>
 
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => setLocation("/billing")}>Cancel</Button>
+        <Button variant="outline" onClick={() => setLocation(backPath)}>Cancel</Button>
         <Button onClick={handleSubmit} disabled={createMutation.isPending} data-testid="btn-create-invoice">
           {createMutation.isPending ? "Creating..." : "Create Invoice"}
         </Button>
