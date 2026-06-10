@@ -13,8 +13,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { FilePlus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { fmtDate } from "@/lib/dateUtils";
+
+function todayIso() { return new Date().toLocaleDateString("en-CA"); }
+function shiftDate(iso: string, days: number) {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString("en-CA");
+}
+function fmtPickerDate(iso: string) {
+  const today = todayIso();
+  if (iso === today) return "Today";
+  if (iso === shiftDate(today, -1)) return "Yesterday";
+  return fmtDate(iso + "T00:00:00");
+}
 
 const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"];
 
@@ -164,6 +178,9 @@ export default function CertificatesPage() {
   const urlPatientId = urlParams.get("patientId") ?? "";
   const urlDoctorId  = urlParams.get("doctorId")  ?? "";
 
+  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const isToday = selectedDate === todayIso();
+
   const [showCreate, setShowCreate] = useState(() => !!(urlPatientId || urlDoctorId));
   const [form, setForm] = useState({
     patientId: urlPatientId,
@@ -179,9 +196,10 @@ export default function CertificatesPage() {
   const [patientSearch, setPatientSearch] = useState("");
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
 
-  const { data, isLoading } = useListCertificates({}, {
-    query: { queryKey: getListCertificatesQueryKey({}) }
-  });
+  const { data, isLoading } = useListCertificates(
+    { date: selectedDate, limit: 500 },
+    { query: { queryKey: getListCertificatesQueryKey({ date: selectedDate, limit: 500 }) } }
+  );
   const { data: patients } = useListPatients({ limit: 500 }, { query: { queryKey: getListPatientsQueryKey({ limit: 500 }) } });
   const { data: doctors } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
@@ -228,18 +246,58 @@ export default function CertificatesPage() {
   };
 
   const certificates = data?.data ?? [];
+  const total = data?.total ?? 0;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Medical Certificates</h1>
-          <p className="text-sm text-muted-foreground">{certificates.length} certificates</p>
+          <p className="text-sm text-muted-foreground">{total} certificate{total !== 1 ? "s" : ""}</p>
         </div>
         <Button onClick={() => setShowCreate(true)} data-testid="btn-issue-certificate">
           <FilePlus className="mr-2 h-4 w-4" />
           Issue Certificate
         </Button>
+      </div>
+
+      {/* Date picker */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center border border-border rounded-md bg-background shadow-sm overflow-hidden">
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-r border-border"
+            onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="relative flex items-center">
+            <CalendarDays className="absolute left-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="date"
+              value={selectedDate}
+              max={todayIso()}
+              onChange={e => { if (e.target.value) setSelectedDate(e.target.value); }}
+              className="h-9 pl-8 pr-2 text-sm bg-transparent focus:outline-none min-w-[130px] cursor-pointer"
+            />
+          </div>
+          <span className={`px-2 text-xs font-medium border-l border-border h-9 flex items-center ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+            {fmtPickerDate(selectedDate)}
+          </span>
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-l border-border"
+            disabled={isToday}
+            onClick={() => setSelectedDate(d => shiftDate(d, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {!isToday && (
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setSelectedDate(todayIso())}>
+            <X className="h-3.5 w-3.5" />Today
+          </Button>
+        )}
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
@@ -260,7 +318,7 @@ export default function CertificatesPage() {
                 {Array.from({ length: 6 }).map((__, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full" /></td>)}
               </tr>
             )) : certificates.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No certificates found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No certificates for {fmtPickerDate(selectedDate)}</td></tr>
             ) : certificates.map(c => (
               <tr key={c.id} className="border-b border-border hover:bg-muted/20">
                 <td className="px-4 py-3 font-medium">{c.patientName}</td>
@@ -270,9 +328,9 @@ export default function CertificatesPage() {
                     {c.type.replace("_", " ")}
                   </span>
                 </td>
-                <td className="px-4 py-3">{c.issuedDate}</td>
+                <td className="px-4 py-3">{c.issuedDate ? c.issuedDate.split("-").reverse().join("/") : "—"}</td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">
-                  {c.fromDate && c.toDate ? `${c.fromDate} to ${c.toDate}` : "—"}
+                  {c.fromDate && c.toDate ? `${c.fromDate.split("-").reverse().join("/")} to ${c.toDate.split("-").reverse().join("/")}` : "—"}
                 </td>
                 <td className="px-4 py-3">
                   <Link href={`/certificates/${c.id}`}>

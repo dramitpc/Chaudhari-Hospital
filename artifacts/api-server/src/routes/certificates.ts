@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lt } from "drizzle-orm";
 import { db, certificatesTable, patientsTable, usersTable } from "@workspace/db";
 import {
   ListCertificatesQueryParams,
@@ -38,10 +38,18 @@ router.get("/certificates", authenticate, async (req, res): Promise<void> => {
   const page = params.success && params.data.page ? Number(params.data.page) : 1;
   const limit = params.success && params.data.limit ? Number(params.data.limit) : 20;
 
-  let query = db.select().from(certificatesTable).$dynamic();
-  if (params.success && params.data.patientId) query = query.where(eq(certificatesTable.patientId, params.data.patientId));
-  if (params.success && params.data.type) query = query.where(eq(certificatesTable.type, params.data.type as typeof certificatesTable.$inferSelect["type"]));
+  const dateStr = params.success && params.data.date ? params.data.date : new Date().toLocaleDateString("en-CA");
+  const dayStart = new Date(dateStr + "T00:00:00.000Z");
+  const dayEnd   = new Date(dayStart.getTime() + 86_400_000);
 
+  const conditions = [
+    gte(certificatesTable.createdAt, dayStart),
+    lt(certificatesTable.createdAt, dayEnd),
+  ];
+  if (params.success && params.data.patientId) conditions.push(eq(certificatesTable.patientId, params.data.patientId) as never);
+  if (params.success && params.data.type) conditions.push(eq(certificatesTable.type, params.data.type as typeof certificatesTable.$inferSelect["type"]) as never);
+
+  let query = db.select().from(certificatesTable).where(and(...conditions)).$dynamic();
   const all = await query.orderBy(desc(certificatesTable.issuedDate));
   const total = all.length;
   const slice = all.slice((page - 1) * limit, page * limit);

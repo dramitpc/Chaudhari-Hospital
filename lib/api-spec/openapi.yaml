@@ -1189,6 +1189,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: date
+          in: query
+          description: Filter by issued date (YYYY-MM-DD). Defaults to today.
+          schema:
+            type: string
         - name: page
           in: query
           schema:

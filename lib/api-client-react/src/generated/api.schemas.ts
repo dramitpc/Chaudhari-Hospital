@@ -1337,6 +1337,10 @@ limit?: number;
 export type ListCertificatesParams = {
 patientId?: string;
 type?: string;
+/**
+ * Filter by issued date (YYYY-MM-DD). Defaults to today.
+ */
+date?: string;
 page?: number;
 limit?: number;
 };

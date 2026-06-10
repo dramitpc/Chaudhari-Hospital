@@ -1694,6 +1694,7 @@ export const DeleteChargeTypeParams = zod.object({
 export const ListCertificatesQueryParams = zod.object({
   "patientId": zod.coerce.string().optional(),
   "type": zod.coerce.string().optional(),
+  "date": zod.coerce.string().optional().describe('Filter by issued date (YYYY-MM-DD). Defaults to today.'),
   "page": zod.coerce.number().optional(),
   "limit": zod.coerce.number().optional()
 })
