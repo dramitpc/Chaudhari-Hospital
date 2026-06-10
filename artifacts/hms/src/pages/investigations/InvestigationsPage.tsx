@@ -145,9 +145,13 @@ export default function InvestigationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>(isRadiographer ? "pending" : "all");
 
   const localToday = new Date().toLocaleDateString("en-CA");
-  const params = statusFilter === "all"
-    ? { date: localToday }
-    : { date: localToday, status: statusFilter as Investigation["status"] };
+  // Don't restrict by date for pending/in-progress — advised investigations may be from past days.
+  // Apply date filter only when viewing completed/cancelled/all to keep the list manageable.
+  const needsDateFilter = statusFilter === "all" || statusFilter === "completed" || statusFilter === "cancelled";
+  const params = {
+    ...(needsDateFilter ? { date: localToday } : {}),
+    ...(statusFilter !== "all" ? { status: statusFilter as Investigation["status"] } : {}),
+  };
   const { data, isLoading } = useListInvestigations(params, {
     query: { queryKey: getListInvestigationsQueryKey(params), refetchInterval: 30000 },
   });
