@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, Eye, FilePlus, X } from "lucide-react";
+import { CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtDate } from "@/lib/dateUtils";
 
@@ -44,21 +44,12 @@ const certTitles: Record<string, string> = {
 };
 
 const typeColors: Record<string, string> = {
-  sick_leave: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  fitness: "bg-green-50 text-green-700 ring-1 ring-green-200",
-  medical: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  procedure: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
-  vaccination: "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
-  referral_thank_you: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
-};
-
-const typeLabels: Record<string, string> = {
-  sick_leave: "Sick Leave",
-  fitness: "Fitness",
-  medical: "Medical",
-  procedure: "Procedure",
-  vaccination: "Vaccination",
-  referral_thank_you: "Thanking Letter",
+  sick_leave: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  fitness: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  medical: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  procedure: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  vaccination: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
+  referral_thank_you: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
 };
 
 type PreviewProps = {
@@ -307,110 +298,92 @@ export default function CertificatesPage() {
   const total = data?.total ?? 0;
 
   return (
-    <div className="space-y-5">
-      {/* Header — two-level hierarchy */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest mb-1">Administration · Certificates</p>
           <h1 className="text-2xl font-bold">Medical Certificates</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {total} certificate{total !== 1 ? "s" : ""} issued on{" "}
-            <span className="font-medium text-foreground">{fmtPickerDate(selectedDate)}</span>
-          </p>
+          <p className="text-sm text-muted-foreground">{total} certificate{total !== 1 ? "s" : ""}</p>
         </div>
-        <Button
-          onClick={() => setShowCreate(true)}
-          data-testid="btn-issue-certificate"
-          className="shadow-sm"
-        >
+        <Button onClick={() => setShowCreate(true)} data-testid="btn-issue-certificate">
           <FilePlus className="mr-2 h-4 w-4" />
           Issue Certificate
         </Button>
       </div>
 
-      {/* Date navigation — blue pill design */}
-      <div className="flex items-center gap-2">
-        <button
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setSelectedDate(d => shiftDate(d, -1))}
-          aria-label="Previous day"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
-          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 border transition-colors ${
-            isToday
-              ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
-              : "bg-background border-border text-foreground hover:border-primary/50"
-          }`}
-          onClick={() => !isToday && setSelectedDate(todayIso())}
-          aria-label={isToday ? "Viewing today" : "Click to return to today"}
-        >
-          <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-70" />
-          <span className="text-sm font-semibold">{fmtPickerDate(selectedDate)}</span>
-          {isToday && (
-            <span className="text-xs font-medium bg-blue-100 text-blue-500 dark:bg-blue-900/60 dark:text-blue-400 rounded px-1.5 py-0.5">
-              Today
-            </span>
-          )}
-        </button>
-        <button
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          onClick={() => setSelectedDate(d => shiftDate(d, 1))}
-          disabled={isToday}
-          aria-label="Next day"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+      {/* Date picker */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center border border-border rounded-md bg-background shadow-sm overflow-hidden">
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-r border-border"
+            onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="relative flex items-center">
+            <CalendarDays className="absolute left-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="date"
+              value={selectedDate}
+              max={todayIso()}
+              onChange={e => { if (e.target.value) setSelectedDate(e.target.value); }}
+              className="h-9 pl-8 pr-2 text-sm bg-transparent focus:outline-none min-w-[130px] cursor-pointer"
+            />
+          </div>
+          <span className={`px-2 text-xs font-medium border-l border-border h-9 flex items-center ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+            {fmtPickerDate(selectedDate)}
+          </span>
+          <Button
+            variant="ghost" size="icon"
+            className="h-9 w-9 rounded-none border-l border-border"
+            disabled={isToday}
+            onClick={() => setSelectedDate(d => shiftDate(d, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {!isToday && (
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setSelectedDate(todayIso())}>
+            <X className="h-3.5 w-3.5" />Today
+          </Button>
+        )}
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden overflow-x-auto shadow-sm">
+      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="px-6 py-3.5 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider w-[28%]">Patient</th>
-              <th className="px-4 py-3.5 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider w-[24%]">Issuing Doctor</th>
-              <th className="px-4 py-3.5 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider w-[13%]">Type</th>
-              <th className="px-4 py-3.5 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider w-[13%]">Issued</th>
-              <th className="px-4 py-3.5 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Period</th>
-              <th className="px-4 py-3.5 w-16" />
+          <thead className="bg-muted/40 border-b border-border">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Patient</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Issued Date</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Period</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/50">
+          <tbody>
             {isLoading ? Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i} className={i % 2 === 0 ? "" : "bg-muted/20"}>
-                {Array.from({ length: 6 }).map((__, j) => <td key={j} className="px-4 py-4"><Skeleton className="h-4 w-full" /></td>)}
+              <tr key={i} className="border-b border-border">
+                {Array.from({ length: 6 }).map((__, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full" /></td>)}
               </tr>
             )) : certificates.length === 0 ? (
-              <tr><td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">No certificates for {fmtPickerDate(selectedDate)}</td></tr>
-            ) : certificates.map((c, i) => (
-              <tr key={c.id} className={`hover:bg-muted/20 transition-colors ${i % 2 !== 0 ? "bg-muted/10" : ""}`}>
-                <td className="px-6 py-4">
-                  <span className="font-semibold text-foreground">{c.patientName}</span>
-                </td>
-                <td className="px-4 py-4 text-muted-foreground">{c.doctorName}</td>
-                <td className="px-4 py-4">
-                  <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${typeColors[c.type] ?? "bg-muted text-muted-foreground ring-1 ring-border"}`}>
-                    {typeLabels[c.type] ?? c.type.replace(/_/g, " ")}
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No certificates for {fmtPickerDate(selectedDate)}</td></tr>
+            ) : certificates.map(c => (
+              <tr key={c.id} className="border-b border-border hover:bg-muted/20">
+                <td className="px-4 py-3 font-medium">{c.patientName}</td>
+                <td className="px-4 py-3 text-muted-foreground">{c.doctorName}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${typeColors[c.type] ?? ""}`}>
+                    {c.type.replace("_", " ")}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-sm font-mono text-foreground/80">
-                  {c.issuedDate ? c.issuedDate.split("-").reverse().join("/") : "—"}
+                <td className="px-4 py-3">{c.issuedDate ? c.issuedDate.split("-").reverse().join("/") : "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground text-xs">
+                  {c.fromDate && c.toDate ? `${c.fromDate.split("-").reverse().join("/")} to ${c.toDate.split("-").reverse().join("/")}` : "—"}
                 </td>
-                <td className="px-4 py-4">
-                  {c.fromDate && c.toDate ? (
-                    <span className="text-xs text-muted-foreground font-medium bg-muted rounded px-2 py-1">
-                      {c.fromDate.split("-").reverse().join("/")} – {c.toDate.split("-").reverse().join("/")}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground/30 text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-4 text-right">
+                <td className="px-4 py-3">
                   <Link href={`/certificates/${c.id}`}>
-                    <button className="text-primary hover:text-primary/80 font-medium text-xs flex items-center gap-1 ml-auto transition-colors">
-                      <Eye className="h-3.5 w-3.5" /> View
-                    </button>
+                    <Button size="sm" variant="outline">View</Button>
                   </Link>
                 </td>
               </tr>
@@ -418,12 +391,6 @@ export default function CertificatesPage() {
           </tbody>
         </table>
       </div>
-
-      {!isLoading && certificates.length > 0 && (
-        <p className="text-xs text-muted-foreground/60 text-right">
-          Showing {certificates.length} of {total} certificate{total !== 1 ? "s" : ""}
-        </p>
-      )}
 
       <Dialog open={showCreate} onOpenChange={v => { setShowCreate(v); if (!v) { resetPatientSearch(); setForm(f => ({ ...f, patientId: "" })); } }}>
         <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0" onInteractOutside={e => e.preventDefault()}>
