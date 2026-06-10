@@ -51,6 +51,7 @@ export * from './drugInput';
 export * from './drugListResponse';
 export * from './drugUpdate';
 export * from './getDailyOpdReportParams';
+export * from './getDashboardSummaryParams';
 export * from './getDoctorProductivityReportParams';
 export * from './getPatientTrendsParams';
 export * from './getQueueParams';

@@ -1295,6 +1295,12 @@ paths:
       operationId: getDashboardSummary
       tags: [dashboard]
       summary: Get dashboard KPI summary
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+          description: Local date (YYYY-MM-DD) from the client. Defaults to server UTC date.
       responses:
         "200":
           description: Dashboard summary

@@ -11,12 +11,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  
-  const { data: summary, isLoading: isSummaryLoading } = useGetDashboardSummary({
-    query: {
-      queryKey: getGetDashboardSummaryQueryKey()
-    }
-  });
+
+  const localToday = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in browser local tz
+
+  const { data: summary, isLoading: isSummaryLoading } = useGetDashboardSummary(
+    { date: localToday },
+    { query: { queryKey: getGetDashboardSummaryQueryKey({ date: localToday }) } }
+  );
 
   const { data: queueStatus, isLoading: isQueueLoading } = useGetQueueStatus({
     query: {

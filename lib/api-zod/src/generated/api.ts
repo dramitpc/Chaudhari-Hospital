@@ -1803,6 +1803,10 @@ export const ListAuditLogsResponse = zod.object({
 /**
  * @summary Get dashboard KPI summary
  */
+export const GetDashboardSummaryQueryParams = zod.object({
+  "date": zod.coerce.string().optional().describe('Local date (YYYY-MM-DD) from the client. Defaults to server UTC date.')
+})
+
 export const GetDashboardSummaryResponse = zod.object({
   "todayPatients": zod.number(),
   "todayRevenue": zod.number(),

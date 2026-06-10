@@ -21,7 +21,7 @@ function dayBounds(dateStr: string): [Date, Date] {
 }
 
 router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> => {
-  const today = localDateStr();
+  const today = (req.query.date as string | undefined) || localDateStr();
   const monthStart = `${today.slice(0, 7)}-01`;
   const [todayStart, todayEnd] = dayBounds(today);
   const monthStartDate = new Date(monthStart + "T00:00:00.000Z");

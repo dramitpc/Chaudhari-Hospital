@@ -1359,6 +1359,13 @@ page?: number;
 limit?: number;
 };
 
+export type GetDashboardSummaryParams = {
+/**
+ * Local date (YYYY-MM-DD) from the client. Defaults to server UTC date.
+ */
+date?: string;
+};
+
 export type GetRevenueChartParams = {
 days?: number;
 };
