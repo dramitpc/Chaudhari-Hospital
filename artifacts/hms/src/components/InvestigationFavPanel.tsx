@@ -51,6 +51,8 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply }: Invest
 
   const handleApply = (entry: InvEntry) => {
     onApply({ type: entry.type, bodyPart: entry.bodyPart, notes: entry.notes });
+    setIsOpen(false);
+    toast({ title: "Applied to fields" });
   };
 
   const saveFav = () => {
@@ -72,7 +74,10 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply }: Invest
   const total  = favs.length + recent.length;
 
   const EntryRow = ({ entry, onDelete }: { entry: InvEntry; onDelete: () => void }) => (
-    <div className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5">
+    <div
+      className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 cursor-pointer hover:bg-primary/5 hover:border-primary transition-colors"
+      onClick={() => handleApply(entry)}
+    >
       <div className="flex-1 min-w-0">
         {entry.name && <p className="text-xs font-semibold truncate">{entry.name}</p>}
         <div className="flex items-center gap-1 flex-wrap mt-0.5">
@@ -89,17 +94,8 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply }: Invest
         type="button"
         size="sm"
         variant="ghost"
-        className="h-6 px-2 text-xs shrink-0"
-        onClick={() => handleApply(entry)}
-      >
-        Apply
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
         className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-destructive"
-        onClick={onDelete}
+        onClick={e => { e.stopPropagation(); onDelete(); }}
       >
         <X className="h-3 w-3" />
       </Button>
