@@ -148,7 +148,7 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
         <div className="lg:col-span-2 space-y-4">
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="grid grid-cols-2 gap-4 mb-6">
