@@ -183,18 +183,22 @@ export default function NewInvoicePage() {
                 </td>
                 <td className="py-2 pr-2">
                   <Input className="h-8 text-xs text-right" type="number" min="1" value={item.quantity}
+                    onFocus={e => e.currentTarget.select()}
                     onChange={e => updateItem(i, "quantity", parseInt(e.target.value) || 1)} />
                 </td>
                 <td className="py-2 pr-2">
                   <Input className="h-8 text-xs text-right" type="number" min="0" step="0.01" value={item.unitPrice}
+                    onFocus={e => e.currentTarget.select()}
                     onChange={e => updateItem(i, "unitPrice", parseFloat(e.target.value) || 0)} />
                 </td>
                 <td className="py-2 pr-2">
                   <Input className="h-8 text-xs text-right" type="number" min="0" step="0.01" value={item.discount}
+                    onFocus={e => e.currentTarget.select()}
                     onChange={e => updateItem(i, "discount", parseFloat(e.target.value) || 0)} />
                 </td>
                 <td className="py-2 pr-2">
                   <Input className="h-8 text-xs text-right" type="number" min="0" step="0.01" value={item.tax}
+                    onFocus={e => e.currentTarget.select()}
                     onChange={e => updateItem(i, "tax", parseFloat(e.target.value) || 0)} />
                 </td>
                 <td className="py-2 text-right font-medium">₹{item.total.toFixed(2)}</td>
@@ -228,6 +232,7 @@ export default function NewInvoicePage() {
             <div className="relative w-28">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₹</span>
               <Input type="number" min="0" step="0.01" value={discount}
+                onFocus={e => e.currentTarget.select()}
                 onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
                 className="h-7 text-right text-xs pl-5" />
             </div>
