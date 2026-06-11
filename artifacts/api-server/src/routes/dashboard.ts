@@ -10,21 +10,15 @@ import {
   usersTable,
 } from "@workspace/db";
 import { authenticate } from "../middlewares/authenticate";
-import { localDateStr } from "../lib/date";
+import { localDateStr, dayBounds } from "../lib/date";
 
 const router = Router();
-
-function dayBounds(dateStr: string): [Date, Date] {
-  const start = new Date(dateStr + "T00:00:00.000Z");
-  const end   = new Date(start.getTime() + 86_400_000);
-  return [start, end];
-}
 
 router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> => {
   const today = (req.query.date as string | undefined) || localDateStr();
   const monthStart = `${today.slice(0, 7)}-01`;
   const [todayStart, todayEnd] = dayBounds(today);
-  const monthStartDate = new Date(monthStart + "T00:00:00.000Z");
+  const [monthStartDate] = dayBounds(monthStart);
 
   const [
     totalPatientsResult,
