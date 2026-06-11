@@ -141,65 +141,71 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
       </div>
 
       {isOpen && (
-        <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-xs">
-          {total === 0 && (
-            <p className="text-muted-foreground text-center py-1">
-              No entries yet — order an investigation and it will appear here automatically.
-            </p>
-          )}
-
-          {favs.length > 0 && (
-            <div className="space-y-1">
-              <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
-                <Star className="h-3 w-3" /> Favourites
+        <div className="rounded-lg border border-border bg-muted/30 text-xs flex flex-col">
+          {/* Scrollable list area */}
+          <div className="overflow-y-auto max-h-60 p-3 space-y-3">
+            {total === 0 && (
+              <p className="text-muted-foreground text-center py-1">
+                No entries yet — order an investigation and it will appear here automatically.
               </p>
-              {favs.map(e => (
-                <EntryRow key={e.id} entry={e} onDelete={() => deleteFav(e.id)} />
-              ))}
-            </div>
-          )}
+            )}
 
-          {recent.length > 0 && (
-            <div className="space-y-1">
-              <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
-                <Clock className="h-3 w-3" /> Recently Ordered
-              </p>
-              {recent.map(e => (
-                <div key={e.id}>
-                  <EntryRow entry={e} onDelete={() => deleteRecent(e.id)} />
-                  <p className="text-[10px] text-muted-foreground pl-2 mt-0.5">{fmtDateTime(e.savedAt)}</p>
-                </div>
-              ))}
-            </div>
-          )}
+            {favs.length > 0 && (
+              <div className="space-y-1">
+                <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400 sticky top-0 bg-muted/30 py-0.5">
+                  <Star className="h-3 w-3" /> Favourites
+                </p>
+                {favs.map(e => (
+                  <EntryRow key={e.id} entry={e} onDelete={() => deleteFav(e.id)} />
+                ))}
+              </div>
+            )}
 
-          {total > 0 && (
-            <div className="flex items-center gap-2 pt-1 border-t border-border">
-              <span className="flex-1 text-muted-foreground">
-                {selected.size > 0 ? `${selected.size} selected` : "Click entries to select"}
-              </span>
-              <Button
-                type="button" size="sm" className="h-7 px-3 text-xs"
-                disabled={selected.size === 0}
-                onClick={applySelected}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                {selected.size > 1 ? `Order ${selected.size} investigations` : "Apply"}
+            {recent.length > 0 && (
+              <div className="space-y-1">
+                <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 sticky top-0 bg-muted/30 py-0.5">
+                  <Clock className="h-3 w-3" /> Recently Ordered
+                </p>
+                {recent.map(e => (
+                  <div key={e.id}>
+                    <EntryRow entry={e} onDelete={() => deleteRecent(e.id)} />
+                    <p className="text-[10px] text-muted-foreground pl-2 mt-0.5">{fmtDateTime(e.savedAt)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pinned footer */}
+          <div className="border-t border-border p-3 space-y-2 shrink-0">
+            {total > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="flex-1 text-muted-foreground">
+                  {selected.size > 0 ? `${selected.size} selected` : "Click entries to select"}
+                </span>
+                <Button
+                  type="button" size="sm" className="h-7 px-3 text-xs"
+                  disabled={selected.size === 0}
+                  onClick={applySelected}
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  {selected.size > 1 ? `Order ${selected.size} investigations` : "Apply"}
+                </Button>
+              </div>
+            )}
+
+            <div className="flex gap-1.5">
+              <Input
+                className="h-7 text-xs flex-1"
+                value={favName}
+                onChange={e => setFavName(e.target.value)}
+                placeholder={type ? `Name this favourite (default: ${type}${bodyPart ? ` — ${bodyPart}` : ""})` : "Select type first…"}
+                onKeyDown={e => e.key === "Enter" && saveFav()}
+              />
+              <Button type="button" size="sm" className="h-7 px-3 text-xs shrink-0" onClick={saveFav}>
+                <Star className="h-3 w-3 mr-1" /> Save
               </Button>
             </div>
-          )}
-
-          <div className="flex gap-1.5 border-t border-border pt-2">
-            <Input
-              className="h-7 text-xs flex-1"
-              value={favName}
-              onChange={e => setFavName(e.target.value)}
-              placeholder={type ? `Name this favourite (default: ${type}${bodyPart ? ` — ${bodyPart}` : ""})` : "Select type first…"}
-              onKeyDown={e => e.key === "Enter" && saveFav()}
-            />
-            <Button type="button" size="sm" className="h-7 px-3 text-xs shrink-0" onClick={saveFav}>
-              <Star className="h-3 w-3 mr-1" /> Save
-            </Button>
           </div>
         </div>
       )}

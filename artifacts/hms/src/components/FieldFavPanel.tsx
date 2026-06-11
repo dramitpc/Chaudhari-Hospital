@@ -140,7 +140,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-4 min-h-0">
+          <div className="overflow-y-auto max-h-72 px-4 pb-2 space-y-3 min-h-0">
             {total === 0 && (
               <p className="text-muted-foreground text-xs text-center py-6">
                 No entries yet — use the field and they will appear here automatically.
