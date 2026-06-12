@@ -1,5 +1,5 @@
 import { useForm, useWatch } from "react-hook-form";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useRegisterPatient, useGenerateToken, useListDoctors } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -26,14 +26,32 @@ type FormValues = {
   referringDoctorPhone?: string;
 };
 
-function calcAge(dob: string): string {
+function calcAgeComponents(dob: string): { years: number; months: number; days: number } | null {
   const today = new Date();
   const birth = new Date(dob);
-  if (isNaN(birth.getTime())) return "";
+  if (isNaN(birth.getTime())) return null;
   let years = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) years--;
-  return years >= 0 ? String(years) : "";
+  let months = today.getMonth() - birth.getMonth();
+  let days = today.getDate() - birth.getDate();
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) { years--; months += 12; }
+  if (years < 0) return null;
+  return { years, months, days };
+}
+
+function composeAgeString(y: string, m: string, d: string): string {
+  const parts: string[] = [];
+  const yv = parseInt(y) || 0;
+  const mv = parseInt(m) || 0;
+  const dv = parseInt(d) || 0;
+  if (yv > 0) parts.push(`${yv}y`);
+  if (mv > 0) parts.push(`${mv}m`);
+  if (dv > 0) parts.push(`${dv}d`);
+  return parts.join(" ");
 }
 
 export default function RegisterPatientPage() {
@@ -51,14 +69,30 @@ export default function RegisterPatientPage() {
   const { data: doctorsData } = useListDoctors();
   const doctors = doctorsData?.data ?? [];
 
+  const [ageYears, setAgeYears] = useState("");
+  const [ageMonths, setAgeMonths] = useState("");
+  const [ageDays, setAgeDays] = useState("");
+
   const dobValue = useWatch({ control, name: "dateOfBirth" });
+
+  const syncAgeField = useCallback((y: string, m: string, d: string) => {
+    setValue("age", composeAgeString(y, m, d) || undefined);
+  }, [setValue]);
 
   useEffect(() => {
     if (dobValue) {
-      const computed = calcAge(dobValue);
-      if (computed) setValue("age", computed);
+      const c = calcAgeComponents(dobValue);
+      if (c) {
+        const y = String(c.years);
+        const m = String(c.months);
+        const d = String(c.days);
+        setAgeYears(y);
+        setAgeMonths(m);
+        setAgeDays(d);
+        syncAgeField(y, m, d);
+      }
     }
-  }, [dobValue, setValue]);
+  }, [dobValue, syncAgeField]);
 
   const onSubmit = (data: FormValues) => {
     const wantsQueue = addToQueueRef.current;
@@ -155,15 +189,57 @@ export default function RegisterPatientPage() {
               <p className="text-xs text-muted-foreground">Age is calculated automatically from DOB</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Age (years) <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input
-                type="number"
-                min="0"
-                max="150"
-                {...register("age")}
-                data-testid="input-age"
-                placeholder="e.g. 35"
-              />
+              <Label>Age <span className="text-muted-foreground text-xs">(optional — auto-filled from DOB)</span></Label>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="150"
+                    value={ageYears}
+                    onChange={e => {
+                      setAgeYears(e.target.value);
+                      syncAgeField(e.target.value, ageMonths, ageDays);
+                    }}
+                    data-testid="input-age-years"
+                    placeholder="0"
+                    className="pr-10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">yr</span>
+                </div>
+                <div className="flex-1 relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="11"
+                    value={ageMonths}
+                    onChange={e => {
+                      setAgeMonths(e.target.value);
+                      syncAgeField(ageYears, e.target.value, ageDays);
+                    }}
+                    data-testid="input-age-months"
+                    placeholder="0"
+                    className="pr-10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">mo</span>
+                </div>
+                <div className="flex-1 relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="31"
+                    value={ageDays}
+                    onChange={e => {
+                      setAgeDays(e.target.value);
+                      syncAgeField(ageYears, ageMonths, e.target.value);
+                    }}
+                    data-testid="input-age-days"
+                    placeholder="0"
+                    className="pr-10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">d</span>
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Gender *</Label>
