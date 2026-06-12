@@ -413,7 +413,7 @@ export default function InvoiceDetailPage() {
           .print\\:hidden { display: none !important; }
           nav, aside, header { display: none !important; }
           body { margin: 0; }
-          @page { size: A5 landscape; margin: 10mm; }
+          @page { size: A4; margin: 12mm; }
         }
         @media screen {
           .hidden.print\\:block { display: none !important; }
