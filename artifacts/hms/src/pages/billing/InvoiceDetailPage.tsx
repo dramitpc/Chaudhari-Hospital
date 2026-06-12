@@ -293,12 +293,12 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      {/* ── Print-only half-A4 landscape invoice ── */}
-      {/* Page = 297mm × 105mm (half A4 height in landscape) with 8mm margins      */}
-      {/* Usable container = 281mm wide × 89mm tall                                 */}
+      {/* ── Print-only half-A4 portrait invoice ── */}
+      {/* Page = 210mm × 149mm (half A4 height in portrait) with 8mm margins       */}
+      {/* Usable container = 194mm wide × 133mm tall                                */}
       {/* Two invoices tile on one A4 sheet — flip the paper for the second copy    */}
       <div className="hidden print:block" style={{
-        width: "281mm", height: "89mm", overflow: "hidden",
+        width: "194mm", height: "133mm", overflow: "hidden",
         display: "flex", flexDirection: "column",
         fontFamily: "Arial, Helvetica, sans-serif", fontSize: "8pt", color: "#222", boxSizing: "border-box",
       }}>
@@ -424,7 +424,7 @@ export default function InvoiceDetailPage() {
           .print\\:hidden { display: none !important; }
           nav, aside, header { display: none !important; }
           body { margin: 0; }
-          @page { size: 297mm 105mm; margin: 8mm; }
+          @page { size: 210mm 149mm; margin: 8mm; }
         }
         @media screen {
           .hidden.print\\:block { display: none !important; }
