@@ -294,28 +294,29 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* ── Print-only A5 landscape invoice ── */}
-      <div className="hidden print:block">
-        {/* Clinic header */}
-        <div style={{ borderBottom: "2.5px solid #1e3a5f", paddingBottom: "6px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="hidden print:block" style={{ display: "flex", flexDirection: "column", minHeight: "128mm", fontFamily: "Arial, sans-serif" }}>
+
+        {/* ── Header: clinic left, invoice meta right ── */}
+        <div style={{ borderBottom: "3px solid #1e3a5f", paddingBottom: "10px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontSize: "17px", fontWeight: 800, color: "#1e3a5f", letterSpacing: "-0.3px", lineHeight: 1.1 }}>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: "#1e3a5f", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
               {settings?.clinicName ?? "ClinicOS"}
             </div>
             {settings?.address && (
-              <div style={{ fontSize: "8px", color: "#555", marginTop: "2px" }}>{settings.address}</div>
+              <div style={{ fontSize: "11px", color: "#555", marginTop: "4px" }}>{settings.address}</div>
             )}
-            <div style={{ fontSize: "8px", color: "#555", marginTop: "1px", display: "flex", gap: "10px" }}>
+            <div style={{ fontSize: "11px", color: "#555", marginTop: "3px", display: "flex", gap: "16px" }}>
               {settings?.phone && <span>✆ {settings.phone}</span>}
               {settings?.email && <span>✉ {settings.email}</span>}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "20px", fontWeight: 700, color: "#1e3a5f", letterSpacing: "2px", textTransform: "uppercase" }}>Invoice</div>
-            <div style={{ fontSize: "10px", fontWeight: 600, color: "#444", fontFamily: "monospace", marginTop: "2px" }}>{invoice.invoiceNumber}</div>
-            <div style={{ fontSize: "8px", color: "#666", marginTop: "1px" }}>Date: {fmtDate(invoice.createdAt)}</div>
-            <div style={{ marginTop: "4px" }}>
+            <div style={{ fontSize: "26px", fontWeight: 700, color: "#1e3a5f", letterSpacing: "3px", textTransform: "uppercase" }}>Invoice</div>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "#444", fontFamily: "monospace", marginTop: "4px" }}>{invoice.invoiceNumber}</div>
+            <div style={{ fontSize: "11px", color: "#666", marginTop: "3px" }}>Date: {fmtDate(invoice.createdAt)}</div>
+            <div style={{ marginTop: "6px" }}>
               <span style={{
-                fontSize: "8px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "0.5px",
+                fontSize: "11px", fontWeight: 700, padding: "3px 12px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "0.5px",
                 background: invoice.status === "paid" ? "#dcfce7" : invoice.status === "partial" ? "#dbeafe" : invoice.status === "pending" ? "#fef3c7" : "#fee2e2",
                 color: invoice.status === "paid" ? "#166534" : invoice.status === "partial" ? "#1e40af" : invoice.status === "pending" ? "#92400e" : "#991b1b",
               }}>{invoice.status.toUpperCase()}</span>
@@ -323,88 +324,90 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Bill-to + doctor row */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "8px", fontSize: "8px" }}>
-          <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "5px 8px" }}>
-            <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "7px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "2px" }}>Bill To</div>
-            <div style={{ fontWeight: 600, fontSize: "9px" }}>{invoice.patientName}</div>
-            {patient?.dateOfBirth && <div style={{ color: "#666" }}>DOB: {fmtDate(patient.dateOfBirth)}</div>}
-            {patient?.phone && <div style={{ color: "#666" }}>✆ {patient.phone}</div>}
+        {/* ── Bill-to / Doctor / Payment info cards ── */}
+        <div style={{ display: "flex", gap: "14px", marginBottom: "14px" }}>
+          <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "8px 12px" }}>
+            <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "4px" }}>Bill To</div>
+            <div style={{ fontWeight: 700, fontSize: "13px", color: "#111" }}>{invoice.patientName}</div>
+            {patient?.dateOfBirth && <div style={{ fontSize: "11px", color: "#555", marginTop: "2px" }}>DOB: {fmtDate(patient.dateOfBirth)}</div>}
+            {patient?.phone && <div style={{ fontSize: "11px", color: "#555", marginTop: "2px" }}>✆ {patient.phone}</div>}
           </div>
           {invoice.doctorName && (
-            <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "5px 8px" }}>
-              <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "7px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "2px" }}>Consulting Doctor</div>
-              <div style={{ fontWeight: 600, fontSize: "9px" }}>Dr. {invoice.doctorName}</div>
+            <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "8px 12px" }}>
+              <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "4px" }}>Consulting Doctor</div>
+              <div style={{ fontWeight: 700, fontSize: "13px", color: "#111" }}>Dr. {invoice.doctorName}</div>
             </div>
           )}
-          <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "5px 8px" }}>
-            <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "7px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "2px" }}>Payment</div>
-            {invoice.paymentMode && <div style={{ fontWeight: 600, fontSize: "9px", textTransform: "capitalize" }}>{invoice.paymentMode}</div>}
-            <div style={{ color: "#166534", fontWeight: 600 }}>Paid: ₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
-            {(invoice.balance ?? 0) > 0 && <div style={{ color: "#92400e", fontWeight: 600 }}>Balance: ₹{(invoice.balance ?? 0).toFixed(2)}</div>}
+          <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "8px 12px" }}>
+            <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "4px" }}>Payment</div>
+            {invoice.paymentMode && <div style={{ fontWeight: 700, fontSize: "12px", color: "#111", textTransform: "capitalize", marginBottom: "2px" }}>{invoice.paymentMode}</div>}
+            <div style={{ fontSize: "11px", color: "#16a34a", fontWeight: 600 }}>Paid: ₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
+            {(invoice.balance ?? 0) > 0 && <div style={{ fontSize: "11px", color: "#b45309", fontWeight: 600, marginTop: "2px" }}>Balance: ₹{(invoice.balance ?? 0).toFixed(2)}</div>}
           </div>
         </div>
 
-        {/* Items table */}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8px", marginBottom: "6px" }}>
-          <thead>
-            <tr style={{ background: "#1e3a5f", color: "#fff" }}>
-              <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 600, borderRadius: "0" }}>#</th>
-              <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 600 }}>Description</th>
-              <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>Qty</th>
-              <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>Unit Price</th>
-              {items.some(it => (it.discount ?? 0) > 0) && <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>Disc (₹)</th>}
-              {items.some(it => (it.tax ?? 0) > 0) && <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>Tax (₹)</th>}
-              <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => (
-              <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                <td style={{ padding: "3.5px 6px", color: "#888" }}>{idx + 1}</td>
-                <td style={{ padding: "3.5px 6px", fontWeight: 500 }}>{item.description}</td>
-                <td style={{ padding: "3.5px 6px", textAlign: "right" }}>{item.quantity}</td>
-                <td style={{ padding: "3.5px 6px", textAlign: "right" }}>₹{item.unitPrice.toFixed(2)}</td>
-                {items.some(it => (it.discount ?? 0) > 0) && <td style={{ padding: "3.5px 6px", textAlign: "right", color: "#16a34a" }}>{(item.discount ?? 0) > 0 ? `₹${(item.discount ?? 0).toFixed(2)}` : "—"}</td>}
-                {items.some(it => (it.tax ?? 0) > 0) && <td style={{ padding: "3.5px 6px", textAlign: "right" }}>{(item.tax ?? 0) > 0 ? `₹${(item.tax ?? 0).toFixed(2)}` : "—"}</td>}
-                <td style={{ padding: "3.5px 6px", textAlign: "right", fontWeight: 600 }}>₹{item.total.toFixed(2)}</td>
+        {/* ── Items table (flex-grow to fill page) ── */}
+        <div style={{ flex: 1 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+            <thead>
+              <tr style={{ background: "#1e3a5f", color: "#fff" }}>
+                <th style={{ padding: "7px 10px", textAlign: "left", fontWeight: 600, width: "28px" }}>#</th>
+                <th style={{ padding: "7px 10px", textAlign: "left", fontWeight: 600 }}>Description</th>
+                <th style={{ padding: "7px 10px", textAlign: "right", fontWeight: 600, width: "40px" }}>Qty</th>
+                <th style={{ padding: "7px 10px", textAlign: "right", fontWeight: 600, width: "90px" }}>Unit Price</th>
+                {items.some(it => (it.discount ?? 0) > 0) && <th style={{ padding: "7px 10px", textAlign: "right", fontWeight: 600, width: "80px" }}>Disc (₹)</th>}
+                {items.some(it => (it.tax ?? 0) > 0) && <th style={{ padding: "7px 10px", textAlign: "right", fontWeight: 600, width: "75px" }}>Tax (₹)</th>}
+                <th style={{ padding: "7px 10px", textAlign: "right", fontWeight: 600, width: "90px" }}>Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((item, idx) => (
+                <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ padding: "7px 10px", color: "#999" }}>{idx + 1}</td>
+                  <td style={{ padding: "7px 10px", fontWeight: 500 }}>{item.description}</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right" }}>{item.quantity}</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right" }}>₹{item.unitPrice.toFixed(2)}</td>
+                  {items.some(it => (it.discount ?? 0) > 0) && <td style={{ padding: "7px 10px", textAlign: "right", color: "#16a34a" }}>{(item.discount ?? 0) > 0 ? `₹${(item.discount ?? 0).toFixed(2)}` : "—"}</td>}
+                  {items.some(it => (it.tax ?? 0) > 0) && <td style={{ padding: "7px 10px", textAlign: "right" }}>{(item.tax ?? 0) > 0 ? `₹${(item.tax ?? 0).toFixed(2)}` : "—"}</td>}
+                  <td style={{ padding: "7px 10px", textAlign: "right", fontWeight: 600 }}>₹{item.total.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        {/* Totals block */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-          <div style={{ minWidth: "180px", fontSize: "8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #e2e8f0" }}>
+        {/* ── Totals block ── */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "14px", marginBottom: "14px" }}>
+          <div style={{ minWidth: "230px", fontSize: "11px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0" }}>
               <span style={{ color: "#555" }}>Subtotal</span><span>₹{invoice.subtotal.toFixed(2)}</span>
             </div>
             {(invoice.discount ?? 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #e2e8f0", color: "#16a34a" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0", color: "#16a34a" }}>
                 <span>Discount</span><span>-₹{(invoice.discount ?? 0).toFixed(2)}</span>
               </div>
             )}
             {(invoice.tax ?? 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0" }}>
                 <span style={{ color: "#555" }}>Tax</span><span>₹{(invoice.tax ?? 0).toFixed(2)}</span>
               </div>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "2px solid #1e3a5f", fontWeight: 700, fontSize: "10px", color: "#1e3a5f" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "2.5px solid #1e3a5f", fontWeight: 700, fontSize: "14px", color: "#1e3a5f" }}>
               <span>TOTAL</span><span>₹{invoice.total.toFixed(2)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #e2e8f0", color: "#16a34a", fontWeight: 600 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0", color: "#16a34a", fontWeight: 600 }}>
               <span>Paid</span><span>₹{(invoice.amountPaid ?? 0).toFixed(2)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 600, color: (invoice.balance ?? 0) > 0 ? "#b45309" : "#16a34a" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontWeight: 600, color: (invoice.balance ?? 0) > 0 ? "#b45309" : "#16a34a" }}>
               <span>Balance Due</span><span>₹{(invoice.balance ?? 0).toFixed(2)}</span>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "5px", fontSize: "7.5px", color: "#888", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {/* ── Footer ── */}
+        <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "8px", fontSize: "10px", color: "#888", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
           <span>Thank you for choosing <strong style={{ color: "#1e3a5f" }}>{settings?.clinicName ?? "ClinicOS"}</strong>. We wish you good health.</span>
-          <span style={{ fontFamily: "monospace", color: "#aaa" }}>{invoice.invoiceNumber}</span>
+          <span style={{ fontFamily: "monospace", color: "#bbb" }}>{invoice.invoiceNumber}</span>
         </div>
       </div>
 
