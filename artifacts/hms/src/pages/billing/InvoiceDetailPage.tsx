@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { fmtDate } from "@/lib/dateUtils";
 import {
@@ -59,6 +59,26 @@ export default function InvoiceDetailPage() {
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("cash");
   const [showShare, setShowShare] = useState(false);
+
+  // Print scaling — target: upper half of A4 with 12mm margins = 136mm
+  // Element is off-screen (not display:none) so scrollHeight is measurable
+  const printContentRef = useRef<HTMLDivElement>(null);
+  const [printScale, setPrintScale] = useState(1);
+  const TARGET_MM = 136;
+
+  useEffect(() => {
+    if (!printContentRef.current || !invoice) return;
+    // 1mm = 3.7795px at 96 dpi
+    const targetPx = TARGET_MM * 3.7795;
+    const el = printContentRef.current;
+    // Force a single layout read
+    const naturalH = el.scrollHeight;
+    if (naturalH > 0 && naturalH > targetPx) {
+      setPrintScale(targetPx / naturalH);
+    } else {
+      setPrintScale(1);
+    }
+  }, [invoice, patient, settings]);
 
   const handleCancel = () => {
     if (!confirm("Cancel this invoice? This cannot be undone.")) return;
@@ -294,7 +314,17 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* ── Print-only A5 landscape invoice ── */}
-      <div className="hidden print:block">
+      {/* Outer wrapper: off-screen on screen (so scrollHeight is measurable), visible on print */}
+      <div className="invoice-print-outer">
+        {/* Inner content: scale transform applied here */}
+        <div
+          ref={printContentRef}
+          style={{
+            transform: `scale(${printScale})`,
+            transformOrigin: "top left",
+            width: printScale < 1 ? `${100 / printScale}%` : "100%",
+          }}
+        >
         {/* Clinic header */}
         <div style={{ borderBottom: "2.5px solid #1e3a5f", paddingBottom: "10px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
@@ -406,7 +436,8 @@ export default function InvoiceDetailPage() {
           <span>Thank you for choosing <strong style={{ color: "#1e3a5f" }}>{settings?.clinicName ?? "ClinicOS"}</strong>. We wish you good health.</span>
           <span style={{ fontFamily: "monospace", color: "#aaa" }}>{invoice.invoiceNumber}</span>
         </div>
-      </div>
+        </div>{/* end inner scale wrapper */}
+      </div>{/* end invoice-print-outer */}
 
       <style>{`
         @media print {
@@ -414,8 +445,28 @@ export default function InvoiceDetailPage() {
           nav, aside, header { display: none !important; }
           body { margin: 0; }
           @page { size: A4; margin: 12mm; }
+          /* Print: show outer wrapper, fixed to upper half of A4 */
+          .invoice-print-outer {
+            display: block !important;
+            position: static !important;
+            visibility: visible !important;
+            width: 100%;
+            height: 136mm;
+            overflow: hidden;
+          }
         }
         @media screen {
+          /* Off-screen but rendered (not display:none) so scrollHeight is measurable */
+          .invoice-print-outer {
+            position: fixed;
+            left: -10000px;
+            top: 0;
+            width: 186mm;
+            height: auto;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: -1;
+          }
           .hidden.print\\:block { display: none !important; }
         }
       `}</style>
