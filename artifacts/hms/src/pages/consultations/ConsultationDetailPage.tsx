@@ -1497,7 +1497,7 @@ export default function ConsultationDetailPage() {
                                     >Pay</button>
                                   )}
                                   <Link
-                                    href={`/billing/${inv.id}`}
+                                    href={`/billing/${inv.id}?from=consultation&cid=${id}`}
                                     className="text-[11px] text-blue-600 hover:underline whitespace-nowrap"
                                   >View →</Link>
                                 </div>
