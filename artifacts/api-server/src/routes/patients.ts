@@ -60,7 +60,9 @@ router.get("/patients", authenticate, async (req, res): Promise<void> => {
       or(
         ilike(patientsTable.fullName, `%${search}%`),
         ilike(patientsTable.phone, `%${search}%`),
-        ilike(patientsTable.patientId, `%${search}%`)
+        ilike(patientsTable.patientId, `%${search}%`),
+        ilike(patientsTable.email, `%${search}%`),
+        ilike(patientsTable.address, `%${search}%`)
       )
     );
   }

@@ -19,12 +19,13 @@ export default function PatientsPage() {
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 20;
   const debouncedSearch = useDebounce(search, 300);
+  // When searching, fetch up to 200 results so all matches are visible at once
+  const limit = debouncedSearch ? 200 : 20;
 
   const { data, isLoading } = useListPatients(
-    { search: debouncedSearch || undefined, page, limit },
-    { query: { queryKey: getListPatientsQueryKey({ search: debouncedSearch || undefined, page, limit }) } }
+    { search: debouncedSearch || undefined, page: debouncedSearch ? 1 : page, limit },
+    { query: { queryKey: getListPatientsQueryKey({ search: debouncedSearch || undefined, page: debouncedSearch ? 1 : page, limit }) } }
   );
 
   const patients = data?.data ?? [];
