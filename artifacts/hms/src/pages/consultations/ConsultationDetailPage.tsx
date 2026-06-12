@@ -1887,9 +1887,9 @@ export default function ConsultationDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex gap-0 overflow-hidden min-h-0">
+            <div className="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden min-h-0">
               {/* LEFT: Drug Picker */}
-              <div className="w-[340px] shrink-0 flex flex-col gap-2 overflow-hidden border-r border-border pr-4 mr-4">
+              <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-2 overflow-hidden border-b lg:border-b-0 lg:border-r border-border pb-3 mb-3 lg:pb-0 lg:mb-0 lg:pr-4 lg:mr-4">
                 {/* ── Drug Picker ── */}
                 {(() => {
                   const freq = getDrugFreq();
@@ -1962,55 +1962,92 @@ export default function ConsultationDetailPage() {
               {/* RIGHT: Drug Table + Footer */}
               <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
                 {/* ── Editable drug rows ── */}
-                <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-xs text-muted-foreground">
-                        <th className="text-left py-1 pr-2 w-44">Drug Name</th>
-                        <th className="text-left py-1 pr-2 w-24">Dosage</th>
-                        <th className="text-left py-1 pr-2 w-28">Frequency</th>
-                        <th className="text-left py-1 pr-2 w-20">Duration</th>
-                        <th className="text-left py-1 pr-2">Instructions</th>
-                        <th className="w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {drugItems.map((item, i) => (
-                        <tr key={i}>
-                          <td className="pr-2 py-1">
-                            <Input
-                              className="h-7 text-xs"
-                              value={item.drugName}
-                              onChange={e => updateDrugRow(i, "drugName", e.target.value)}
-                              placeholder="Drug name"
-                            />
-                          </td>
-                          <td className="pr-2 py-1">
-                            <Input className="h-8 text-xs" value={item.dosage} onChange={e => updateDrugRow(i, "dosage", e.target.value)} placeholder="500mg" />
-                          </td>
-                          <td className="pr-2 py-1">
-                            <Input className="h-8 text-xs" value={item.frequency} onChange={e => updateDrugRow(i, "frequency", e.target.value)} placeholder="TDS" />
-                          </td>
-                          <td className="pr-2 py-1">
-                            <Input className="h-8 text-xs" value={item.duration} onChange={e => updateDrugRow(i, "duration", e.target.value)} placeholder="5 days" />
-                          </td>
-                          <td className="pr-2 py-1">
-                            <Input className="h-8 text-xs" value={item.instructions ?? ""} onChange={e => updateDrugRow(i, "instructions", e.target.value)} placeholder="After food" />
-                          </td>
-                          <td className="py-1">
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeDrugRow(i)}>×</Button>
-                          </td>
+                <div className="flex-1 overflow-y-auto min-h-0">
+
+                  {/* Desktop table (lg+) */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-muted-foreground">
+                          <th className="text-left py-1 pr-2 w-44">Drug Name</th>
+                          <th className="text-left py-1 pr-2 w-24">Dosage</th>
+                          <th className="text-left py-1 pr-2 w-28">Frequency</th>
+                          <th className="text-left py-1 pr-2 w-20">Duration</th>
+                          <th className="text-left py-1 pr-2">Instructions</th>
+                          <th className="w-8"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {drugItems.map((item, i) => (
+                          <tr key={i}>
+                            <td className="pr-2 py-1">
+                              <Input className="h-7 text-xs" value={item.drugName}
+                                onChange={e => updateDrugRow(i, "drugName", e.target.value)} placeholder="Drug name" />
+                            </td>
+                            <td className="pr-2 py-1">
+                              <Input className="h-8 text-xs" value={item.dosage} onChange={e => updateDrugRow(i, "dosage", e.target.value)} placeholder="500mg" />
+                            </td>
+                            <td className="pr-2 py-1">
+                              <Input className="h-8 text-xs" value={item.frequency} onChange={e => updateDrugRow(i, "frequency", e.target.value)} placeholder="TDS" />
+                            </td>
+                            <td className="pr-2 py-1">
+                              <Input className="h-8 text-xs" value={item.duration} onChange={e => updateDrugRow(i, "duration", e.target.value)} placeholder="5 days" />
+                            </td>
+                            <td className="pr-2 py-1">
+                              <Input className="h-8 text-xs" value={item.instructions ?? ""} onChange={e => updateDrugRow(i, "instructions", e.target.value)} placeholder="After food" />
+                            </td>
+                            <td className="py-1">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeDrugRow(i)}>×</Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile cards (< lg) */}
+                  <div className="lg:hidden space-y-2">
+                    {drugItems.map((item, i) => (
+                      <div key={i} className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Input className="h-9 text-sm flex-1 font-medium" value={item.drugName}
+                            onChange={e => updateDrugRow(i, "drugName", e.target.value)} placeholder="Drug name" />
+                          <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-muted-foreground"
+                            onClick={() => removeDrugRow(i)}>×</Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Dosage</p>
+                            <Input className="h-9 text-sm" value={item.dosage}
+                              onChange={e => updateDrugRow(i, "dosage", e.target.value)} placeholder="500mg" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Frequency</p>
+                            <Input className="h-9 text-sm" value={item.frequency}
+                              onChange={e => updateDrugRow(i, "frequency", e.target.value)} placeholder="TDS" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Duration</p>
+                            <Input className="h-9 text-sm" value={item.duration}
+                              onChange={e => updateDrugRow(i, "duration", e.target.value)} placeholder="5 days" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Instructions</p>
+                            <Input className="h-9 text-sm" value={item.instructions ?? ""}
+                              onChange={e => updateDrugRow(i, "instructions", e.target.value)} placeholder="After food" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                 </div>
                 {/* ── Footer ── */}
-                <div className="shrink-0 flex items-center justify-between gap-2 pt-2 border-t border-border">
-                  <Button variant="outline" size="sm" onClick={addDrugRow}>
+                <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-border sm:flex-row sm:items-center sm:justify-between">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={addDrugRow}>
                     <Plus className="h-3 w-3 mr-1" /> Add Row
                   </Button>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 justify-end">
                     <Button variant="outline" size="sm" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); }}>Cancel</Button>
                     <Button variant="outline" size="sm" onClick={() => setShowRxPreview(true)}>
                       <FileText className="mr-2 h-4 w-4" />
