@@ -143,7 +143,7 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
       {isOpen && (
         <div className="rounded-lg border border-border bg-muted/30 text-xs flex flex-col">
           {/* Scrollable list area */}
-          <div className="overflow-y-auto max-h-60 p-3 space-y-3">
+          <div className="overflow-y-auto max-h-[32rem] p-3 space-y-3">
             {total === 0 && (
               <p className="text-muted-foreground text-center py-1">
                 No entries yet — order an investigation and it will appear here automatically.
