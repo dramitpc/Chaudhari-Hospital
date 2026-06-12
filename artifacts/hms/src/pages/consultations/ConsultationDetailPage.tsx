@@ -1887,9 +1887,9 @@ export default function ConsultationDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden min-h-0">
+            <div className="flex-1 flex flex-col lg:flex-row gap-0 overflow-y-auto lg:overflow-hidden min-h-0">
               {/* LEFT: Drug Picker */}
-              <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-2 overflow-hidden border-b lg:border-b-0 lg:border-r border-border pb-3 mb-3 lg:pb-0 lg:mb-0 lg:pr-4 lg:mr-4">
+              <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-2 overflow-visible lg:overflow-hidden border-b lg:border-b-0 lg:border-r border-border pb-3 mb-3 lg:pb-0 lg:mb-0 lg:pr-4 lg:mr-4">
                 {/* ── Drug Picker ── */}
                 {(() => {
                   const freq = getDrugFreq();
@@ -1941,7 +1941,7 @@ export default function ConsultationDetailPage() {
                           onChange={e => setDrugPickerSearch(e.target.value)}
                         />
                       </div>
-                      <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
+                      <div className="max-h-48 lg:max-h-none lg:flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
                         {filtered.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-3">No drugs match your search</p>
                         )}
