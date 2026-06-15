@@ -1914,18 +1914,18 @@ export default function ConsultationDetailPage() {
                       <div
                         key={d.id}
                         onClick={() => !alreadyAdded && addDrugInstant(d)}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded select-none text-xs transition-colors ${
+                        className={`flex items-center gap-1 px-1 py-1.5 rounded select-none text-xs transition-colors ${
                           alreadyAdded
                             ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 cursor-default opacity-70"
                             : "hover:bg-primary/10 hover:border-primary/30 border border-transparent cursor-pointer"
                         }`}
                       >
-                        <span className="shrink-0 w-3.5 text-center">
+                        <span className="shrink-0 w-3 text-center">
                           {alreadyAdded ? <span className="text-green-600 dark:text-green-400 text-[10px]">✓</span> : <span className="text-muted-foreground text-[10px]">+</span>}
                         </span>
                         <span className="font-medium flex-1 truncate">{d.name}</span>
-                        {d.genericName && <span className="text-muted-foreground truncate max-w-[90px]">{d.genericName}</span>}
-                        {d.defaultDosage && <span className="text-muted-foreground shrink-0">{d.defaultDosage}</span>}
+                        {d.genericName && <span className="hidden lg:inline text-muted-foreground truncate max-w-[90px]">{d.genericName}</span>}
+                        {d.defaultDosage && <span className="hidden lg:inline text-muted-foreground shrink-0">{d.defaultDosage}</span>}
                         {(freq[d.id] ?? 0) > 0 && <span className="shrink-0 text-amber-500" title={`Used ${freq[d.id]} time(s)`}>⭐</span>}
                       </div>
                     );
@@ -1941,7 +1941,7 @@ export default function ConsultationDetailPage() {
                           onChange={e => setDrugPickerSearch(e.target.value)}
                         />
                       </div>
-                      <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
+                      <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-1 space-y-0.5 min-h-0">
                         {filtered.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-3">No drugs match your search</p>
                         )}
