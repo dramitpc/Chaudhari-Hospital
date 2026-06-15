@@ -20,8 +20,7 @@ export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search, 300);
-  // When searching, fetch up to 200 results so all matches are visible at once
-  const limit = debouncedSearch ? 200 : 20;
+  const limit = 20;
 
   const { data, isLoading } = useListPatients(
     { search: debouncedSearch || undefined, page: debouncedSearch ? 1 : page, limit },
@@ -30,7 +29,7 @@ export default function PatientsPage() {
 
   const patients = data?.data ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = debouncedSearch ? 1 : Math.ceil(total / limit);
 
   return (
     <div className="space-y-6">

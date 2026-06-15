@@ -69,7 +69,10 @@ router.get("/patients", authenticate, async (req, res): Promise<void> => {
 
   const all = await query.orderBy(desc(patientsTable.createdAt));
   const total = all.length;
-  const data = all.slice((page - 1) * limit, page * limit).map(formatPatient);
+  // When a search term is present return all matches; otherwise paginate
+  const data = search
+    ? all.map(formatPatient)
+    : all.slice((page - 1) * limit, page * limit).map(formatPatient);
   await logAudit(req, req.user!.id, "LIST_PATIENTS", "patients");
   res.json({ data, total, page, limit });
 });
