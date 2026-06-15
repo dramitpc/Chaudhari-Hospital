@@ -1887,9 +1887,9 @@ export default function ConsultationDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col lg:flex-row gap-0 overflow-y-auto lg:overflow-hidden min-h-0">
+            <div className="flex-1 flex flex-row gap-0 overflow-hidden min-h-0">
               {/* LEFT: Drug Picker */}
-              <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-2 overflow-visible lg:overflow-hidden border-b lg:border-b-0 lg:border-r border-border pb-3 mb-3 lg:pb-0 lg:mb-0 lg:pr-4 lg:mr-4">
+              <div className="w-[160px] sm:w-[240px] lg:w-[340px] shrink-0 flex flex-col gap-2 overflow-hidden border-r border-border pr-3 mr-3 lg:pr-4 lg:mr-4">
                 {/* ── Drug Picker ── */}
                 {(() => {
                   const freq = getDrugFreq();
@@ -1941,7 +1941,7 @@ export default function ConsultationDetailPage() {
                           onChange={e => setDrugPickerSearch(e.target.value)}
                         />
                       </div>
-                      <div className="max-h-48 lg:max-h-none lg:flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
+                      <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 space-y-0.5 min-h-0">
                         {filtered.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-3">No drugs match your search</p>
                         )}
@@ -2008,32 +2008,32 @@ export default function ConsultationDetailPage() {
                   {/* Mobile cards (< lg) */}
                   <div className="lg:hidden space-y-2">
                     {drugItems.map((item, i) => (
-                      <div key={i} className="rounded-md border border-border bg-muted/20 p-3 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Input className="h-9 text-sm flex-1 font-medium" value={item.drugName}
+                      <div key={i} className="rounded-md border border-border bg-muted/20 p-2 space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Input className="h-8 text-xs flex-1 font-medium" value={item.drugName}
                             onChange={e => updateDrugRow(i, "drugName", e.target.value)} placeholder="Drug name" />
-                          <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-muted-foreground"
+                          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-muted-foreground"
                             onClick={() => removeDrugRow(i)}>×</Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-1.5">
                           <div className="space-y-0.5">
-                            <p className="text-xs text-muted-foreground">Dosage</p>
-                            <Input className="h-9 text-sm" value={item.dosage}
+                            <p className="text-[10px] text-muted-foreground">Dosage</p>
+                            <Input className="h-8 text-xs" value={item.dosage}
                               onChange={e => updateDrugRow(i, "dosage", e.target.value)} placeholder="500mg" />
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-xs text-muted-foreground">Frequency</p>
-                            <Input className="h-9 text-sm" value={item.frequency}
+                            <p className="text-[10px] text-muted-foreground">Frequency</p>
+                            <Input className="h-8 text-xs" value={item.frequency}
                               onChange={e => updateDrugRow(i, "frequency", e.target.value)} placeholder="TDS" />
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-xs text-muted-foreground">Duration</p>
-                            <Input className="h-9 text-sm" value={item.duration}
+                            <p className="text-[10px] text-muted-foreground">Duration</p>
+                            <Input className="h-8 text-xs" value={item.duration}
                               onChange={e => updateDrugRow(i, "duration", e.target.value)} placeholder="5 days" />
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-xs text-muted-foreground">Instructions</p>
-                            <Input className="h-9 text-sm" value={item.instructions ?? ""}
+                            <p className="text-[10px] text-muted-foreground">Instructions</p>
+                            <Input className="h-8 text-xs" value={item.instructions ?? ""}
                               onChange={e => updateDrugRow(i, "instructions", e.target.value)} placeholder="After food" />
                           </div>
                         </div>
