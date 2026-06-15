@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "../../hooks/useDebounce";
 import { Link, useSearch } from "wouter";
 import {
   useListCertificates, useCreateCertificate, useListPatients, useListUsers, useGetClinicSettings,
@@ -244,26 +245,22 @@ export default function CertificatesPage() {
 
   const [patientSearch, setPatientSearch] = useState("");
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
+  const [selectedPatientObj, setSelectedPatientObj] = useState<{ id: string; fullName: string; patientId: string; phone?: string | null } | null>(null);
+  const debouncedApiSearch = useDebounce(patientDropdownOpen ? patientSearch : "", 300);
 
   const { data, isLoading } = useListCertificates(
     { date: selectedDate, limit: 500 },
     { query: { queryKey: getListCertificatesQueryKey({ date: selectedDate, limit: 500 }) } }
   );
-  const { data: patients } = useListPatients({ limit: 500 }, { query: { queryKey: getListPatientsQueryKey({ limit: 500 }) } });
+  const { data: patients } = useListPatients(
+    { search: debouncedApiSearch || undefined, limit: 50 },
+    { query: { queryKey: getListPatientsQueryKey({ search: debouncedApiSearch || undefined, limit: 50 }) } }
+  );
   const { data: doctors } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
   const createMutation = useCreateCertificate();
 
-  const filteredPatients = useMemo(() => {
-    const q = patientSearch.toLowerCase();
-    return (patients?.data ?? []).filter(p =>
-      p.fullName.toLowerCase().includes(q) ||
-      p.patientId.toLowerCase().includes(q) ||
-      (p.phone ?? "").includes(q)
-    );
-  }, [patients?.data, patientSearch]);
-
-  const selectedPatient = (patients?.data ?? []).find(p => p.id === form.patientId);
+  const selectedPatient = selectedPatientObj ?? (patients?.data ?? []).find(p => p.id === form.patientId);
   const selectedDoctor = (doctors?.data ?? []).find(d => d.id === form.doctorId);
   const patientName = selectedPatient?.fullName ?? "";
   const doctorName = selectedDoctor?.fullName ?? (user?.role === "doctor" ? (user as unknown as { fullName?: string }).fullName ?? "" : "");
@@ -278,6 +275,7 @@ export default function CertificatesPage() {
   const resetPatientSearch = () => {
     setPatientSearch("");
     setPatientDropdownOpen(false);
+    setSelectedPatientObj(null);
   };
 
   const handleCreate = () => {
@@ -417,14 +415,15 @@ export default function CertificatesPage() {
                     />
                     {patientDropdownOpen && (
                       <div className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                        {filteredPatients.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-muted-foreground">No patients found</p>
-                        ) : filteredPatients.map(p => (
+                        {(patients?.data ?? []).length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">{patientSearch ? "No patients found" : "Type to search…"}</p>
+                        ) : (patients?.data ?? []).map(p => (
                           <button
                             key={p.id}
                             type="button"
                             className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-baseline gap-2"
                             onMouseDown={() => {
+                              setSelectedPatientObj(p);
                               setForm(f => ({ ...f, patientId: p.id }));
                               setPatientSearch(`${p.fullName} · ${p.patientId}${p.phone ? ` · ${p.phone}` : ""}`);
                               setPatientDropdownOpen(false);

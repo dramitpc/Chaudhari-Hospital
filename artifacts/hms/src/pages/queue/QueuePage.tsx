@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "../../hooks/useDebounce";
 import { useLocation } from "wouter";
 import {
   useGetQueue, useCallNextPatient, useUpdateTokenStatus, useGenerateToken,
@@ -105,6 +106,8 @@ export default function QueuePage() {
   const [tokenVisitType, setTokenVisitType] = useState<"new" | "followup">("new");
   const [patientSearch, setPatientSearch] = useState("");
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
+  const [selectedPatientObj, setSelectedPatientObj] = useState<{ id: string; salutation?: string | null; fullName: string; patientId: string; phone?: string | null } | null>(null);
+  const debouncedPatientSearch = useDebounce(patientSearch, 300);
 
   const { data: doctorsData } = useListDoctors({ query: { queryKey: getListDoctorsQueryKey() } });
   const doctors = doctorsData?.data ?? [];
@@ -121,7 +124,10 @@ export default function QueuePage() {
     { query: { enabled: !!selectedDoctorId, queryKey: getGetQueueQueryKey({ doctorId: selectedDoctorId || undefined, date: selectedDate }) } }
   );
 
-  const { data: patients } = useListPatients({ limit: 200 }, { query: { queryKey: getListPatientsQueryKey({ limit: 200 }) } });
+  const { data: patients } = useListPatients(
+    { search: debouncedPatientSearch || undefined, limit: 50 },
+    { query: { queryKey: getListPatientsQueryKey({ search: debouncedPatientSearch || undefined, limit: 50 }) } }
+  );
 
   const callNextMutation = useCallNextPatient();
   const updateStatusMutation = useUpdateTokenStatus();
@@ -245,6 +251,7 @@ export default function QueuePage() {
     setDialogMode("existing");
     setPatientSearch("");
     setPatientDropdownOpen(false);
+    setSelectedPatientObj(null);
     setNewSalutation("");
     setNewName("");
     setNewGender("");
@@ -286,7 +293,7 @@ export default function QueuePage() {
                   description: `${patient.fullName} registered & added to queue`,
                 });
                 queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-                queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey({ limit: 200 }) });
+                queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
                 resetTokenModal();
               },
               onError: () => toast({ title: "Registered but queue failed", description: "Patient was registered; add to queue manually.", variant: "destructive" }),
@@ -793,15 +800,7 @@ export default function QueuePage() {
                 <Label>Patient <span className="text-destructive">*</span></Label>
                 {(() => {
                   const allPatients = patients?.data ?? [];
-                  const q = patientSearch.trim().toLowerCase();
-                  const filtered = q
-                    ? allPatients.filter(p =>
-                        p.fullName.toLowerCase().includes(q) ||
-                        (p.patientId ?? "").toLowerCase().includes(q) ||
-                        (p.phone ?? "").includes(q)
-                      )
-                    : allPatients;
-                  const selected = allPatients.find(p => p.id === tokenPatientId);
+                  const selected = selectedPatientObj;
                   return (
                     <div className="relative">
                       {selected && !patientDropdownOpen ? (
@@ -811,6 +810,7 @@ export default function QueuePage() {
                             setPatientSearch("");
                             setPatientDropdownOpen(true);
                             setTokenPatientId("");
+                            setSelectedPatientObj(null);
                           }}
                           data-testid="selected-patient-display"
                         >
@@ -832,10 +832,10 @@ export default function QueuePage() {
                           />
                           {patientDropdownOpen && (
                             <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-52 overflow-y-auto">
-                              {filtered.length === 0 ? (
-                                <p className="px-3 py-2 text-sm text-muted-foreground">No patients found</p>
+                              {allPatients.length === 0 ? (
+                                <p className="px-3 py-2 text-sm text-muted-foreground">{patientSearch ? "No patients found" : "Type to search…"}</p>
                               ) : (
-                                filtered.slice(0, 50).map(p => (
+                                allPatients.slice(0, 50).map(p => (
                                   <button
                                     key={p.id}
                                     type="button"
@@ -843,6 +843,7 @@ export default function QueuePage() {
                                     onMouseDown={e => e.preventDefault()}
                                     onClick={() => {
                                       setTokenPatientId(p.id);
+                                      setSelectedPatientObj(p);
                                       setPatientSearch("");
                                       setPatientDropdownOpen(false);
                                     }}

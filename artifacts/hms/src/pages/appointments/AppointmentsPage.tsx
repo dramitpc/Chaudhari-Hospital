@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDebounce } from "../../hooks/useDebounce";
 import {
   useListAppointments, useListUsers, useCreateAppointment, useUpdateAppointment, useCancelAppointment,
   getListAppointmentsQueryKey, getListUsersQueryKey
@@ -33,6 +34,10 @@ export default function AppointmentsPage() {
   const [showBooking, setShowBooking] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [apptPatientSearch, setApptPatientSearch] = useState("");
+  const [apptPatientDropdownOpen, setApptPatientDropdownOpen] = useState(false);
+  const [selectedApptPatient, setSelectedApptPatient] = useState<{ id: string; fullName: string; patientId: string; phone?: string | null } | null>(null);
+  const debouncedApptSearch = useDebounce(apptPatientSearch, 300);
   const { register, handleSubmit, setValue, reset } = useForm();
 
   const { data: apptData, isLoading } = useListAppointments(
@@ -40,7 +45,10 @@ export default function AppointmentsPage() {
     { query: { queryKey: getListAppointmentsQueryKey({ date, doctorId: doctorId || undefined }) } }
   );
   const { data: users } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
-  const { data: patients } = useListPatients({ limit: 100 }, { query: { queryKey: getListPatientsQueryKey({ limit: 100 }) } });
+  const { data: patients } = useListPatients(
+    { search: debouncedApptSearch || undefined, limit: 50 },
+    { query: { queryKey: getListPatientsQueryKey({ search: debouncedApptSearch || undefined, limit: 50 }) } }
+  );
 
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
@@ -157,7 +165,7 @@ export default function AppointmentsPage() {
         </table>
       </div>
 
-      <Dialog open={showBooking} onOpenChange={setShowBooking}>
+      <Dialog open={showBooking} onOpenChange={v => { setShowBooking(v); if (!v) { setSelectedApptPatient(null); setApptPatientSearch(""); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Book Appointment</DialogTitle>
@@ -165,12 +173,53 @@ export default function AppointmentsPage() {
           <form onSubmit={handleSubmit(onBook)} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Patient</Label>
-              <Select onValueChange={v => setValue("patientId", v)}>
-                <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                <SelectContent>
-                  {(patients?.data ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.fullName} ({p.patientId})</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                {selectedApptPatient ? (
+                  <div
+                    className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 cursor-pointer hover:bg-muted/50"
+                    onClick={() => { setSelectedApptPatient(null); setApptPatientSearch(""); setValue("patientId", ""); }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{selectedApptPatient.fullName}</p>
+                      <p className="text-xs text-muted-foreground">{selectedApptPatient.patientId}{selectedApptPatient.phone ? ` · ${selectedApptPatient.phone}` : ""}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">change</span>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      autoFocus
+                      value={apptPatientSearch}
+                      onChange={e => { setApptPatientSearch(e.target.value); setApptPatientDropdownOpen(true); }}
+                      onFocus={() => setApptPatientDropdownOpen(true)}
+                      placeholder="Search by name, patient ID, or mobile…"
+                    />
+                    {apptPatientDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-52 overflow-y-auto">
+                        {(patients?.data ?? []).length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">{apptPatientSearch ? "No patients found" : "Type to search…"}</p>
+                        ) : (patients?.data ?? []).map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-muted transition-colors"
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setSelectedApptPatient(p);
+                              setValue("patientId", p.id);
+                              setApptPatientSearch("");
+                              setApptPatientDropdownOpen(false);
+                            }}
+                          >
+                            <p className="text-sm font-medium">{p.fullName}</p>
+                            <p className="text-xs text-muted-foreground">{p.patientId}{p.phone ? ` · ${p.phone}` : ""}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Doctor</Label>
