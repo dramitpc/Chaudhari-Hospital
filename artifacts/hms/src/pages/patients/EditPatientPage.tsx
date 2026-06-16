@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { useGetPatient, useUpdatePatient, getGetPatientQueryKey } from "@workspace/api-client-react";
 import { useForm, Controller } from "react-hook-form";
@@ -11,6 +11,40 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function composeAgeString(y: string, m: string, d: string): string {
+  const parts: string[] = [];
+  if (parseInt(y) > 0) parts.push(`${parseInt(y)}y`);
+  if (parseInt(m) > 0) parts.push(`${parseInt(m)}m`);
+  if (parseInt(d) > 0) parts.push(`${parseInt(d)}d`);
+  return parts.join(" ");
+}
+
+function parseAgeString(age: string): { years: string; months: string; days: string } {
+  if (!age) return { years: "", months: "", days: "" };
+  if (/^\d+$/.test(age.trim())) return { years: age.trim(), months: "", days: "" };
+  const yMatch = age.match(/(\d+)\s*y/);
+  const mMatch = age.match(/(\d+)\s*m/);
+  const dMatch = age.match(/(\d+)\s*d/);
+  return {
+    years: yMatch ? yMatch[1] : "",
+    months: mMatch ? mMatch[1] : "",
+    days: dMatch ? dMatch[1] : "",
+  };
+}
+
+function calcAgeComponents(dob: string): { years: number; months: number; days: number } | null {
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - birth.getFullYear();
+  let months = today.getMonth() - birth.getMonth();
+  let days = today.getDate() - birth.getDate();
+  if (days < 0) { months--; days += new Date(today.getFullYear(), today.getMonth(), 0).getDate(); }
+  if (months < 0) { years--; months += 12; }
+  if (years < 0) return null;
+  return { years, months, days };
+}
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -40,20 +74,33 @@ export default function EditPatientPage() {
   const { register, handleSubmit, reset, control, watch, setValue } = useForm();
   const mutation = useUpdatePatient();
 
+  const [ageYears, setAgeYears] = useState("");
+  const [ageMonths, setAgeMonths] = useState("");
+  const [ageDays, setAgeDays] = useState("");
+
   useEffect(() => {
-    if (patient) reset(patient);
+    if (patient) {
+      reset(patient);
+      const parsed = parseAgeString(patient.age ?? "");
+      setAgeYears(parsed.years);
+      setAgeMonths(parsed.months);
+      setAgeDays(parsed.days);
+    }
   }, [patient, reset]);
 
   const dobValue = watch("dateOfBirth");
   useEffect(() => {
     if (!dobValue) return;
-    const birth = new Date(dobValue);
-    if (isNaN(birth.getTime())) return;
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    if (age >= 0) setValue("age", String(age));
+    const c = calcAgeComponents(dobValue);
+    if (c) {
+      const y = String(c.years);
+      const m = String(c.months);
+      const d = String(c.days);
+      setAgeYears(y);
+      setAgeMonths(m);
+      setAgeDays(d);
+      setValue("age", composeAgeString(y, m, d) || undefined);
+    }
   }, [dobValue, setValue]);
 
   const onSubmit = (data: Record<string, unknown>) => {
@@ -116,19 +163,43 @@ export default function EditPatientPage() {
               <Input type="date" {...register("dateOfBirth")} />
             </div>
             <div className="space-y-1.5">
-              <Label>Age (years)</Label>
-              <Input
-                type="number"
-                min="0"
-                max="150"
-                {...register("age")}
-                readOnly={!!dobValue}
-                placeholder={dobValue ? "Calculated from DOB" : "e.g. 35"}
-                className={dobValue ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}
-              />
-              {dobValue && (
-                <p className="text-xs text-muted-foreground">Age is auto-calculated from Date of Birth</p>
-              )}
+              <Label>Age <span className="text-muted-foreground text-xs">(auto-filled from DOB)</span></Label>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    type="number" min="0" max="150"
+                    value={ageYears}
+                    readOnly={!!dobValue}
+                    onChange={e => { setAgeYears(e.target.value); setValue("age", composeAgeString(e.target.value, ageMonths, ageDays) || undefined); }}
+                    placeholder="0"
+                    className={`pr-10 ${dobValue ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">yr</span>
+                </div>
+                <div className="flex-1 relative">
+                  <Input
+                    type="number" min="0" max="11"
+                    value={ageMonths}
+                    readOnly={!!dobValue}
+                    onChange={e => { setAgeMonths(e.target.value); setValue("age", composeAgeString(ageYears, e.target.value, ageDays) || undefined); }}
+                    placeholder="0"
+                    className={`pr-10 ${dobValue ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">mo</span>
+                </div>
+                <div className="flex-1 relative">
+                  <Input
+                    type="number" min="0" max="31"
+                    value={ageDays}
+                    readOnly={!!dobValue}
+                    onChange={e => { setAgeDays(e.target.value); setValue("age", composeAgeString(ageYears, ageMonths, e.target.value) || undefined); }}
+                    placeholder="0"
+                    className={`pr-10 ${dobValue ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">d</span>
+                </div>
+              </div>
+              {dobValue && <p className="text-xs text-muted-foreground">Auto-calculated from Date of Birth</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>

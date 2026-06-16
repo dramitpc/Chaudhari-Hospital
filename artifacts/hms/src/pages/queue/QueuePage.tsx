@@ -19,6 +19,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlusCircle, ChevronLeft, ChevronRight, CalendarDays, X, RefreshCw, Receipt, DollarSign, Pencil } from "lucide-react";
 
+function composeAgeString(y: string, m: string, d: string): string {
+  const parts: string[] = [];
+  if (parseInt(y) > 0) parts.push(`${parseInt(y)}y`);
+  if (parseInt(m) > 0) parts.push(`${parseInt(m)}m`);
+  if (parseInt(d) > 0) parts.push(`${parseInt(d)}d`);
+  return parts.join(" ");
+}
+
 function shiftDate(iso: string, days: number): string {
   const d = new Date(iso + "T00:00:00");
   d.setDate(d.getDate() + days);
@@ -142,7 +150,9 @@ export default function QueuePage() {
   const [newName, setNewName] = useState("");
   const [newGender, setNewGender] = useState<"male" | "female" | "other" | "">("");
   const [newPhone, setNewPhone] = useState("");
-  const [newAge, setNewAge] = useState("");
+  const [newAgeYears, setNewAgeYears] = useState("");
+  const [newAgeMonths, setNewAgeMonths] = useState("");
+  const [newAgeDays, setNewAgeDays] = useState("");
   const [newAddress, setNewAddress] = useState("");
 
   // Read invoice-created flags from sessionStorage (set by ConsultationDetailPage after creating an invoice)
@@ -256,7 +266,9 @@ export default function QueuePage() {
     setNewName("");
     setNewGender("");
     setNewPhone("");
-    setNewAge("");
+    setNewAgeYears("");
+    setNewAgeMonths("");
+    setNewAgeDays("");
     setNewAddress("");
   };
 
@@ -281,7 +293,7 @@ export default function QueuePage() {
   const handleRegisterAndQueue = () => {
     if (!newName || !newGender || !selectedDoctorId) return;
     registerPatientMutation.mutate(
-      { data: { salutation: newSalutation || undefined, fullName: newName, gender: newGender, phone: newPhone || undefined, age: newAge || undefined, address: newAddress || undefined } },
+      { data: { salutation: newSalutation || undefined, fullName: newName, gender: newGender, phone: newPhone || undefined, age: composeAgeString(newAgeYears, newAgeMonths, newAgeDays) || undefined, address: newAddress || undefined } },
       {
         onSuccess: (patient) => {
           generateTokenMutation.mutate(
@@ -903,13 +915,21 @@ export default function QueuePage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Age (years)</Label>
-                    <Input
-                      type="number" min="0" max="150"
-                      value={newAge}
-                      onChange={e => setNewAge(e.target.value)}
-                      placeholder="e.g. 35"
-                    />
+                    <Label className="text-xs">Age</Label>
+                    <div className="flex gap-1">
+                      <div className="flex-1 relative">
+                        <Input type="number" min="0" max="150" value={newAgeYears} onChange={e => setNewAgeYears(e.target.value)} placeholder="0" className="pr-6 text-xs h-9" />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">yr</span>
+                      </div>
+                      <div className="flex-1 relative">
+                        <Input type="number" min="0" max="11" value={newAgeMonths} onChange={e => setNewAgeMonths(e.target.value)} placeholder="0" className="pr-6 text-xs h-9" />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">mo</span>
+                      </div>
+                      <div className="flex-1 relative">
+                        <Input type="number" min="0" max="31" value={newAgeDays} onChange={e => setNewAgeDays(e.target.value)} placeholder="0" className="pr-4 text-xs h-9" />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">d</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
