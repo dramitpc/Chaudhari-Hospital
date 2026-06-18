@@ -207,22 +207,6 @@
   }
 }
 
-/* ─── Prescription print ──────────────────────────────────── */
-@media print {
-  @page {
-    size: A4 portrait;
-    /* 12mm all sides → printable area 186×273mm ≈ 703×1034px at 96dpi.
-       A4_H in PrescriptionDetailPage.tsx must stay in sync with this. */
-    margin: 12mm;
-  }
-
-  /* Ensure colours (clinic brand, allergy banner) print as-is */
-  [data-rx-body],
-  [data-rx-body] * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
 
 /**
  * Using the elevate system.
