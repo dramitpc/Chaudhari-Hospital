@@ -57,13 +57,17 @@ router.get("/billing/invoices", authenticate, async (req, res): Promise<void> =>
   const page = params.success && params.data.page ? Number(params.data.page) : 1;
   const limit = params.success && params.data.limit ? Number(params.data.limit) : 20;
 
-  let query = db.select().from(invoicesTable).$dynamic();
-  if (params.success && params.data.patientId) query = query.where(eq(invoicesTable.patientId, params.data.patientId));
-  if (params.success && params.data.status) query = query.where(eq(invoicesTable.status, params.data.status as "draft" | "pending" | "paid" | "partial" | "cancelled" | "refunded"));
+  const conditions = [];
+  if (params.success && params.data.patientId) conditions.push(eq(invoicesTable.patientId, params.data.patientId));
+  if (params.success && params.data.status) conditions.push(eq(invoicesTable.status, params.data.status as "draft" | "pending" | "paid" | "partial" | "cancelled" | "refunded"));
   if (params.success && params.data.date) {
     const [dayStart, dayEnd] = dayBounds(params.data.date);
-    query = query.where(and(gte(invoicesTable.createdAt, dayStart), lt(invoicesTable.createdAt, dayEnd)));
+    conditions.push(gte(invoicesTable.createdAt, dayStart));
+    conditions.push(lt(invoicesTable.createdAt, dayEnd));
   }
+  const query = conditions.length > 0
+    ? db.select().from(invoicesTable).where(and(...conditions))
+    : db.select().from(invoicesTable);
 
   const all = await query.orderBy(desc(invoicesTable.createdAt));
   const total = all.length;

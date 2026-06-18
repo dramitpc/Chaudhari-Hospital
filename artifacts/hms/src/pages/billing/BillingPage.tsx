@@ -41,9 +41,11 @@ export default function BillingPage() {
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const limit = 20;
 
+  const dateFilter = activeStatus === "all" ? selectedDate : undefined;
+
   const { data, isLoading } = useListInvoices(
-    { status: activeStatus === "all" ? undefined : activeStatus, date: selectedDate, page, limit },
-    { query: { queryKey: getListInvoicesQueryKey({ status: activeStatus === "all" ? undefined : activeStatus, date: selectedDate, page, limit }) } }
+    { status: activeStatus === "all" ? undefined : activeStatus, date: dateFilter, page, limit },
+    { query: { queryKey: getListInvoicesQueryKey({ status: activeStatus === "all" ? undefined : activeStatus, date: dateFilter, page, limit }) } }
   );
 
   const invoices = data?.data ?? [];
@@ -67,7 +69,7 @@ export default function BillingPage() {
       </div>
 
       {/* Date picker row */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className={`flex flex-wrap items-center gap-2 transition-opacity ${activeStatus !== "all" ? "opacity-40 pointer-events-none select-none" : ""}`}>
         <div className="flex items-center border border-border rounded-md bg-background shadow-sm overflow-hidden">
           <Button
             variant="ghost" size="icon"
@@ -139,7 +141,7 @@ export default function BillingPage() {
                 {Array.from({ length: 5 }).map((__, j) => <td key={j} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>)}
               </tr>
             )) : invoices.length === 0 ? (
-              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">No invoices for {fmtPickerDate(selectedDate)}</td></tr>
+              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">{activeStatus === "all" ? `No invoices for ${fmtPickerDate(selectedDate)}` : `No ${activeStatus} invoices`}</td></tr>
             ) : invoices.map(inv => (
               <tr key={inv.id} className="border-b border-border hover:bg-muted/20">
                 <td className="px-3 py-3 font-mono text-xs text-primary">{inv.invoiceNumber}</td>
