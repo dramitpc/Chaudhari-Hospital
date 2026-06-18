@@ -41,14 +41,9 @@ export default function BillingPage() {
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const limit = 20;
 
-  // When a specific status is selected, show all matching invoices across all dates.
-  // Only apply the date filter in the "all" tab.
-  const filterDate = activeStatus === "all" ? selectedDate : undefined;
-  const filterStatus = activeStatus === "all" ? undefined : activeStatus;
-
   const { data, isLoading } = useListInvoices(
-    { status: filterStatus, date: filterDate, page, limit },
-    { query: { queryKey: getListInvoicesQueryKey({ status: filterStatus, date: filterDate, page, limit }) } }
+    { status: activeStatus === "all" ? undefined : activeStatus, date: selectedDate, page, limit },
+    { query: { queryKey: getListInvoicesQueryKey({ status: activeStatus === "all" ? undefined : activeStatus, date: selectedDate, page, limit }) } }
   );
 
   const invoices = data?.data ?? [];
@@ -71,8 +66,8 @@ export default function BillingPage() {
         </Link>
       </div>
 
-      {/* Date picker row — only shown in "all" tab */}
-      <div className={`flex flex-wrap items-center gap-2 ${activeStatus !== "all" ? "hidden" : ""}`}>
+      {/* Date picker row */}
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center border border-border rounded-md bg-background shadow-sm overflow-hidden">
           <Button
             variant="ghost" size="icon"
@@ -144,7 +139,7 @@ export default function BillingPage() {
                 {Array.from({ length: 5 }).map((__, j) => <td key={j} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>)}
               </tr>
             )) : invoices.length === 0 ? (
-              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">{activeStatus === "all" ? `No invoices for ${fmtPickerDate(selectedDate)}` : `No ${activeStatus} invoices`}</td></tr>
+              <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">No invoices for {fmtPickerDate(selectedDate)}</td></tr>
             ) : invoices.map(inv => (
               <tr key={inv.id} className="border-b border-border hover:bg-muted/20">
                 <td className="px-3 py-3 font-mono text-xs text-primary">{inv.invoiceNumber}</td>

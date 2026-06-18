@@ -162,8 +162,31 @@ export default function PrescriptionDetailPage() {
     }
   }, [prescription?.patientLanguage, patient?.preferredLanguage, urlLang]);
 
+  const printRef = useRef<HTMLDivElement>(null);
+
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
+
+  // Fit-to-A4: shrink via zoom if content overflows one page
+  useEffect(() => {
+    const A4_PX = 1047; // 297mm − 2×10mm margins at 96 dpi
+    const before = () => {
+      const el = printRef.current;
+      if (!el) return;
+      el.style.zoom = "";
+      const h = el.scrollHeight;
+      if (h > A4_PX) el.style.zoom = String(A4_PX / h);
+    };
+    const after = () => {
+      if (printRef.current) printRef.current.style.zoom = "";
+    };
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   // Auto-print: translate first when a lang was passed, then print
   useEffect(() => {
@@ -388,66 +411,60 @@ export default function PrescriptionDetailPage() {
       )}
 
       {/* Prescription body */}
-      <div data-rx-body="" className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-0 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
+      <div ref={printRef} className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-4 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
         {/* Indic font preload */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
 
-        {/* ── Fixed header ── */}
-        <div data-rx-header="">
-          {/* Letterhead */}
-          <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
-            <div className={`flex-1 ${textAlign}`}>
-              <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
-              {settings?.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
-              {settings?.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
-              {settings?.email && <p className="text-sm text-muted-foreground">{settings.email}</p>}
-              {settings?.website && <p className="text-sm text-muted-foreground">{settings.website}</p>}
-              {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
-            </div>
-            <div className="flex-1 text-right">
-              <p className="text-base font-semibold text-foreground">Dr. {prescription.doctorName}</p>
-              {prescription.doctorSpecialization && (
-                <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
-              )}
-              {prescription.doctorConsultingHours && (
-                <p className="text-xs text-muted-foreground mt-0.5">🕐 {prescription.doctorConsultingHours}</p>
-              )}
-            </div>
+        {/* Letterhead */}
+        <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
+          <div className={`flex-1 ${textAlign}`}>
+            <h1 className="text-2xl font-bold text-primary">{settings?.clinicName ?? "Hospital"}</h1>
+            {settings?.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
+            {settings?.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
+            {settings?.email && <p className="text-sm text-muted-foreground">{settings.email}</p>}
+            {settings?.website && <p className="text-sm text-muted-foreground">{settings.website}</p>}
+            {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
           </div>
-
-          <div className="mb-4 text-right">
-            <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 p-3 bg-muted/30 rounded divide-x divide-border">
-            <div className="pr-5">
-              <p className="text-xs text-muted-foreground">Patient Name</p>
-              <p className="text-sm font-medium">{prescription.patientName}</p>
-            </div>
-            <div className="pl-5 pr-5">
-              <p className="text-xs text-muted-foreground">Patient ID</p>
-              <p className="text-sm font-medium">{patient?.patientId ?? "—"}</p>
-            </div>
-            <div className="pl-5 pr-5">
-              <p className="text-xs text-muted-foreground">Age</p>
-              <p className="text-sm font-medium">{calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—"}</p>
-            </div>
-            <div className="pl-5 pr-5">
-              <p className="text-xs text-muted-foreground">Sex</p>
-              <p className="text-sm font-medium capitalize">{patient?.gender ?? "—"}</p>
-            </div>
-            {consultation?.visitType && (
-              <div className="pl-5">
-                <p className="text-xs text-muted-foreground">Visit Type</p>
-                <p className="text-sm font-medium capitalize">{consultation.visitType.replace(/_/g, " ")}</p>
-              </div>
+          <div className="flex-1 text-right">
+            <p className="text-base font-semibold text-foreground">Dr. {prescription.doctorName}</p>
+            {prescription.doctorSpecialization && (
+              <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
+            )}
+            {prescription.doctorConsultingHours && (
+              <p className="text-xs text-muted-foreground mt-0.5">🕐 {prescription.doctorConsultingHours}</p>
             )}
           </div>
-        </div>{/* end data-rx-header */}
+        </div>
 
-        {/* ── Prescription content ── */}
-        <div data-rx-content="">
+        <div className="mb-4 text-right">
+          <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 p-3 bg-muted/30 rounded divide-x divide-border">
+          <div className="pr-5">
+            <p className="text-xs text-muted-foreground">Patient Name</p>
+            <p className="text-sm font-medium">{prescription.patientName}</p>
+          </div>
+          <div className="pl-5 pr-5">
+            <p className="text-xs text-muted-foreground">Patient ID</p>
+            <p className="text-sm font-medium">{patient?.patientId ?? "—"}</p>
+          </div>
+          <div className="pl-5 pr-5">
+            <p className="text-xs text-muted-foreground">Age</p>
+            <p className="text-sm font-medium">{calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—"}</p>
+          </div>
+          <div className="pl-5 pr-5">
+            <p className="text-xs text-muted-foreground">Sex</p>
+            <p className="text-sm font-medium capitalize">{patient?.gender ?? "—"}</p>
+          </div>
+          {consultation?.visitType && (
+            <div className="pl-5">
+              <p className="text-xs text-muted-foreground">Visit Type</p>
+              <p className="text-sm font-medium capitalize">{consultation.visitType.replace(/_/g, " ")}</p>
+            </div>
+          )}
+        </div>
 
         {/* Known Allergies */}
         {patient?.allergies && (
@@ -620,91 +637,21 @@ export default function PrescriptionDetailPage() {
             <p className="text-xs text-muted-foreground">Signature &amp; Stamp</p>
           </div>
         </div>
-        </div>{/* end data-rx-content */}
-      </div>{/* end data-rx-body */}
+      </div>
 
       <style>{`
+        @page {
+          size: A4;
+          margin: 1cm;
+        }
         @media print {
           .print\\:hidden { display: none !important; }
           nav, aside, header { display: none !important; }
-          html, body { margin: 0 !important; padding: 0 !important; }
-
-          /* ── Outer container ─────────────────────────────────── */
-          [data-rx-body] {
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            max-width: 100% !important;
-            width: 100% !important;
-          }
-
-          /* ════════════════════════════════════════════════════════
-             HEADER — fixed readable sizes, never auto-scaled
-             ════════════════════════════════════════════════════════ */
-          [data-rx-header] {
-            font-size: 0.95rem !important;
-            line-height: 1.4 !important;
-          }
-          [data-rx-header] h1 {
-            font-size: 1.25rem !important;
-            line-height: 1.2 !important;
-          }
-          [data-rx-header] .text-base { font-size: 0.95rem !important; }
-          [data-rx-header] .text-sm   { font-size: 0.85rem !important; }
-          [data-rx-header] .text-xs   { font-size: 0.75rem !important; }
-          [data-rx-header] .border-b-2 {
-            padding-bottom: 6px !important;
-            margin-bottom: 8px !important;
-          }
-          [data-rx-header] .mb-4 { margin-bottom: 4px !important; }
-          [data-rx-header] .mb-6 { margin-bottom: 6px !important; }
-          [data-rx-header] .flex.flex-wrap.items-center {
-            padding: 4px 10px !important;
-            margin-bottom: 6px !important;
-          }
-
-          /* ════════════════════════════════════════════════════════
-             CONTENT — compact base sizes; JS zoom scales them up
-             to fill the remaining page height after the header.
-             ════════════════════════════════════════════════════════ */
-          [data-rx-content] {
-            font-size: 0.78rem !important;
-            line-height: 1.35 !important;
-          }
-          [data-rx-content] p { line-height: 1.35 !important; margin-bottom: 0 !important; }
-          [data-rx-content] .text-sm   { font-size: 0.78rem !important; }
-          [data-rx-content] .text-xs   { font-size: 0.68rem !important; }
-          [data-rx-content] .text-base { font-size: 0.82rem !important; }
-
-          [data-rx-content] .mb-6 { margin-bottom: 5px !important; }
-          [data-rx-content] .mb-4 { margin-bottom: 4px !important; }
-          [data-rx-content] .mb-3 { margin-bottom: 3px !important; }
-          [data-rx-content] .mb-2 { margin-bottom: 2px !important; }
-          [data-rx-content] .mt-12 { margin-top: 8px !important; }
-          [data-rx-content] .space-y-1\\.5 > * + * { margin-top: 2px !important; }
-          [data-rx-content] .space-y-2   > * + * { margin-top: 2px !important; }
-
-          [data-rx-content] table th,
-          [data-rx-content] table td {
-            padding: 2px 5px !important;
-            font-size: 0.72rem !important;
-            line-height: 1.3 !important;
-          }
-          [data-rx-content] ol li {
-            padding-bottom: 2px !important;
-            padding-top: 0 !important;
-          }
-          [data-rx-content] .border.rounded {
-            padding: 3px 6px !important;
-            margin-bottom: 4px !important;
-          }
-          [data-rx-content] img { height: 36px !important; max-width: 110px !important; }
-
-          /* Preserve brand colours in print */
-          [data-rx-body] * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
+          body { margin: 0 !important; }
+          /* Tighten spacing so short content stays compact */
+          .rx-section { margin-bottom: 0.5rem !important; }
+          .rx-section-title { margin-bottom: 0.25rem !important; font-size: 0.7rem !important; }
+          .rx-item { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
         }
       `}</style>
 
