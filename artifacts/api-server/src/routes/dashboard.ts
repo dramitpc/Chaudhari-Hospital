@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, gte, lt, and, sql } from "drizzle-orm";
+import { eq, desc, gte, lt, and, sql, notInArray } from "drizzle-orm";
 import {
   db,
   patientsTable,
@@ -33,7 +33,7 @@ router.get("/dashboard/summary", authenticate, async (req, res): Promise<void> =
     db.select({ count: sql<number>`count(*)` }).from(patientsTable),
     db.select({ count: sql<number>`count(*)` }).from(queueTokensTable).where(eq(queueTokensTable.queueDate, today)),
     db.select({ count: sql<number>`count(*)` }).from(queueTokensTable).where(and(eq(queueTokensTable.queueDate, today), eq(queueTokensTable.status, "waiting"))),
-    db.select({ total: sql<number>`coalesce(sum(amount_paid), 0)` }).from(invoicesTable).where(and(gte(invoicesTable.createdAt, todayStart), lt(invoicesTable.createdAt, todayEnd))),
+    db.select({ total: sql<number>`coalesce(sum(amount_paid), 0)` }).from(invoicesTable).where(and(gte(invoicesTable.createdAt, todayStart), lt(invoicesTable.createdAt, todayEnd), notInArray(invoicesTable.status, ["cancelled", "draft"]))),
     db.select({ count: sql<number>`count(*)` }).from(appointmentsTable).where(eq(appointmentsTable.appointmentDate, today)),
     db.select({ count: sql<number>`count(*)` }).from(consultationsTable).where(and(eq(consultationsTable.visitDate, today), eq(consultationsTable.status, "completed"))),
     db.select({ count: sql<number>`count(*)` }).from(invoicesTable).where(eq(invoicesTable.status, "pending")),
