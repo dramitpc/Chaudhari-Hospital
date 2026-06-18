@@ -70,7 +70,7 @@ export default function ReportsPage() {
                   { label: "Total Patients", value: opdReport.totalPatients },
                   { label: "New Patients", value: opdReport.newPatients },
                   { label: "Follow-ups", value: opdReport.followUps },
-                  { label: "Total Revenue", value: `₹${opdReport.totalRevenue.toFixed(2)}` },
+                  { label: "Collected", value: `₹${opdReport.totalRevenue.toFixed(2)}` },
                 ].map(card => (
                   <div key={card.label} className="rounded-lg border border-border bg-card p-4">
                     <p className="text-xs text-muted-foreground">{card.label}</p>
@@ -279,28 +279,36 @@ export default function ReportsPage() {
           {revLoading ? <Skeleton className="h-64 w-full" /> : revenueReport && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: "Total Revenue", value: `₹${revenueReport.totalRevenue.toFixed(2)}` },
-                  { label: "Total Invoices", value: revenueReport.totalInvoices },
-                  { label: "Collected", value: `₹${revenueReport.collected.toFixed(2)}` },
-                  { label: "Pending", value: `₹${revenueReport.pending.toFixed(2)}` },
-                ].map(card => (
-                  <div key={card.label} className="rounded-lg border border-border bg-card p-4">
-                    <p className="text-xs text-muted-foreground">{card.label}</p>
-                    <p className="text-2xl font-bold mt-1">{card.value}</p>
-                  </div>
-                ))}
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground">Total Billed</p>
+                  <p className="text-2xl font-bold mt-1">₹{revenueReport.totalRevenue.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">= Collected + Pending</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground">Total Invoices</p>
+                  <p className="text-2xl font-bold mt-1">{revenueReport.totalInvoices}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 border-l-4 border-l-green-500">
+                  <p className="text-xs text-muted-foreground">Collected</p>
+                  <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">₹{revenueReport.collected.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">cash received</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 border-l-4 border-l-amber-500">
+                  <p className="text-xs text-muted-foreground">Outstanding</p>
+                  <p className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">₹{revenueReport.pending.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">yet to be collected</p>
+                </div>
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4">
-                <h3 className="font-semibold text-sm mb-3">Daily Revenue Trend</h3>
+                <h3 className="font-semibold text-sm mb-3">Daily Billing Trend</h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={revenueReport.daily ?? []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d: string) => { const [,m,day] = d.split("-"); return `${day}/${m}`; }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${v}`} />
-                    <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} />
-                    <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                    <Tooltip formatter={(v: number) => [`₹${v.toFixed(2)}`, "Billed"]} />
+                    <Line type="monotone" dataKey="revenue" name="Billed" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -363,7 +371,7 @@ export default function ReportsPage() {
                           <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Category</th>
                           <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Line Items</th>
                           <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Total</th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">% of Revenue</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">% of Billed</th>
                         </tr>
                       </thead>
                       <tbody>
