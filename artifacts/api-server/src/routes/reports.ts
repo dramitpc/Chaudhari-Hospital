@@ -105,12 +105,16 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   const endDate = req.query.endDate as string ?? localDateStr();
   const [rangeStart, rangeEnd] = rangeBounds(startDate, endDate);
 
-  const invoices = await db.select().from(invoicesTable)
+  const allInvoices = await db.select().from(invoicesTable)
     .where(and(gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd)));
 
+  // Exclude draft and cancelled invoices from revenue figures
+  const invoices = allInvoices.filter(i => !["draft", "cancelled"].includes(i.status));
+
   const totalRevenue = invoices.reduce((s, i) => s + i.total, 0);
-  const collected = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amountPaid, 0);
-  const pending = invoices.filter(i => i.status === "pending" || i.status === "partial").reduce((s, i) => s + i.balance, 0);
+  // Collected = actual cash received across paid AND partial invoices
+  const collected = invoices.reduce((s, i) => s + (i.amountPaid ?? 0), 0);
+  const pending = invoices.filter(i => i.status === "pending" || i.status === "partial").reduce((s, i) => s + (i.balance ?? 0), 0);
 
   const dailyMap: Record<string, { revenue: number; count: number }> = {};
   for (const inv of invoices) {
