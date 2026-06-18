@@ -175,6 +175,10 @@ router.post("/billing/invoices/:id/pay", authenticate, async (req, res): Promise
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
+  if (parsed.data.amount > existing.balance) {
+    res.status(400).json({ error: `Payment amount (₹${parsed.data.amount}) exceeds outstanding balance (₹${existing.balance})` });
+    return;
+  }
   const newPaid = existing.amountPaid + parsed.data.amount;
   const newBalance = existing.total - newPaid;
   const status = newBalance <= 0 ? "paid" : "partial";

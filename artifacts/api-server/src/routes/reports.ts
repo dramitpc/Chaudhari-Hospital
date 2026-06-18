@@ -114,9 +114,10 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   // totalRevenue = billed amount on active invoices
   const totalRevenue = activeInvoices.reduce((s, i) => s + i.total, 0);
   // collected = cash actually received: fully paid + partial payments on partial invoices
+  // cap at invoice total as a safety net against any historically over-recorded payments
   const collected = activeInvoices
     .filter(i => i.status === "paid" || i.status === "partial")
-    .reduce((s, i) => s + (i.amountPaid ?? 0), 0);
+    .reduce((s, i) => s + Math.min(i.amountPaid ?? 0, i.total), 0);
   // pending = outstanding balance: unpaid pending + remaining balance on partial invoices
   const pending = activeInvoices
     .filter(i => i.status === "pending" || i.status === "partial")
