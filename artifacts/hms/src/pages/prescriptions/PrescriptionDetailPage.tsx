@@ -162,46 +162,8 @@ export default function PrescriptionDetailPage() {
     }
   }, [prescription?.patientLanguage, patient?.preferredLanguage, urlLang]);
 
-  const headerRef  = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
-
-  // Selective fit-to-page: the header (letterhead, date, patient info) keeps its
-  // fixed CSS sizes; only the prescription body (allergies → signature) is zoomed
-  // to fill the remaining page height. zoom on a specific element affects layout
-  // (unlike transform: scale) so surrounding content reflows correctly.
-  // Chrome/Edge/Safari honour CSS zoom; Firefox falls back to its own Fit-to-Page.
-  useEffect(() => {
-    // Conservative A4 printable height with browser-default margins (~10-15 mm/side).
-    // Using 960px gives headroom for varying browser margin defaults.
-    const A4_H = 960;
-    const MAX_SCALE = 2.5;
-    const before = () => {
-      const headerEl  = headerRef.current;
-      const contentEl = contentRef.current;
-      if (!headerEl || !contentEl) return;
-      contentEl.style.zoom = "";
-      const headerH    = headerEl.scrollHeight;
-      const contentH   = contentEl.scrollHeight;
-      const availableH = A4_H - headerH;
-      if (availableH < 50 || contentH < 1) return;
-      const scale = Math.min(availableH / contentH, MAX_SCALE);
-      if (Math.abs(scale - 1) > 0.005) {
-        contentEl.style.zoom = String(scale);
-      }
-    };
-    const after = () => {
-      if (contentRef.current) contentRef.current.style.zoom = "";
-    };
-    window.addEventListener("beforeprint", before);
-    window.addEventListener("afterprint", after);
-    return () => {
-      window.removeEventListener("beforeprint", before);
-      window.removeEventListener("afterprint", after);
-    };
-  }, []);
 
   // Auto-print: translate first when a lang was passed, then print
   useEffect(() => {
@@ -431,8 +393,8 @@ export default function PrescriptionDetailPage() {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
 
-        {/* ── Fixed header (not auto-scaled) ── */}
-        <div ref={headerRef} data-rx-header="">
+        {/* ── Fixed header ── */}
+        <div data-rx-header="">
           {/* Letterhead */}
           <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
             <div className={`flex-1 ${textAlign}`}>
@@ -484,8 +446,8 @@ export default function PrescriptionDetailPage() {
           </div>
         </div>{/* end data-rx-header */}
 
-        {/* ── Auto-scaled content ── */}
-        <div ref={contentRef} data-rx-content="">
+        {/* ── Prescription content ── */}
+        <div data-rx-content="">
 
         {/* Known Allergies */}
         {patient?.allergies && (
