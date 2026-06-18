@@ -1151,7 +1151,7 @@ export default function ConsultationDetailPage() {
                 <p className="text-sm text-muted-foreground">No prescriptions yet for this visit.</p>
               ) : (
                 <div className="space-y-2">
-                  {prescriptions.map(p => (
+                  {prescriptions.slice().reverse().map(p => (
                     <div key={p.id} className="rounded-lg border border-border p-3 flex items-center justify-between gap-2">
                       <Link href={`/prescriptions/${p.id}`} className="flex-1 min-w-0">
                         <div className="hover:opacity-70 transition-opacity">
