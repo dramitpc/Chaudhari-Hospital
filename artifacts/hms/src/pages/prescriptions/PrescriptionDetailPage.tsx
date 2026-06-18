@@ -176,10 +176,13 @@ export default function PrescriptionDetailPage() {
   // NOTE: only scale by height — the browser handles horizontal fitting on its
   // own. Measuring scrollWidth vs screen viewport gives a false width ratio.
   useEffect(() => {
-    // A4 printable height: (297mm − 10mm top − 10mm bottom) × (96px / 25.4mm)
-    const A4_H = 1062;
-    // Cap upward scaling so a 2-drug prescription doesn't look absurdly large
-    const MAX_SCALE = 1.5;
+    // A4 printable height: (297mm − 12mm top − 12mm bottom) × (96px / 25.4mm) ≈ 1034px
+    // Must match the @page margin in index.css
+    const A4_H = 1034;
+    // Allow generous upward scaling so typical prescriptions fill the page.
+    // A standard 3-drug prescription is ~550–650px tall at A4 width → needs ~1.6–1.9×.
+    // Very sparse prescriptions (1 drug) cap at 2.5× to avoid absurdly huge text.
+    const MAX_SCALE = 2.5;
     const before = () => {
       const el = printRef.current;
       if (!el) return;
