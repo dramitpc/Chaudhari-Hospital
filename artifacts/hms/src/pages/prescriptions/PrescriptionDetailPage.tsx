@@ -170,21 +170,23 @@ export default function PrescriptionDetailPage() {
   // Fit-to-A4: auto-scale via CSS zoom so content always fills one A4 page —
   // shrinks when content is too tall, expands when content is short.
   // beforeprint fires after @media print styles apply so scrollHeight reflects
-  // the compacted print layout. zoom is written to <html> so the entire printed
-  // page scales uniformly (Chrome/Edge/Safari; Firefox ignores zoom but its
-  // built-in "Fit to page" handles overflow there).
+  // the print layout. zoom is written to <html> so the entire page scales
+  // uniformly (Chrome/Edge/Safari; Firefox ignores CSS zoom but its built-in
+  // "Fit to page" covers overflow there).
+  // NOTE: only scale by height — the browser handles horizontal fitting on its
+  // own. Measuring scrollWidth vs screen viewport gives a false width ratio.
   useEffect(() => {
-    const A4_H = 1062; // (297 - 8 - 8) mm × (96 / 25.4) ≈ printable height px at 96 dpi
-    const A4_W = 734;  // (210 - 8 - 8) mm × (96 / 25.4) ≈ printable width px at 96 dpi
-    const MAX_SCALE = 1.8; // don't blow up very short prescriptions beyond this
+    // A4 printable height: (297mm − 10mm top − 10mm bottom) × (96px / 25.4mm)
+    const A4_H = 1062;
+    // Cap upward scaling so a 2-drug prescription doesn't look absurdly large
+    const MAX_SCALE = 1.5;
     const before = () => {
       const el = printRef.current;
       if (!el) return;
       document.documentElement.style.zoom = "";
       const h = el.scrollHeight;
-      const w = el.scrollWidth;
-      // Scale to fill height; also constrain by width so nothing clips sideways
-      const scale = Math.min(A4_H / h, A4_W / Math.max(w, 1), MAX_SCALE);
+      if (h < 1) return;
+      const scale = Math.min(A4_H / h, MAX_SCALE);
       if (Math.abs(scale - 1) > 0.005) {
         document.documentElement.style.zoom = String(scale);
       }
