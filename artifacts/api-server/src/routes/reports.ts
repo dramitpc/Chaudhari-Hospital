@@ -108,12 +108,22 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   const invoices = await db.select().from(invoicesTable)
     .where(and(gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd)));
 
-  const totalRevenue = invoices.reduce((s, i) => s + i.total, 0);
-  const collected = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amountPaid, 0);
-  const pending = invoices.filter(i => i.status === "pending" || i.status === "partial").reduce((s, i) => s + i.balance, 0);
+  // Only count invoices that represent real transactions (exclude cancelled/draft/refunded)
+  const activeInvoices = invoices.filter(i => i.status !== "cancelled" && i.status !== "draft" && i.status !== "refunded");
+
+  // totalRevenue = billed amount on active invoices
+  const totalRevenue = activeInvoices.reduce((s, i) => s + i.total, 0);
+  // collected = cash actually received: fully paid + partial payments on partial invoices
+  const collected = activeInvoices
+    .filter(i => i.status === "paid" || i.status === "partial")
+    .reduce((s, i) => s + (i.amountPaid ?? 0), 0);
+  // pending = outstanding balance: unpaid pending + remaining balance on partial invoices
+  const pending = activeInvoices
+    .filter(i => i.status === "pending" || i.status === "partial")
+    .reduce((s, i) => s + (i.balance ?? 0), 0);
 
   const dailyMap: Record<string, { revenue: number; count: number }> = {};
-  for (const inv of invoices) {
+  for (const inv of activeInvoices) {
     const d = inv.createdAt.toISOString().split("T")[0];
     if (!dailyMap[d]) dailyMap[d] = { revenue: 0, count: 0 };
     dailyMap[d].revenue += inv.total;
@@ -129,7 +139,7 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   const byTypeMap: Record<string, BreakRow> = {};
   const byCatMap:  Record<string, BreakRow> = {};
 
-  for (const inv of invoices) {
+  for (const inv of activeInvoices) {
     const items = (inv.items as unknown as { chargeTypeId?: string; description?: string; total?: number }[]) ?? [];
     for (const item of items) {
       const lineTotal = item.total ?? 0;
@@ -150,7 +160,7 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   const byChargeType = Object.values(byTypeMap).sort((a, b) => b.total - a.total);
   const byCategory   = Object.values(byCatMap).sort((a, b) => b.total - a.total);
 
-  res.json({ startDate, endDate, totalRevenue, totalInvoices: invoices.length, collected, pending, daily, byChargeType, byCategory });
+  res.json({ startDate, endDate, totalRevenue, totalInvoices: activeInvoices.length, collected, pending, daily, byChargeType, byCategory });
 });
 
 router.get("/reports/doctor-productivity", authenticate, async (req, res): Promise<void> => {
