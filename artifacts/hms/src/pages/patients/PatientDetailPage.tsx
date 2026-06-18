@@ -125,6 +125,12 @@ export default function PatientDetailPage() {
         <TabsList>
           <TabsTrigger value="demographics">Demographics</TabsTrigger>
           <TabsTrigger value="history">EMR History</TabsTrigger>
+          <TabsTrigger value="prescriptions">
+            Prescriptions
+            {history?.prescriptions && history.prescriptions.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary leading-none">{history.prescriptions.length}</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="vitals">Vitals</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
@@ -172,6 +178,37 @@ export default function PatientDetailPage() {
           ))}
           {(!history?.consultations || history.consultations.length === 0) && (
             <div className="text-center py-8 text-muted-foreground">No consultation history</div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="prescriptions" className="mt-4 space-y-3">
+          {(!history?.prescriptions || history.prescriptions.length === 0) ? (
+            <div className="text-center py-8 text-muted-foreground">No prescriptions on record</div>
+          ) : (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs text-muted-foreground">Date</th>
+                    <th className="px-4 py-2 text-left text-xs text-muted-foreground">Medications</th>
+                    <th className="px-4 py-2 text-left text-xs text-muted-foreground">Follow-up</th>
+                    <th className="px-4 py-2 text-left text-xs text-muted-foreground"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.prescriptions.map(p => (
+                    <tr key={p.id} className="border-t border-border hover:bg-muted/20">
+                      <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(p.visitDate)}</td>
+                      <td className="px-4 py-2.5">{Array.isArray(p.items) ? `${p.items.length} drug${p.items.length !== 1 ? "s" : ""}` : "—"}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground">{p.followUpDate ? fmtDate(p.followUpDate) : "—"}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Link href={`/prescriptions/${p.id}`} className="text-xs text-primary hover:underline">View</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </TabsContent>
 
