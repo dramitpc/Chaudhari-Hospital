@@ -179,7 +179,7 @@ router.post("/billing/invoices/:id/pay", authenticate, async (req, res): Promise
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
-  const newPaid = existing.amountPaid + parsed.data.amount;
+  const newPaid = Math.min(existing.amountPaid + parsed.data.amount, existing.total);
   const newBalance = existing.total - newPaid;
   const status = newBalance <= 0 ? "paid" : "partial";
   const [inv] = await db.update(invoicesTable).set({

@@ -112,8 +112,8 @@ router.get("/reports/revenue", authenticate, async (req, res): Promise<void> => 
   const invoices = allInvoices.filter(i => !["draft", "cancelled"].includes(i.status));
 
   const totalRevenue = invoices.reduce((s, i) => s + i.total, 0);
-  // Collected = actual cash received across paid AND partial invoices
-  const collected = invoices.reduce((s, i) => s + (i.amountPaid ?? 0), 0);
+  // Collected = actual cash received; clamped to invoice total to guard against overpayment data
+  const collected = invoices.reduce((s, i) => s + Math.min(i.amountPaid ?? 0, i.total), 0);
   const pending = invoices.filter(i => i.status === "pending" || i.status === "partial").reduce((s, i) => s + (i.balance ?? 0), 0);
 
   const dailyMap: Record<string, { revenue: number; count: number }> = {};
