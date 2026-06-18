@@ -167,18 +167,25 @@ export default function PrescriptionDetailPage() {
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
 
-  // Fit-to-A4: shrink via zoom if content overflows one page
+  // Fit-to-A4: shrink via CSS zoom so content never spills to a second page.
+  // beforeprint fires after @media print styles apply, so scrollHeight reflects
+  // the compacted print layout. zoom is written to <html> so the entire printed
+  // page scales uniformly (works in Chrome/Edge/Safari; Firefox ignores zoom but
+  // its built-in "Fit to page" handles overflow there).
   useEffect(() => {
-    const A4_PX = 1047; // 297mm − 2×10mm margins at 96 dpi
+    const A4_PX = 1062; // (297 - 8 - 8) mm × (96 / 25.4) ≈ 1062 px printable height at 96 dpi
     const before = () => {
       const el = printRef.current;
       if (!el) return;
-      el.style.zoom = "";
+      document.documentElement.style.zoom = "";
       const h = el.scrollHeight;
-      if (h > A4_PX) el.style.zoom = String(A4_PX / h);
+      if (h > A4_PX) {
+        const scale = A4_PX / h;
+        document.documentElement.style.zoom = String(scale);
+      }
     };
     const after = () => {
-      if (printRef.current) printRef.current.style.zoom = "";
+      document.documentElement.style.zoom = "";
     };
     window.addEventListener("beforeprint", before);
     window.addEventListener("afterprint", after);
@@ -411,7 +418,7 @@ export default function PrescriptionDetailPage() {
       )}
 
       {/* Prescription body */}
-      <div ref={printRef} className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-4 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
+      <div ref={printRef} data-rx-body="" className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-0 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
         {/* Indic font preload */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
@@ -642,16 +649,82 @@ export default function PrescriptionDetailPage() {
       <style>{`
         @page {
           size: A4;
-          margin: 1cm;
+          margin: 8mm;
         }
         @media print {
           .print\\:hidden { display: none !important; }
           nav, aside, header { display: none !important; }
-          body { margin: 0 !important; }
-          /* Tighten spacing so short content stays compact */
-          .rx-section { margin-bottom: 0.5rem !important; }
-          .rx-section-title { margin-bottom: 0.25rem !important; font-size: 0.7rem !important; }
-          .rx-item { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+
+          /* ── Container ──────────────────────────────────────── */
+          [data-rx-body] {
+            font-size: 0.78rem !important;
+            line-height: 1.35 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+
+          /* ── Letterhead ─────────────────────────────────────── */
+          [data-rx-body] h1 {
+            font-size: 1.05rem !important;
+            line-height: 1.2 !important;
+          }
+          [data-rx-body] .border-b-2 {
+            padding-bottom: 4px !important;
+            margin-bottom: 6px !important;
+          }
+
+          /* ── Date row ───────────────────────────────────────── */
+          [data-rx-body] .text-right.mb-4,
+          [data-rx-body] .mb-4.text-right { margin-bottom: 3px !important; }
+
+          /* ── Patient info bar ───────────────────────────────── */
+          [data-rx-body] .flex.flex-wrap.items-center {
+            padding: 3px 8px !important;
+            margin-bottom: 5px !important;
+          }
+
+          /* ── Generic section spacing ────────────────────────── */
+          [data-rx-body] .mb-6 { margin-bottom: 5px !important; }
+          [data-rx-body] .mb-4 { margin-bottom: 4px !important; }
+          [data-rx-body] .mb-3 { margin-bottom: 3px !important; }
+          [data-rx-body] .mb-2 { margin-bottom: 2px !important; }
+          [data-rx-body] .space-y-1\\.5 > * + * { margin-top: 2px !important; }
+          [data-rx-body] .space-y-2 > * + * { margin-top: 2px !important; }
+
+          /* ── Text sizing ────────────────────────────────────── */
+          [data-rx-body] p { line-height: 1.35 !important; margin-bottom: 0 !important; }
+          [data-rx-body] .text-sm  { font-size: 0.78rem !important; }
+          [data-rx-body] .text-xs  { font-size: 0.68rem !important; }
+          [data-rx-body] .text-base { font-size: 0.82rem !important; }
+          [data-rx-body] .text-2xl  { font-size: 1.05rem !important; }
+
+          /* ── Drug table ─────────────────────────────────────── */
+          [data-rx-body] table th,
+          [data-rx-body] table td {
+            padding: 2px 5px !important;
+            font-size: 0.72rem !important;
+            line-height: 1.3 !important;
+          }
+
+          /* ── Drug list ──────────────────────────────────────── */
+          [data-rx-body] ol li {
+            padding-bottom: 2px !important;
+            padding-top: 0 !important;
+          }
+
+          /* ── Allergy box ────────────────────────────────────── */
+          [data-rx-body] .border.rounded {
+            padding: 3px 6px !important;
+            margin-bottom: 4px !important;
+          }
+
+          /* ── Signature block ────────────────────────────────── */
+          [data-rx-body] .mt-12 { margin-top: 8px !important; }
+          [data-rx-body] img { height: 36px !important; max-width: 110px !important; }
         }
       `}</style>
 
