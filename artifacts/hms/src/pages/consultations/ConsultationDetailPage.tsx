@@ -86,6 +86,13 @@ const RX_PREVIEW_LANGUAGES = [
   { code: "pa", label: "ਪੰਜਾਬੀ (Punjabi)" },
   { code: "bn", label: "বাংলা (Bengali)" },
 ];
+// ── Orthotic master list ──────────────────────────────────────────────────────
+const ORTHOTIC_GROUPS: { group: string; items: string[] }[] = [
+  { group: "Spinal", items: ["Cervical collar", "Lumbar support", "Sacroiliac belt", "TLSO brace"] },
+  { group: "Lower Limb", items: ["Knee brace", "Patella stabilizer", "Knee immobilizer", "AFO (ankle-foot orthosis)", "CAM boot / walking boot", "Heel wedge"] },
+  { group: "Upper Limb", items: ["Shoulder sling", "Wrist splint", "Thumb spica splint", "Tennis elbow brace"] },
+  { group: "Foot", items: ["Foot orthosis", "Arch support / insoles", "Heel cup", "Metatarsal pad"] },
+];
 // ── Investigation Queue Row ───────────────────────────────────────────────────
 const INV_STATUS_COLORS: Record<string, string> = {
   pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
@@ -288,6 +295,10 @@ export default function ConsultationDetailPage() {
   const [drugItems, setDrugItems] = useState<DrugItem[]>([
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
+  const [orthoticItems, setOrthoticItems] = useState<string[]>([]);
+
+  const addOrthotic = (item: string) => setOrthoticItems(prev => prev.includes(item) ? prev : [...prev, item]);
+  const removeOrthotic = (item: string) => setOrthoticItems(prev => prev.filter(i => i !== item));
 
   // ── Diagnosis & Advice controlled state ───────────────────────────────────
   const [diagnosisValue, setDiagnosisValue] = useState("");
@@ -847,6 +858,7 @@ export default function ConsultationDetailPage() {
     advice: adviceValue || consultation!.advice || undefined,
     followUpDate: consultation!.followUpDate ?? undefined,
     items: drugItems.filter(i => i.drugName),
+    notes: orthoticItems.length > 0 ? JSON.stringify(orthoticItems) : undefined,
   });
 
   const handleAddPrescription = (andPrint = false) => {
@@ -876,13 +888,14 @@ export default function ConsultationDetailPage() {
 
     if (editRxId) {
       updatePrescriptionMutation.mutate(
-        { id: editRxId, data: { diagnosis: payload.diagnosis, advice: payload.advice, followUpDate: payload.followUpDate, items: payload.items } },
+        { id: editRxId, data: { diagnosis: payload.diagnosis, advice: payload.advice, followUpDate: payload.followUpDate, items: payload.items, notes: payload.notes } },
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
             setShowPrescriptionModal(false);
             setEditRxId(null);
             setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
+            setOrthoticItems([]);
             if (andPrint) navigate(`/prescriptions/${editRxId}${printSuffix}`);
           },
           onError,
@@ -894,6 +907,7 @@ export default function ConsultationDetailPage() {
           queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
           setShowPrescriptionModal(false);
           setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
+          setOrthoticItems([]);
           if (andPrint) navigate(`/prescriptions/${rx.id}${printSuffix}`);
         },
         onError,
@@ -1442,6 +1456,10 @@ export default function ConsultationDetailPage() {
                                 ? (p.items as DrugItem[]).map(i => ({ ...i }))
                                 : [{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]
                             );
+                            try {
+                              const parsed = p.notes ? JSON.parse(p.notes as string) : [];
+                              setOrthoticItems(Array.isArray(parsed) ? parsed : []);
+                            } catch { setOrthoticItems([]); }
                             setEditRxId(p.id);
                             setShowRxPreview(false);
                             setShowPrescriptionModal(true);
@@ -1911,7 +1929,7 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("en"); } }}>
+      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("en"); setOrthoticItems([]); } }}>
         <DialogContent className="max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
@@ -2116,6 +2134,18 @@ export default function ConsultationDetailPage() {
                 );
               })()}
 
+              {/* Orthotics */}
+              {orthoticItems.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">🦴 Prescribed Orthotics</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {orthoticItems.map(item => (
+                      <span key={item} className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-full px-2.5 py-0.5">{item}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Advice */}
               {(adviceValue || consultation?.advice) && (() => {
                 const enAdvice = adviceValue || consultation?.advice;
@@ -2205,7 +2235,7 @@ export default function ConsultationDetailPage() {
                   };
 
                   return (
-                    <div className="flex flex-col flex-1 overflow-hidden gap-2">
+                    <div className="flex flex-col flex-[3] min-h-0 overflow-hidden gap-2">
                       <div className="flex items-center gap-2 shrink-0">
                         <Input
                           className="h-7 text-xs flex-1"
@@ -2230,6 +2260,37 @@ export default function ConsultationDetailPage() {
                     </div>
                   );
                 })()}
+
+                {/* ── Orthotic Picker (lower ¼) ── */}
+                <div className="flex-[1] min-h-0 flex flex-col overflow-hidden border-t border-border pt-2 gap-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0 px-1">🦴 Orthotics</p>
+                  <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-1 space-y-0.5 min-h-0">
+                    {ORTHOTIC_GROUPS.map(grp => (
+                      <div key={grp.group}>
+                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1 pb-0.5">{grp.group}</p>
+                        {grp.items.map(item => {
+                          const added = orthoticItems.includes(item);
+                          return (
+                            <div
+                              key={item}
+                              onClick={() => added ? removeOrthotic(item) : addOrthotic(item)}
+                              className={`flex items-center gap-1 px-1 py-1 rounded select-none text-xs transition-colors cursor-pointer ${
+                                added
+                                  ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300"
+                                  : "hover:bg-primary/10 hover:border-primary/30 border border-transparent"
+                              }`}
+                            >
+                              <span className="shrink-0 w-3 text-center text-[10px]">
+                                {added ? "✓" : "+"}
+                              </span>
+                              <span className="flex-1 truncate">{item}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
               </div>
               {/* RIGHT: Drug Table + Footer */}
@@ -2315,13 +2376,38 @@ export default function ConsultationDetailPage() {
                   </div>
 
                 </div>
+
+                {/* ── Prescribed Orthotics ── */}
+                {orthoticItems.length > 0 && (
+                  <div className="shrink-0 border-t border-border pt-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">🦴 Prescribed Orthotics</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {orthoticItems.map(item => (
+                        <span
+                          key={item}
+                          className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-full px-2.5 py-0.5"
+                        >
+                          {item}
+                          <button
+                            type="button"
+                            onClick={() => removeOrthotic(item)}
+                            className="ml-0.5 text-blue-500 hover:text-destructive transition-colors leading-none"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* ── Footer ── */}
                 <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-border sm:flex-row sm:items-center sm:justify-between">
                   <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={addDrugRow}>
                     <Plus className="h-3 w-3 mr-1" /> Add Row
                   </Button>
                   <div className="flex flex-wrap gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); }}>Cancel</Button>
+                    <Button variant="outline" size="sm" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); setOrthoticItems([]); }}>Cancel</Button>
                     <Button variant="outline" size="sm" onClick={() => setShowRxPreview(true)}>
                       <FileText className="mr-2 h-4 w-4" />
                       Preview
