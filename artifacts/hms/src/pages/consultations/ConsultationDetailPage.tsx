@@ -296,9 +296,26 @@ export default function ConsultationDetailPage() {
     { drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }
   ]);
   const [orthoticItems, setOrthoticItems] = useState<string[]>([]);
+  const [orthoticCustomInput, setOrthoticCustomInput] = useState("");
+  const [editingOrthoticIdx, setEditingOrthoticIdx] = useState<number | null>(null);
+  const [editingOrthoticValue, setEditingOrthoticValue] = useState("");
 
   const addOrthotic = (item: string) => setOrthoticItems(prev => prev.includes(item) ? prev : [...prev, item]);
   const removeOrthotic = (item: string) => setOrthoticItems(prev => prev.filter(i => i !== item));
+  const addCustomOrthotic = () => {
+    const val = orthoticCustomInput.trim();
+    if (!val) return;
+    addOrthotic(val);
+    setOrthoticCustomInput("");
+  };
+  const commitOrthoticEdit = () => {
+    if (editingOrthoticIdx === null) return;
+    const val = editingOrthoticValue.trim();
+    if (val) setOrthoticItems(prev => prev.map((it, i) => i === editingOrthoticIdx ? val : it));
+    else setOrthoticItems(prev => prev.filter((_, i) => i !== editingOrthoticIdx));
+    setEditingOrthoticIdx(null);
+    setEditingOrthoticValue("");
+  };
 
   // ── Diagnosis & Advice controlled state ───────────────────────────────────
   const [diagnosisValue, setDiagnosisValue] = useState("");
@@ -895,7 +912,7 @@ export default function ConsultationDetailPage() {
             setShowPrescriptionModal(false);
             setEditRxId(null);
             setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
-            setOrthoticItems([]);
+            setOrthoticItems([]); setOrthoticCustomInput(""); setEditingOrthoticIdx(null); setEditingOrthoticValue("");
             if (andPrint) navigate(`/prescriptions/${editRxId}${printSuffix}`);
           },
           onError,
@@ -907,7 +924,7 @@ export default function ConsultationDetailPage() {
           queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
           setShowPrescriptionModal(false);
           setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
-          setOrthoticItems([]);
+          setOrthoticItems([]); setOrthoticCustomInput(""); setEditingOrthoticIdx(null); setEditingOrthoticValue("");
           if (andPrint) navigate(`/prescriptions/${rx.id}${printSuffix}`);
         },
         onError,
@@ -1929,7 +1946,7 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("en"); setOrthoticItems([]); } }}>
+      <Dialog open={showPrescriptionModal} onOpenChange={v => { setShowPrescriptionModal(v); if (!v) { setShowRxPreview(false); setEditRxId(null); setPreviewTranslation(null); setPreviewLang("en"); setOrthoticItems([]); setOrthoticCustomInput(""); setEditingOrthoticIdx(null); setEditingOrthoticValue(""); } }}>
         <DialogContent className="max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex items-center justify-between gap-2">
@@ -2264,6 +2281,24 @@ export default function ConsultationDetailPage() {
                 {/* ── Orthotic Picker (lower ¼) ── */}
                 <div className="flex-[1] min-h-0 flex flex-col overflow-hidden border-t border-border pt-2 gap-1">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0 px-1">🦴 Orthotics</p>
+                  {/* Custom entry */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Input
+                      className="h-6 text-xs flex-1"
+                      placeholder="Type custom orthotic…"
+                      value={orthoticCustomInput}
+                      onChange={e => setOrthoticCustomInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomOrthotic(); } }}
+                    />
+                    <Button
+                      type="button" size="icon" variant="outline"
+                      className="h-6 w-6 shrink-0"
+                      onClick={addCustomOrthotic}
+                      disabled={!orthoticCustomInput.trim()}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
                   <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-1 space-y-0.5 min-h-0">
                     {ORTHOTIC_GROUPS.map(grp => (
                       <div key={grp.group}>
@@ -2380,23 +2415,48 @@ export default function ConsultationDetailPage() {
                 {/* ── Prescribed Orthotics ── */}
                 {orthoticItems.length > 0 && (
                   <div className="shrink-0 border-t border-border pt-2">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">🦴 Prescribed Orthotics</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">🦴 Prescribed Orthotics <span className="normal-case font-normal text-muted-foreground">(click label to edit)</span></p>
                     <div className="flex flex-wrap gap-1.5">
-                      {orthoticItems.map(item => (
-                        <span
-                          key={item}
-                          className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-full px-2.5 py-0.5"
-                        >
-                          {item}
-                          <button
-                            type="button"
-                            onClick={() => removeOrthotic(item)}
-                            className="ml-0.5 text-blue-500 hover:text-destructive transition-colors leading-none"
+                      {orthoticItems.map((item, idx) =>
+                        editingOrthoticIdx === idx ? (
+                          <span key={idx} className="flex items-center gap-0.5 border border-blue-400 dark:border-blue-600 rounded-full overflow-hidden bg-background">
+                            <input
+                              autoFocus
+                              className="h-5 text-xs px-2 outline-none bg-transparent w-32 text-foreground"
+                              value={editingOrthoticValue}
+                              onChange={e => setEditingOrthoticValue(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") { e.preventDefault(); commitOrthoticEdit(); }
+                                if (e.key === "Escape") { setEditingOrthoticIdx(null); setEditingOrthoticValue(""); }
+                              }}
+                              onBlur={commitOrthoticEdit}
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={e => { e.preventDefault(); commitOrthoticEdit(); }}
+                              className="pr-2 text-blue-500 hover:text-primary text-xs leading-none"
+                            >✓</button>
+                          </span>
+                        ) : (
+                          <span
+                            key={idx}
+                            className="flex items-center gap-0.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-full pl-2.5 pr-1 py-0.5"
                           >
-                            ×
-                          </button>
-                        </span>
-                      ))}
+                            <button
+                              type="button"
+                              className="hover:underline transition-colors"
+                              onClick={() => { setEditingOrthoticIdx(idx); setEditingOrthoticValue(item); }}
+                            >
+                              {item}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeOrthotic(item)}
+                              className="ml-0.5 text-blue-400 hover:text-destructive transition-colors leading-none"
+                            >×</button>
+                          </span>
+                        )
+                      )}
                     </div>
                   </div>
                 )}
@@ -2407,7 +2467,7 @@ export default function ConsultationDetailPage() {
                     <Plus className="h-3 w-3 mr-1" /> Add Row
                   </Button>
                   <div className="flex flex-wrap gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); setOrthoticItems([]); }}>Cancel</Button>
+                    <Button variant="outline" size="sm" onClick={() => { setShowPrescriptionModal(false); setEditRxId(null); setOrthoticItems([]); setOrthoticCustomInput(""); setEditingOrthoticIdx(null); setEditingOrthoticValue(""); }}>Cancel</Button>
                     <Button variant="outline" size="sm" onClick={() => setShowRxPreview(true)}>
                       <FileText className="mr-2 h-4 w-4" />
                       Preview
