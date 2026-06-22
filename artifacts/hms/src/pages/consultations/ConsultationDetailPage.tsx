@@ -7,7 +7,8 @@ import {
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
   useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation, useListInvestigations, useUpdateInvestigation,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey,
+  type Investigation
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,136 @@ const RX_PREVIEW_LANGUAGES = [
   { code: "pa", label: "ਪੰਜਾਬੀ (Punjabi)" },
   { code: "bn", label: "বাংলা (Bengali)" },
 ];
+// ── Investigation Queue Row ───────────────────────────────────────────────────
+const INV_STATUS_COLORS: Record<string, string> = {
+  pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  completed:   "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  cancelled:   "bg-muted text-muted-foreground",
+};
+const INV_STATUS_LABELS: Record<string, string> = {
+  pending:     "Pending",
+  in_progress: "In Progress",
+  completed:   "Completed",
+  cancelled:   "Cancelled",
+};
+
+function InvRow({
+  inv,
+  consultationId,
+  onStatusChange,
+  onPrint,
+  onPreviewImage,
+}: {
+  inv: Investigation;
+  consultationId: string;
+  onStatusChange: (id: string, status: string) => void;
+  onPrint: (inv: Investigation) => void;
+  onPreviewImage: (src: string, label: string) => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const updateMutation = useUpdateInvestigation();
+  const [notes, setNotes] = useState(inv.resultNotes ?? "");
+
+  // Sync when radiographer updates notes externally (parent re-fetch)
+  const extNotes = inv.resultNotes ?? "";
+  if (!updateMutation.isPending && notes !== extNotes && document.activeElement?.tagName !== "TEXTAREA") {
+    setNotes(extNotes);
+  }
+
+  const saveNotes = () => {
+    const trimmed = notes.trim();
+    if (trimmed === (inv.resultNotes ?? "").trim()) return;
+    updateMutation.mutate(
+      { id: inv.id, data: { resultNotes: trimmed || undefined } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) });
+        },
+        onError: () => toast({ title: "Failed to save notes", variant: "destructive" }),
+      }
+    );
+  };
+
+  const attachments = parseAttachments(inv.imageAttachment);
+  const label = [inv.type, inv.bodyPart ? `— ${inv.bodyPart}` : "", inv.notes ? `(${inv.notes})` : ""].filter(Boolean).join(" ");
+
+  return (
+    <div className="rounded-md border border-border bg-card overflow-hidden">
+      {/* Header */}
+      <div className="flex items-start gap-3 px-3 py-2.5">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">{label}</p>
+          {inv.requestedByName && (
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {inv.requestedByName} · {fmtDate(inv.createdAt)}
+              {inv.completedAt && ` · Done ${fmtDate(inv.completedAt)}`}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            size="sm" variant="ghost" className="h-7 w-7 p-0"
+            onClick={() => onPrint(inv)} title="Print investigation report"
+          >
+            <Printer className="h-3.5 w-3.5" />
+          </Button>
+          <Select value={inv.status} onValueChange={s => onStatusChange(inv.id, s)}>
+            <SelectTrigger className={`h-6 text-[11px] w-28 px-2 py-0 border-0 font-medium rounded-full ${INV_STATUS_COLORS[inv.status]}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(INV_STATUS_LABELS).map(([val, lbl]) => (
+                <SelectItem key={val} value={val} className="text-xs">{lbl}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Image thumbnails */}
+      {attachments.length > 0 && (
+        <div className="px-3 pb-2 pt-1.5 border-t border-border/40 flex flex-wrap gap-1.5 items-start">
+          {attachments.map((att, idx) =>
+            isPdfData(att.data) ? (
+              <button
+                key={idx}
+                onClick={() => openInNewTab(att.data)}
+                className="flex items-center gap-1 rounded border border-border bg-red-50 dark:bg-red-950/30 pl-1.5 pr-2 py-0.5 text-xs text-red-700 dark:text-red-400 hover:underline"
+              >
+                <FileText className="h-3 w-3 shrink-0" />
+                {att.name.length > 18 ? att.name.slice(0, 16) + "…" : att.name}
+              </button>
+            ) : (
+              <button
+                key={idx}
+                onClick={() => onPreviewImage(att.data, att.name)}
+                className="rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
+                title={att.name}
+              >
+                <img src={att.data} alt={att.name} className="h-16 w-16 object-cover" />
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Result notes */}
+      <div className="px-3 pb-3 pt-1.5 border-t border-border/40">
+        <Label className="text-[10px] text-muted-foreground mb-1 block">Result Notes</Label>
+        <Textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          onBlur={saveNotes}
+          placeholder="Radiographer's findings, results, interpretation…"
+          rows={2}
+          className="text-xs resize-none"
+        />
+      </div>
+    </div>
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ConsultationDetailPage() {
@@ -416,6 +547,105 @@ export default function ConsultationDetailPage() {
     setShowInvestigationModal(false);
     setInvType(""); setInvBodyPart(""); setInvNotes("");
     queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
+  };
+
+  // ── Print investigation report ────────────────────────────────────────────
+  const printInvReport = (inv: Investigation) => {
+    const clinic = clinicSettings as Record<string, string | null | undefined> | undefined;
+    const clinicName = clinic?.clinicName ?? "Hospital";
+    const address    = clinic?.address   ?? "";
+    const phone      = clinic?.phone     ?? "";
+    const email      = clinic?.email     ?? "";
+    const reg        = clinic?.registrationNumber ?? "";
+    const patientName = patient?.fullName ?? inv.patientName ?? "—";
+    const consultantName = inv.requestedByName ?? user?.fullName ?? "—";
+    const atts = parseAttachments(inv.imageAttachment);
+    const imageTags = atts
+      .filter(a => !isPdfData(a.data))
+      .map(a => `<div class="img-wrap"><img src="${a.data}" alt="${a.name}" /><div class="img-label">${a.name}</div></div>`)
+      .join("");
+    const resultBlock = inv.resultNotes
+      ? `<div class="section-title">Findings / Results</div><div class="result-box">${inv.resultNotes.replace(/\n/g, "<br/>")}</div>`
+      : "";
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Investigation Report — ${patientName}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:20mm 22mm}
+  .header{text-align:center;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:18px}
+  .clinic-name{font-size:20px;font-weight:700;letter-spacing:.3px}
+  .clinic-sub{font-size:11px;color:#444;margin-top:2px}
+  .report-title{text-align:center;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:18px 0 14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .field{margin-bottom:8px}
+  .field .lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px}
+  .field .val{font-size:13px;font-weight:600;margin-top:1px}
+  .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;background:#d1fae5;color:#065f46}
+  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:3px}
+  .result-box{background:#f8f8f8;border-left:3px solid #333;padding:10px 12px;font-size:13px;white-space:pre-wrap;line-height:1.6}
+  .images{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+  .img-wrap{text-align:center}
+  .img-wrap img{max-width:220px;max-height:220px;object-fit:contain;border:1px solid #ccc;border-radius:4px}
+  .img-label{font-size:10px;color:#666;margin-top:3px}
+  .signature-block{margin-top:56px;display:flex;justify-content:flex-end}
+  .signature-inner{text-align:center;min-width:180px}
+  .sig-line{border-top:1px solid #333;padding-top:6px;margin-top:0}
+  .sig-name{font-weight:700;font-size:13px}
+  .sig-title{font-size:11px;color:#555}
+  @media print{body{padding:0}}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="clinic-name">${clinicName}</div>
+    ${address ? `<div class="clinic-sub">${address}</div>` : ""}
+    ${[phone && `Tel: ${phone}`, email, reg && `Reg: ${reg}`].filter(Boolean).join(" &nbsp;|&nbsp; ") ? `<div class="clinic-sub">${[phone && `Tel: ${phone}`, email, reg && `Reg: ${reg}`].filter(Boolean).join(" &nbsp;|&nbsp; ")}</div>` : ""}
+  </div>
+
+  <div class="report-title">Investigation Report</div>
+
+  <div class="grid2">
+    <div>
+      <div class="field"><div class="lbl">Patient Name</div><div class="val">${patientName}</div></div>
+      <div class="field"><div class="lbl">Ordered By</div><div class="val">${consultantName}</div></div>
+    </div>
+    <div>
+      <div class="field"><div class="lbl">Date Ordered</div><div class="val">${new Date(inv.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}</div></div>
+      ${inv.completedAt ? `<div class="field"><div class="lbl">Date Completed</div><div class="val">${new Date(inv.completedAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}</div></div>` : ""}
+    </div>
+  </div>
+
+  <div class="section-title">Investigation Details</div>
+  <div class="grid2">
+    <div class="field"><div class="lbl">Type</div><div class="val">${inv.type}</div></div>
+    ${inv.bodyPart ? `<div class="field"><div class="lbl">Body Part / Region</div><div class="val">${inv.bodyPart}</div></div>` : ""}
+  </div>
+  ${inv.notes ? `<div class="field"><div class="lbl">Clinical Notes</div><div class="val">${inv.notes}</div></div>` : ""}
+  <div class="field" style="margin-top:8px"><div class="lbl">Status</div><span class="badge">${INV_STATUS_LABELS[inv.status] ?? inv.status}</span></div>
+
+  ${resultBlock}
+
+  ${imageTags ? `<div class="section-title">Attached Images</div><div class="images">${imageTags}</div>` : ""}
+
+  <div class="signature-block">
+    <div class="signature-inner">
+      <div class="sig-line">
+        <div class="sig-name">${consultantName}</div>
+        <div class="sig-title">Consultant / Requesting Physician</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => win.print();
+    }
   };
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -989,71 +1219,36 @@ export default function ConsultationDetailPage() {
 
               {/* Investigation Queue */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    <ScanLine className="h-3.5 w-3.5" />
-                    Investigation Queue
-                    {investigations.length > 0 && (
-                      <span className="ml-1 rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold">
-                        {investigations.length}
-                      </span>
-                    )}
-                  </Label>
-                </div>
+                <Label className="text-xs flex items-center gap-1.5">
+                  <ScanLine className="h-3.5 w-3.5" />
+                  Investigation Queue
+                  {investigations.length > 0 && (
+                    <span className="ml-1 rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold">
+                      {investigations.length}
+                    </span>
+                  )}
+                </Label>
                 {investigations.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center border border-dashed rounded-md">
                     No investigations ordered yet for this consultation.
                   </p>
                 ) : (
-                  <div className="divide-y divide-border rounded-md border border-border overflow-hidden">
-                    {investigations.map(inv => {
-                      const label = [inv.type, inv.bodyPart ? `- ${inv.bodyPart}` : "", inv.notes ? `(${inv.notes})` : ""].filter(Boolean).join(" ");
-                      const statusColors: Record<string, string> = {
-                        pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-                        in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                        completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                        cancelled: "bg-muted text-muted-foreground",
-                      };
-                      const statusLabels: Record<string, string> = {
-                        pending: "Pending",
-                        in_progress: "In Progress",
-                        completed: "Completed",
-                        cancelled: "Cancelled",
-                      };
-                      return (
-                        <div key={inv.id} className="flex items-start gap-3 px-3 py-2.5 bg-card hover:bg-muted/30 transition-colors">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{label}</p>
-                            {inv.requestedByName && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {inv.requestedByName} · {fmtDate(inv.createdAt)}
-                              </p>
-                            )}
-                            {inv.resultNotes && (
-                              <p className="text-xs mt-1 text-muted-foreground italic">{inv.resultNotes}</p>
-                            )}
-                          </div>
-                          <Select
-                            value={inv.status}
-                            onValueChange={status => {
-                              updateInvestigationMutation.mutate(
-                                { id: inv.id, data: { status: status as "pending" | "in_progress" | "completed" | "cancelled" } },
-                                { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
-                              );
-                            }}
-                          >
-                            <SelectTrigger className={`h-6 text-[11px] w-28 shrink-0 px-2 py-0 border-0 font-medium rounded-full ${statusColors[inv.status]}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(statusLabels).map(([val, lbl]) => (
-                                <SelectItem key={val} value={val} className="text-xs">{lbl}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      );
-                    })}
+                  <div className="space-y-2">
+                    {investigations.map(inv => (
+                      <InvRow
+                        key={inv.id}
+                        inv={inv}
+                        consultationId={id ?? ""}
+                        onStatusChange={(invId, status) => {
+                          updateInvestigationMutation.mutate(
+                            { id: invId, data: { status: status as "pending" | "in_progress" | "completed" | "cancelled" } },
+                            { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
+                          );
+                        }}
+                        onPrint={printInvReport}
+                        onPreviewImage={(src, label) => setInvImagePreview({ open: true, src, label })}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
