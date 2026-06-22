@@ -6,8 +6,8 @@ import {
   useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
-  useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey
+  useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation, useListInvestigations, useUpdateInvestigation,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -117,6 +117,12 @@ export default function ConsultationDetailPage() {
   const updateInvoiceMutation = useUpdateInvoice();
   const recordPaymentMutation = useRecordPayment();
   const createInvestigationMutation = useCreateInvestigation();
+  const updateInvestigationMutation = useUpdateInvestigation();
+  const { data: investigationsData, refetch: refetchInvestigations } = useListInvestigations(
+    { consultationId: id ?? "" },
+    { query: { enabled: !!id, queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) } }
+  );
+  const investigations = investigationsData?.data ?? [];
   const { data: chargeTypes } = useListChargeTypes({ query: { queryKey: getListChargeTypesQueryKey() } });
 
   const patientId = consultation?.patientId ?? "";
@@ -409,6 +415,7 @@ export default function ConsultationDetailPage() {
     toast({ title: "Investigation ordered" });
     setShowInvestigationModal(false);
     setInvType(""); setInvBodyPart(""); setInvNotes("");
+    queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
   };
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -978,6 +985,77 @@ export default function ConsultationDetailPage() {
                   rows={6}
                   placeholder="Blood tests, imaging, referrals..."
                 />
+              </div>
+
+              {/* Investigation Queue */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <ScanLine className="h-3.5 w-3.5" />
+                    Investigation Queue
+                    {investigations.length > 0 && (
+                      <span className="ml-1 rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold">
+                        {investigations.length}
+                      </span>
+                    )}
+                  </Label>
+                </div>
+                {investigations.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center border border-dashed rounded-md">
+                    No investigations ordered yet for this consultation.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-border rounded-md border border-border overflow-hidden">
+                    {investigations.map(inv => {
+                      const label = [inv.type, inv.bodyPart ? `- ${inv.bodyPart}` : "", inv.notes ? `(${inv.notes})` : ""].filter(Boolean).join(" ");
+                      const statusColors: Record<string, string> = {
+                        pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+                        in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                        completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                        cancelled: "bg-muted text-muted-foreground",
+                      };
+                      const statusLabels: Record<string, string> = {
+                        pending: "Pending",
+                        in_progress: "In Progress",
+                        completed: "Completed",
+                        cancelled: "Cancelled",
+                      };
+                      return (
+                        <div key={inv.id} className="flex items-start gap-3 px-3 py-2.5 bg-card hover:bg-muted/30 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{label}</p>
+                            {inv.requestedByName && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {inv.requestedByName} · {fmtDate(inv.createdAt)}
+                              </p>
+                            )}
+                            {inv.resultNotes && (
+                              <p className="text-xs mt-1 text-muted-foreground italic">{inv.resultNotes}</p>
+                            )}
+                          </div>
+                          <Select
+                            value={inv.status}
+                            onValueChange={status => {
+                              updateInvestigationMutation.mutate(
+                                { id: inv.id, data: { status: status as "pending" | "in_progress" | "completed" | "cancelled" } },
+                                { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
+                              );
+                            }}
+                          >
+                            <SelectTrigger className={`h-6 text-[11px] w-28 shrink-0 px-2 py-0 border-0 font-medium rounded-full ${statusColors[inv.status]}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(statusLabels).map(([val, lbl]) => (
+                                <SelectItem key={val} value={val} className="text-xs">{lbl}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Clinical Attachments */}
