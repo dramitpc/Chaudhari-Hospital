@@ -591,7 +591,7 @@ export default function ConsultationDetailPage() {
   }, [consultation, clinicalInit]);
 
   // ── Sync investigation queue results into the editable orders field ─────────
-  const QUEUE_MARKER = "\n\n--- Investigation Results ---\n";
+  const QUEUE_MARKER = "\n\u200B\u200B";
   const prevQueueTextRef = useRef<string | null>(null);
   const queueText = useMemo(() =>
     investigations.map(inv => {
