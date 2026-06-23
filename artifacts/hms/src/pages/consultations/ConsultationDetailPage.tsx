@@ -300,14 +300,30 @@ export default function ConsultationDetailPage() {
   const [editingOrthoticIdx, setEditingOrthoticIdx] = useState<number | null>(null);
   const [editingOrthoticValue, setEditingOrthoticValue] = useState("");
 
+  // Persistent custom orthotic list (localStorage)
+  const CUSTOM_ORTHO_LS = "clinicos_custom_orthotics";
+  const [customOrthoticList, setCustomOrthoticList] = useState<string[]>(() => {
+    try { const raw = localStorage.getItem(CUSTOM_ORTHO_LS); return raw ? JSON.parse(raw) : []; } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(CUSTOM_ORTHO_LS, JSON.stringify(customOrthoticList)); } catch { /* ignore */ }
+  }, [customOrthoticList]);
+
   const addOrthotic = (item: string) => setOrthoticItems(prev => prev.includes(item) ? prev : [...prev, item]);
   const removeOrthotic = (item: string) => setOrthoticItems(prev => prev.filter(i => i !== item));
-  const addCustomOrthotic = () => {
+
+  // Add a name to the persistent picker list (and optionally to the prescription too)
+  const addToCustomList = () => {
     const val = orthoticCustomInput.trim();
     if (!val) return;
-    addOrthotic(val);
+    setCustomOrthoticList(prev => prev.includes(val) ? prev : [...prev, val]);
     setOrthoticCustomInput("");
   };
+  const removeFromCustomList = (item: string) => {
+    setCustomOrthoticList(prev => prev.filter(i => i !== item));
+    removeOrthotic(item); // also deselect from current Rx if it was selected
+  };
+
   const commitOrthoticEdit = () => {
     if (editingOrthoticIdx === null) return;
     const val = editingOrthoticValue.trim();
@@ -2281,25 +2297,63 @@ export default function ConsultationDetailPage() {
                 {/* ── Orthotic Picker (lower ¼) ── */}
                 <div className="flex-[1] min-h-0 flex flex-col overflow-hidden border-t border-border pt-2 gap-1">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0 px-1">🦴 Orthotics</p>
-                  {/* Custom entry */}
+                  {/* Add to custom list */}
                   <div className="flex items-center gap-1 shrink-0">
                     <Input
                       className="h-6 text-xs flex-1"
-                      placeholder="Type custom orthotic…"
+                      placeholder="Add to list…"
                       value={orthoticCustomInput}
                       onChange={e => setOrthoticCustomInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomOrthotic(); } }}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addToCustomList(); } }}
                     />
                     <Button
                       type="button" size="icon" variant="outline"
                       className="h-6 w-6 shrink-0"
-                      onClick={addCustomOrthotic}
+                      onClick={addToCustomList}
                       disabled={!orthoticCustomInput.trim()}
+                      title="Save to list"
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
                   <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-1 space-y-0.5 min-h-0">
+                    {/* Custom saved items */}
+                    {customOrthoticList.length > 0 && (
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1 pb-0.5">⭐ Custom</p>
+                        {customOrthoticList.map(item => {
+                          const added = orthoticItems.includes(item);
+                          return (
+                            <div
+                              key={item}
+                              className={`flex items-center gap-1 px-1 py-1 rounded select-none text-xs transition-colors ${
+                                added
+                                  ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300"
+                                  : "hover:bg-primary/10 hover:border-primary/30 border border-transparent"
+                              }`}
+                            >
+                              <span
+                                className="shrink-0 w-3 text-center text-[10px] cursor-pointer"
+                                onClick={() => added ? removeOrthotic(item) : addOrthotic(item)}
+                              >
+                                {added ? "✓" : "+"}
+                              </span>
+                              <span
+                                className="flex-1 truncate cursor-pointer"
+                                onClick={() => added ? removeOrthotic(item) : addOrthotic(item)}
+                              >{item}</span>
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); removeFromCustomList(item); }}
+                                className="shrink-0 text-muted-foreground hover:text-destructive transition-colors text-[10px] leading-none px-0.5"
+                                title="Remove from list"
+                              >✕</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/* Preset groups */}
                     {ORTHOTIC_GROUPS.map(grp => (
                       <div key={grp.group}>
                         <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1 pb-0.5">{grp.group}</p>
