@@ -118,7 +118,8 @@ function InvRow({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateMutation = useUpdateInvestigation();
-  const [notes, setNotes] = useState(inv.resultNotes ?? "");
+  const [resultNotes, setResultNotes] = useState(inv.resultNotes ?? "");
+  const [editingResult, setEditingResult] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editType, setEditType] = useState(inv.type ?? "");
   const [editBodyPart, setEditBodyPart] = useState(inv.bodyPart ?? "");
@@ -126,18 +127,20 @@ function InvRow({
 
   // Sync result notes when radiographer updates externally
   const extNotes = inv.resultNotes ?? "";
-  if (!updateMutation.isPending && notes !== extNotes && document.activeElement?.tagName !== "TEXTAREA") {
-    setNotes(extNotes);
+  if (!updateMutation.isPending && resultNotes !== extNotes && !editingResult) {
+    setResultNotes(extNotes);
   }
 
-  const saveNotes = () => {
-    const trimmed = notes.trim();
-    if (trimmed === (inv.resultNotes ?? "").trim()) return;
+  const saveResultNotes = () => {
+    const trimmed = resultNotes.trim();
     updateMutation.mutate(
       { id: inv.id, data: { resultNotes: trimmed || undefined } },
       {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) }),
-        onError: () => toast({ title: "Failed to save notes", variant: "destructive" }),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) });
+          setEditingResult(false);
+        },
+        onError: () => toast({ title: "Failed to save result notes", variant: "destructive" }),
       }
     );
   };
@@ -225,6 +228,40 @@ function InvRow({
                   {inv.completedAt && ` · Done ${fmtDate(inv.completedAt)}`}
                 </p>
               )}
+              {/* Result notes — single line text */}
+              {editingResult ? (
+                <div className="mt-1.5 flex items-start gap-1">
+                  <Textarea
+                    autoFocus
+                    value={resultNotes}
+                    onChange={e => setResultNotes(e.target.value)}
+                    rows={2}
+                    className="text-xs resize-none flex-1"
+                    placeholder="Findings, results, interpretation…"
+                    onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveResultNotes(); if (e.key === "Escape") setEditingResult(false); }}
+                  />
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button size="sm" className="h-6 text-xs px-2" onClick={saveResultNotes} disabled={updateMutation.isPending}>
+                      {updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setResultNotes(inv.resultNotes ?? ""); setEditingResult(false); }}>
+                      ✕
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="mt-0.5 w-full text-left group flex items-baseline gap-1"
+                  onClick={() => setEditingResult(true)}
+                  title="Click to add/edit result notes"
+                >
+                  <span className="text-[10px] text-muted-foreground shrink-0">Result:</span>
+                  <span className={`text-xs truncate ${resultNotes ? "text-foreground" : "text-muted-foreground/50 italic"}`}>
+                    {resultNotes || "add result notes…"}
+                  </span>
+                  <Pencil className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-60 shrink-0 transition-opacity" />
+                </button>
+              )}
             </>
           )}
         </div>
@@ -284,18 +321,6 @@ function InvRow({
         </div>
       )}
 
-      {/* Result notes */}
-      <div className="px-3 pb-3 pt-1.5 border-t border-border/40">
-        <Label className="text-[10px] text-muted-foreground mb-1 block">Result Notes</Label>
-        <Textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          onBlur={saveNotes}
-          placeholder="Radiographer's findings, results, interpretation…"
-          rows={2}
-          className="text-xs resize-none"
-        />
-      </div>
     </div>
   );
 }
