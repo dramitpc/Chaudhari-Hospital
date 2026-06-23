@@ -86,13 +86,7 @@ const RX_PREVIEW_LANGUAGES = [
   { code: "pa", label: "ਪੰਜਾਬੀ (Punjabi)" },
   { code: "bn", label: "বাংলা (Bengali)" },
 ];
-// ── Orthotic master list ──────────────────────────────────────────────────────
-const ORTHOTIC_GROUPS: { group: string; items: string[] }[] = [
-  { group: "Spinal", items: ["Cervical collar", "Lumbar support", "Sacroiliac belt", "TLSO brace"] },
-  { group: "Lower Limb", items: ["Knee brace", "Patella stabilizer", "Knee immobilizer", "AFO (ankle-foot orthosis)", "CAM boot / walking boot", "Heel wedge"] },
-  { group: "Upper Limb", items: ["Shoulder sling", "Wrist splint", "Thumb spica splint", "Tennis elbow brace"] },
-  { group: "Foot", items: ["Foot orthosis", "Arch support / insoles", "Heel cup", "Metatarsal pad"] },
-];
+
 // ── Investigation Queue Row ───────────────────────────────────────────────────
 const INV_STATUS_COLORS: Record<string, string> = {
   pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
@@ -2353,31 +2347,9 @@ export default function ConsultationDetailPage() {
                         })}
                       </div>
                     )}
-                    {/* Preset groups */}
-                    {ORTHOTIC_GROUPS.map(grp => (
-                      <div key={grp.group}>
-                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1 pb-0.5">{grp.group}</p>
-                        {grp.items.map(item => {
-                          const added = orthoticItems.includes(item);
-                          return (
-                            <div
-                              key={item}
-                              onClick={() => added ? removeOrthotic(item) : addOrthotic(item)}
-                              className={`flex items-center gap-1 px-1 py-1 rounded select-none text-xs transition-colors cursor-pointer ${
-                                added
-                                  ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300"
-                                  : "hover:bg-primary/10 hover:border-primary/30 border border-transparent"
-                              }`}
-                            >
-                              <span className="shrink-0 w-3 text-center text-[10px]">
-                                {added ? "✓" : "+"}
-                              </span>
-                              <span className="flex-1 truncate">{item}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
+                    {customOrthoticList.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4">Type a name above and press Enter to add it to your list.</p>
+                    )}
                   </div>
                 </div>
 
