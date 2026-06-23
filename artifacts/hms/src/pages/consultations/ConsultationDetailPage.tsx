@@ -1376,6 +1376,18 @@ export default function ConsultationDetailPage() {
                   rows={6}
                   placeholder="Blood tests, imaging, referrals..."
                 />
+                {investigations.length > 0 && (
+                  <textarea
+                    readOnly
+                    className="col-span-full w-full resize-none rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none"
+                    rows={investigations.length}
+                    value={investigations.map(inv => {
+                      const name = [inv.type, inv.bodyPart ? `— ${inv.bodyPart}` : ""].filter(Boolean).join(" ");
+                      const result = inv.resultNotes?.trim();
+                      return result ? `${name}: ${result}` : `${name}: pending`;
+                    }).join("\n")}
+                  />
+                )}
               </div>
 
               {/* Investigation Queue */}
