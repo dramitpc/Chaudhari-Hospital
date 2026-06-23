@@ -459,9 +459,15 @@ export default function PrescriptionDetailPage() {
             <p className="text-sm font-medium capitalize">{patient?.gender ?? "—"}</p>
           </div>
           {consultation?.visitType && (
-            <div className="pl-5">
+            <div className="pl-5 pr-5">
               <p className="text-xs text-muted-foreground">Visit Type</p>
               <p className="text-sm font-medium capitalize">{consultation.visitType.replace(/_/g, " ")}</p>
+            </div>
+          )}
+          {patient?.address && (
+            <div className="pl-5">
+              <p className="text-xs text-muted-foreground">Address</p>
+              <p className="text-sm font-medium">{patient.address}</p>
             </div>
           )}
         </div>
