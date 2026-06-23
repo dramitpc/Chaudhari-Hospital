@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2, Pencil } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
@@ -88,6 +88,7 @@ const RX_PREVIEW_LANGUAGES = [
 ];
 
 // ── Investigation Queue Row ───────────────────────────────────────────────────
+const INV_TYPES = ["X-Ray", "CT Scan", "MRI", "Ultrasound", "ECG", "Echocardiography", "Mammography", "Bone Density Scan", "Blood Test", "Biopsy", "Other"];
 const INV_STATUS_COLORS: Record<string, string> = {
   pending:     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -118,8 +119,12 @@ function InvRow({
   const queryClient = useQueryClient();
   const updateMutation = useUpdateInvestigation();
   const [notes, setNotes] = useState(inv.resultNotes ?? "");
+  const [editing, setEditing] = useState(false);
+  const [editType, setEditType] = useState(inv.type ?? "");
+  const [editBodyPart, setEditBodyPart] = useState(inv.bodyPart ?? "");
+  const [editNotes, setEditNotes] = useState(inv.notes ?? "");
 
-  // Sync when radiographer updates notes externally (parent re-fetch)
+  // Sync result notes when radiographer updates externally
   const extNotes = inv.resultNotes ?? "";
   if (!updateMutation.isPending && notes !== extNotes && document.activeElement?.tagName !== "TEXTAREA") {
     setNotes(extNotes);
@@ -131,12 +136,39 @@ function InvRow({
     updateMutation.mutate(
       { id: inv.id, data: { resultNotes: trimmed || undefined } },
       {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) });
-        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) }),
         onError: () => toast({ title: "Failed to save notes", variant: "destructive" }),
       }
     );
+  };
+
+  const saveEdit = () => {
+    if (!editType.trim()) return;
+    updateMutation.mutate(
+      {
+        id: inv.id,
+        data: {
+          type: editType.trim(),
+          bodyPart: editBodyPart.trim() || undefined,
+          notes: editNotes.trim() || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) });
+          setEditing(false);
+          toast({ title: "Investigation updated" });
+        },
+        onError: () => toast({ title: "Failed to update investigation", variant: "destructive" }),
+      }
+    );
+  };
+
+  const cancelEdit = () => {
+    setEditType(inv.type ?? "");
+    setEditBodyPart(inv.bodyPart ?? "");
+    setEditNotes(inv.notes ?? "");
+    setEditing(false);
   };
 
   const attachments = parseAttachments(inv.imageAttachment);
@@ -147,15 +179,65 @@ function InvRow({
       {/* Header */}
       <div className="flex items-start gap-3 px-3 py-2.5">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">{label}</p>
-          {inv.requestedByName && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {inv.requestedByName} · {fmtDate(inv.createdAt)}
-              {inv.completedAt && ` · Done ${fmtDate(inv.completedAt)}`}
-            </p>
+          {editing ? (
+            <div className="space-y-1.5">
+              <Select value={editType} onValueChange={setEditType}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="Investigation type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INV_TYPES.map(t => (
+                    <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                className="h-7 text-xs"
+                placeholder="Body part / region (optional)"
+                value={editBodyPart}
+                onChange={e => setEditBodyPart(e.target.value)}
+              />
+              <Input
+                className="h-7 text-xs"
+                placeholder="Clinical notes (optional)"
+                value={editNotes}
+                onChange={e => setEditNotes(e.target.value)}
+              />
+              <div className="flex gap-1.5 pt-0.5">
+                <Button
+                  size="sm" className="h-6 text-xs px-3"
+                  onClick={saveEdit}
+                  disabled={!editType.trim() || updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                </Button>
+                <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={cancelEdit}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-medium">{label}</p>
+              {inv.requestedByName && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {inv.requestedByName} · {fmtDate(inv.createdAt)}
+                  {inv.completedAt && ` · Done ${fmtDate(inv.completedAt)}`}
+                </p>
+              )}
+            </>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {!editing && (
+            <Button
+              size="sm" variant="ghost" className="h-7 w-7 p-0"
+              onClick={() => { setEditType(inv.type ?? ""); setEditBodyPart(inv.bodyPart ?? ""); setEditNotes(inv.notes ?? ""); setEditing(true); }}
+              title="Edit investigation"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             size="sm" variant="ghost" className="h-7 w-7 p-0"
             onClick={() => onPrint(inv)} title="Print investigation report"

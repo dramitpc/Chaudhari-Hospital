@@ -1257,8 +1257,10 @@ export const InvestigationUpdateStatus = {
 } as const;
 
 export interface InvestigationUpdate {
-  status?: InvestigationUpdateStatus;
+  type?: string;
+  bodyPart?: string;
   notes?: string;
+  status?: InvestigationUpdateStatus;
   resultNotes?: string;
   imageAttachment?: string;
 }

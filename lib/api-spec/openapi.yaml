@@ -3219,11 +3219,15 @@ components:
     InvestigationUpdate:
       type: object
       properties:
+        type:
+          type: string
+        bodyPart:
+          type: string
+        notes:
+          type: string
         status:
           type: string
           enum: [pending, in_progress, completed, cancelled]
-        notes:
-          type: string
         resultNotes:
           type: string
         imageAttachment:

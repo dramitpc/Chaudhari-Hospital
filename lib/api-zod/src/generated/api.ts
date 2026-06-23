@@ -2104,8 +2104,10 @@ export const UpdateInvestigationParams = zod.object({
 })
 
 export const UpdateInvestigationBody = zod.object({
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
+  "type": zod.string().optional(),
+  "bodyPart": zod.string().optional(),
   "notes": zod.string().optional(),
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
   "resultNotes": zod.string().optional(),
   "imageAttachment": zod.string().optional()
 })
