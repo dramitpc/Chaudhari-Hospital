@@ -5497,3 +5497,73 @@ export const useUpdateInvestigation = <TError = ErrorType<unknown>,
       return useMutation(getUpdateInvestigationMutationOptions(options));
     }
 
+export const getDeleteInvestigationUrl = (id: string,) => {
+
+
+
+
+  return `/api/investigations/${id}`
+}
+
+/**
+ * @summary Delete an investigation
+ */
+export const deleteInvestigation = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteInvestigationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteInvestigationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInvestigation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInvestigation>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteInvestigation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInvestigation>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteInvestigation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInvestigationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInvestigation>>>
+
+    export type DeleteInvestigationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete an investigation
+ */
+export const useDeleteInvestigation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInvestigation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInvestigation>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteInvestigationMutationOptions(options));
+    }
+

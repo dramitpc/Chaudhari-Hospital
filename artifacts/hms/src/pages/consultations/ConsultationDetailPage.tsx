@@ -6,7 +6,7 @@ import {
   useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
-  useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation, useListInvestigations, useUpdateInvestigation,
+  useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation, useListInvestigations, useUpdateInvestigation, useDeleteInvestigation,
   getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey,
   type Investigation
 } from "@workspace/api-client-react";
@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2, Pencil, Trash2 } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
@@ -118,6 +118,8 @@ function InvRow({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateMutation = useUpdateInvestigation();
+  const deleteMutation = useDeleteInvestigation();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [resultNotes, setResultNotes] = useState(inv.resultNotes ?? "");
   const [editingResult, setEditingResult] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -266,7 +268,7 @@ function InvRow({
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {!editing && (
+          {!editing && !confirmDelete && (
             <Button
               size="sm" variant="ghost" className="h-7 w-7 p-0"
               onClick={() => { setEditType(inv.type ?? ""); setEditBodyPart(inv.bodyPart ?? ""); setEditNotes(inv.notes ?? ""); setEditing(true); }}
@@ -275,12 +277,40 @@ function InvRow({
               <Pencil className="h-3.5 w-3.5" />
             </Button>
           )}
-          <Button
-            size="sm" variant="ghost" className="h-7 w-7 p-0"
-            onClick={() => onPrint(inv)} title="Print investigation report"
-          >
-            <Printer className="h-3.5 w-3.5" />
-          </Button>
+          {!editing && !confirmDelete && (
+            <Button
+              size="sm" variant="ghost" className="h-7 w-7 p-0"
+              onClick={() => onPrint(inv)} title="Print investigation report"
+            >
+              <Printer className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {confirmDelete ? (
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] text-destructive font-medium">Delete?</span>
+              <Button
+                size="sm" variant="destructive" className="h-6 text-xs px-2"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(
+                  { id: inv.id },
+                  {
+                    onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId }) }),
+                    onError: () => toast({ title: "Failed to delete investigation", variant: "destructive" }),
+                  }
+                )}
+              >
+                {deleteMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setConfirmDelete(false)}>No</Button>
+            </div>
+          ) : !editing && (
+            <Button
+              size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setConfirmDelete(true)} title="Delete investigation"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Select value={inv.status} onValueChange={s => onStatusChange(inv.id, s)}>
             <SelectTrigger className={`h-6 text-[11px] w-28 px-2 py-0 border-0 font-medium rounded-full ${INV_STATUS_COLORS[inv.status]}`}>
               <SelectValue />

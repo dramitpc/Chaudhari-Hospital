@@ -1538,6 +1538,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Investigation"
+    delete:
+      operationId: deleteInvestigation
+      tags: [investigations]
+      summary: Delete an investigation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
 components:
   schemas:

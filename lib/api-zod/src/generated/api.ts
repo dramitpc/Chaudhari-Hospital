@@ -2131,3 +2131,11 @@ export const UpdateInvestigationResponse = zod.object({
 })
 
 
+/**
+ * @summary Delete an investigation
+ */
+export const DeleteInvestigationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+

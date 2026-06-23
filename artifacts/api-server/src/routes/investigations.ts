@@ -100,4 +100,28 @@ router.patch(
   }
 );
 
+// DELETE /investigations/:id
+router.delete(
+  "/investigations/:id",
+  authenticate,
+  async (req, res) => {
+    const params = UpdateInvestigationParams.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ error: "Invalid params" });
+    }
+
+    const [row] = await db
+      .delete(investigationsTable)
+      .where(eq(investigationsTable.id, params.data.id))
+      .returning();
+
+    if (!row) {
+      return res.status(404).json({ error: "Investigation not found" });
+    }
+
+    await logAudit(req, req.user!.id, "delete", "investigation", row.id);
+    return res.status(204).send();
+  }
+);
+
 export default router;
