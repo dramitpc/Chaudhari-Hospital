@@ -597,15 +597,13 @@ export default function PrescriptionDetailPage() {
           try { const p = prescription.notes ? JSON.parse(prescription.notes) : []; if (Array.isArray(p)) orthotics = p; } catch { /* not JSON */ }
           if (orthotics.length === 0) return null;
           return (
-            <div className="mb-6">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">🦴 Prescribed Orthotics</p>
-              <div className="flex flex-wrap gap-2">
-                {orthotics.map(item => (
-                  <span key={item} className="text-sm border border-border rounded-full px-3 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">
-                    {item}
-                  </span>
-                ))}
-              </div>
+            <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide shrink-0">🦴 Orthotics:</span>
+              {orthotics.map(item => (
+                <span key={item} className="text-sm border border-border rounded-full px-2.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">
+                  {item}
+                </span>
+              ))}
             </div>
           );
         })()}
