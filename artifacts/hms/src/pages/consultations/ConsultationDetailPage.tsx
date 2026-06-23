@@ -1363,6 +1363,23 @@ export default function ConsultationDetailPage() {
                   rows={6}
                   placeholder="Blood tests, imaging, referrals..."
                 />
+                {/* Queue-derived text summary */}
+                {investigations.length > 0 && (
+                  <div className="col-span-full rounded-md border border-border/60 bg-muted/30 px-3 py-2 space-y-0.5">
+                    {investigations.map(inv => {
+                      const name = [inv.type, inv.bodyPart ? `— ${inv.bodyPart}` : ""].filter(Boolean).join(" ");
+                      const result = inv.resultNotes?.trim();
+                      return (
+                        <p key={inv.id} className="text-xs text-foreground leading-snug truncate">
+                          <span className="font-medium">{name}</span>
+                          {result
+                            ? <span className="text-muted-foreground">: {result}</span>
+                            : <span className="text-muted-foreground/50 italic"> — pending</span>}
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Investigation Queue */}
