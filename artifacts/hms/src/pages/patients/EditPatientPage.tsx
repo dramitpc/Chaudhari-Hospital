@@ -202,6 +202,22 @@ export default function EditPatientPage() {
               {dobValue && <p className="text-xs text-muted-foreground">Auto-calculated from Date of Birth</p>}
             </div>
             <div className="space-y-1.5">
+              <Label>Gender</Label>
+              <Select
+                value={watch("gender") ?? ""}
+                onValueChange={v => setValue("gender", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Email</Label>
               <Input {...register("email")} />
             </div>
