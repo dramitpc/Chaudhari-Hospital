@@ -1,5 +1,5 @@
 import { useRoute, useLocation, useSearch, Link } from "wouter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
@@ -589,6 +589,29 @@ export default function ConsultationDetailPage() {
       setClinicalInit(true);
     }
   }, [consultation, clinicalInit]);
+
+  // ── Sync investigation queue results into the editable orders field ─────────
+  const QUEUE_MARKER = "\n\n--- Investigation Results ---\n";
+  const prevQueueTextRef = useRef<string | null>(null);
+  const queueText = useMemo(() =>
+    investigations.map(inv => {
+      const name = [inv.type, inv.bodyPart ? `— ${inv.bodyPart}` : ""].filter(Boolean).join(" ");
+      const result = inv.resultNotes?.trim();
+      return result ? `${name}: ${result}` : `${name}: pending`;
+    }).join("\n"),
+    [investigations]
+  );
+  useEffect(() => {
+    if (!clinicalInit) return;
+    if (prevQueueTextRef.current === queueText) return;
+    prevQueueTextRef.current = queueText;
+    setInvestigationValue(curr => {
+      const markerIdx = curr.indexOf(QUEUE_MARKER);
+      const base = markerIdx >= 0 ? curr.slice(0, markerIdx) : curr;
+      if (!queueText) return base;
+      return base.trimEnd() + QUEUE_MARKER + queueText;
+    });
+  }, [queueText, clinicalInit]);
 
   // ── Prescription templates ─────────────────────────────────────────────────
   type RxTemplate = { id: string; name: string; items: DrugItem[]; savedAt: number };
@@ -1376,18 +1399,6 @@ export default function ConsultationDetailPage() {
                   rows={6}
                   placeholder="Blood tests, imaging, referrals..."
                 />
-                {investigations.length > 0 && (
-                  <textarea
-                    readOnly
-                    className="col-span-full w-full resize-none rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none"
-                    rows={investigations.length}
-                    value={investigations.map(inv => {
-                      const name = [inv.type, inv.bodyPart ? `— ${inv.bodyPart}` : ""].filter(Boolean).join(" ");
-                      const result = inv.resultNotes?.trim();
-                      return result ? `${name}: ${result}` : `${name}: pending`;
-                    }).join("\n")}
-                  />
-                )}
               </div>
 
               {/* Investigation Queue */}
