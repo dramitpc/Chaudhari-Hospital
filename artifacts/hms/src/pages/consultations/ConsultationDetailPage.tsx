@@ -656,26 +656,9 @@ export default function ConsultationDetailPage() {
   const [invBodyPart, setInvBodyPart] = useState("");
   const [invNotes, setInvNotes] = useState("");
 
-  const formatInvLine = (type: string, bodyPart: string, notes: string): string => {
-    let line = type.trim();
-    if (bodyPart.trim()) line += ` - ${bodyPart.trim()}`;
-    if (notes.trim()) line += ` (${notes.trim()})`;
-    return line;
-  };
-
-  const appendInvToField = (lines: string[]) => {
-    const addition = lines.join("\n");
-    setInvestigationValue(prev => {
-      const next = prev.trim() ? `${prev.trim()}\n${addition}` : addition;
-      handleBlur("investigationOrders", next);
-      return next;
-    });
-  };
-
   const handleOrderInvestigation = () => {
     if (!invType.trim()) return;
     trackInvestigationRecent({ type: invType, bodyPart: invBodyPart, notes: invNotes });
-    appendInvToField([formatInvLine(invType, invBodyPart, invNotes)]);
     if (patientId && user?.id) {
       createInvestigationMutation.mutate({ data: {
         patientId,
@@ -2001,7 +1984,6 @@ export default function ConsultationDetailPage() {
               }}
               onApplyMultiple={(entries) => {
                 entries.forEach(e => trackInvestigationRecent(e));
-                appendInvToField(entries.map(e => formatInvLine(e.type, e.bodyPart, e.notes)));
                 if (patientId && user?.id) {
                   entries.forEach(e => createInvestigationMutation.mutate({ data: {
                     patientId,
