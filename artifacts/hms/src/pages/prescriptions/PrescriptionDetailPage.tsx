@@ -487,7 +487,7 @@ export default function PrescriptionDetailPage() {
         {fmt.showInvestigations && (() => {
           const QUEUE_MARKER = "\n\u200B\u200B";
           const raw = consultation?.investigationOrders ?? prescription.investigationOrders ?? "";
-          const invText = raw.includes(QUEUE_MARKER) ? raw.split(QUEUE_MARKER)[0] : raw;
+          const invText = raw.replaceAll(QUEUE_MARKER, "\n");
           return invText.trim() ? (
             <div className="mb-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Investigations</p>
