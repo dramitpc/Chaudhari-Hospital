@@ -505,6 +505,7 @@ export default function ConsultationDetailPage() {
     referringDoctorName: "", chiefComplaint: "", historyOfPresentIllness: "", clinicalNotes: "", followUpNotes: ""
   });
   const [investigationValue, setInvestigationValue] = useState("");
+  const investigationValueRef = useRef("");
   const [clinicalInit, setClinicalInit] = useState(false);
   const [invImagePreview, setInvImagePreview] = useState<{ open: boolean; src: string; label: string }>({
     open: false, src: "", label: "",
@@ -585,10 +586,14 @@ export default function ConsultationDetailPage() {
         clinicalNotes:           consultation.clinicalNotes           ?? "",
         followUpNotes:           consultation.followUpNotes           ?? "",
       });
-      setInvestigationValue(consultation.investigationOrders ?? "");
+      const initInv = consultation.investigationOrders ?? "";
+      setInvestigationValue(initInv);
+      investigationValueRef.current = initInv;
       setClinicalInit(true);
     }
   }, [consultation, clinicalInit]);
+
+  useEffect(() => { investigationValueRef.current = investigationValue; }, [investigationValue]);
 
   // ── Sync investigation queue results into the editable orders field ─────────
   const QUEUE_MARKER = "\n\u200B\u200B";
@@ -605,12 +610,18 @@ export default function ConsultationDetailPage() {
     if (!clinicalInit) return;
     if (prevQueueTextRef.current === queueText) return;
     prevQueueTextRef.current = queueText;
-    setInvestigationValue(curr => {
-      const markerIdx = curr.indexOf(QUEUE_MARKER);
-      const base = markerIdx >= 0 ? curr.slice(0, markerIdx) : curr;
-      if (!queueText) return base;
-      return base.trimEnd() + QUEUE_MARKER + queueText;
-    });
+    const curr = investigationValueRef.current;
+    const markerIdx = curr.indexOf(QUEUE_MARKER);
+    const base = markerIdx >= 0 ? curr.slice(0, markerIdx) : curr;
+    const next = !queueText ? base : base.trimEnd() + QUEUE_MARKER + queueText;
+    setInvestigationValue(next);
+    investigationValueRef.current = next;
+    if (id) {
+      updateMutation.mutate({ id, data: { investigationOrders: next } }, {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) }),
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queueText, clinicalInit]);
 
   // ── Prescription templates ─────────────────────────────────────────────────
