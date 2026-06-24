@@ -441,24 +441,29 @@ export default function PrescriptionDetailPage() {
           <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
         </div>
 
-        <div className="flex items-stretch mb-6 border border-border rounded overflow-hidden bg-muted/30 w-full">
-          {[
-            { label: "Patient Name", value: prescription.patientName },
-            { label: "Patient ID",   value: patient?.patientId ?? "—" },
-            { label: "Age",          value: calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—" },
-            { label: "Sex",          value: patient?.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : "—" },
-            ...(consultation?.visitType ? [{ label: "Visit Type", value: consultation.visitType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) }] : []),
-            ...(patient?.address    ? [{ label: "Address",    value: patient.address }] : []),
-          ].map((field, idx, arr) => (
-            <div
-              key={field.label}
-              className={`flex-1 min-w-0 px-3 py-2 ${idx < arr.length - 1 ? "border-r border-border" : ""}`}
-            >
-              <p className="text-xs text-muted-foreground truncate">{field.label}</p>
-              <p className="text-sm font-medium truncate">{field.value}</p>
+        {(() => {
+          const genderMap: Record<string, string> = { male: "M", female: "F", other: "O" };
+          const genderCode = (patient?.gender ? genderMap[patient.gender] : undefined) ?? "—";
+          const ageValue = String(calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—");
+          const fields: { label: string; value: string; cls: string }[] = [
+            { label: "Patient Name", value: prescription.patientName ?? "—",  cls: "flex-[3] min-w-0" },
+            { label: "Patient ID",   value: patient?.patientId ?? "—",        cls: "flex-none w-24 shrink-0" },
+            { label: "Age",          value: ageValue,                          cls: "flex-none w-16 shrink-0" },
+            { label: "Sex",          value: genderCode,                                                                              cls: "flex-none w-10 shrink-0" },
+            ...(consultation?.visitType ? [{ label: "Visit Type", value: consultation.visitType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), cls: "flex-1 min-w-0" }] : []),
+            ...(patient?.address        ? [{ label: "Address",    value: patient.address,                                            cls: "flex-[2] min-w-0" }] : []),
+          ];
+          return (
+            <div className="flex items-stretch mb-6 border border-border rounded overflow-hidden bg-muted/30 w-full">
+              {fields.map((field, idx) => (
+                <div key={field.label} className={`${field.cls} px-3 py-2 ${idx < fields.length - 1 ? "border-r border-border" : ""}`}>
+                  <p className="text-xs text-muted-foreground">{field.label}</p>
+                  <p className={`text-sm font-medium ${field.label === "Patient Name" ? "whitespace-normal" : "truncate"}`}>{field.value}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         {/* Known Allergies */}
         {patient?.allergies && (
