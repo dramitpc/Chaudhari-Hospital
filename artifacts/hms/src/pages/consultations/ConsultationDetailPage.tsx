@@ -713,21 +713,23 @@ export default function ConsultationDetailPage() {
     if (!invType.trim()) return;
     trackInvestigationRecent({ type: invType, bodyPart: invBodyPart, notes: invNotes });
     if (patientId && user?.id) {
-      createInvestigationMutation.mutate({ data: {
-        patientId,
-        patientName: patient?.fullName ?? undefined,
-        consultationId: id,
-        requestedById: user.id,
-        requestedByName: user.fullName ?? undefined,
-        type: invType.trim(),
-        bodyPart: invBodyPart.trim() || undefined,
-        notes: invNotes.trim() || undefined,
-      }});
+      createInvestigationMutation.mutate(
+        { data: {
+          patientId,
+          patientName: patient?.fullName ?? undefined,
+          consultationId: id,
+          requestedById: user.id,
+          requestedByName: user.fullName ?? undefined,
+          type: invType.trim(),
+          bodyPart: invBodyPart.trim() || undefined,
+          notes: invNotes.trim() || undefined,
+        }},
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
+      );
     }
     toast({ title: "Investigation ordered" });
     setShowInvestigationModal(false);
     setInvType(""); setInvBodyPart(""); setInvNotes("");
-    queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
   };
 
   // ── Print investigation report ────────────────────────────────────────────
@@ -2038,16 +2040,19 @@ export default function ConsultationDetailPage() {
               onApplyMultiple={(entries) => {
                 entries.forEach(e => trackInvestigationRecent(e));
                 if (patientId && user?.id) {
-                  entries.forEach(e => createInvestigationMutation.mutate({ data: {
-                    patientId,
-                    patientName: patient?.fullName ?? undefined,
-                    consultationId: id,
-                    requestedById: user.id,
-                    requestedByName: user.fullName ?? undefined,
-                    type: e.type.trim(),
-                    bodyPart: e.bodyPart.trim() || undefined,
-                    notes: e.notes.trim() || undefined,
-                  }}));
+                  entries.forEach(e => createInvestigationMutation.mutate(
+                    { data: {
+                      patientId,
+                      patientName: patient?.fullName ?? undefined,
+                      consultationId: id,
+                      requestedById: user.id,
+                      requestedByName: user.fullName ?? undefined,
+                      type: e.type.trim(),
+                      bodyPart: e.bodyPart.trim() || undefined,
+                      notes: e.notes.trim() || undefined,
+                    }},
+                    { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
+                  ));
                 }
                 toast({ title: `${entries.length} investigation${entries.length > 1 ? "s" : ""} ordered` });
                 setShowInvestigationModal(false);
