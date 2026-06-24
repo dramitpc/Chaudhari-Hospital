@@ -441,35 +441,23 @@ export default function PrescriptionDetailPage() {
           <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 p-3 bg-muted/30 rounded divide-x divide-border">
-          <div className="pr-5">
-            <p className="text-xs text-muted-foreground">Patient Name</p>
-            <p className="text-sm font-medium">{prescription.patientName}</p>
-          </div>
-          <div className="pl-5 pr-5">
-            <p className="text-xs text-muted-foreground">Patient ID</p>
-            <p className="text-sm font-medium">{patient?.patientId ?? "—"}</p>
-          </div>
-          <div className="pl-5 pr-5">
-            <p className="text-xs text-muted-foreground">Age</p>
-            <p className="text-sm font-medium">{calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—"}</p>
-          </div>
-          <div className="pl-5 pr-5">
-            <p className="text-xs text-muted-foreground">Sex</p>
-            <p className="text-sm font-medium capitalize">{patient?.gender ?? "—"}</p>
-          </div>
-          {consultation?.visitType && (
-            <div className="pl-5 pr-5">
-              <p className="text-xs text-muted-foreground">Visit Type</p>
-              <p className="text-sm font-medium capitalize">{consultation.visitType.replace(/_/g, " ")}</p>
+        <div className="flex items-stretch mb-6 border border-border rounded overflow-hidden bg-muted/30 w-full">
+          {[
+            { label: "Patient Name", value: prescription.patientName },
+            { label: "Patient ID",   value: patient?.patientId ?? "—" },
+            { label: "Age",          value: calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—" },
+            { label: "Sex",          value: patient?.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : "—" },
+            ...(consultation?.visitType ? [{ label: "Visit Type", value: consultation.visitType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) }] : []),
+            ...(patient?.address    ? [{ label: "Address",    value: patient.address }] : []),
+          ].map((field, idx, arr) => (
+            <div
+              key={field.label}
+              className={`flex-1 min-w-0 px-3 py-2 ${idx < arr.length - 1 ? "border-r border-border" : ""}`}
+            >
+              <p className="text-xs text-muted-foreground truncate">{field.label}</p>
+              <p className="text-sm font-medium truncate">{field.value}</p>
             </div>
-          )}
-          {patient?.address && (
-            <div className="pl-5">
-              <p className="text-xs text-muted-foreground">Address</p>
-              <p className="text-sm font-medium">{patient.address}</p>
-            </div>
-          )}
+          ))}
         </div>
 
         {/* Known Allergies */}
