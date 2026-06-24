@@ -456,8 +456,7 @@ export default function PrescriptionDetailPage() {
           return (
             <div className="flex items-stretch mb-6 border border-border rounded overflow-hidden bg-muted/30 w-full">
               {fields.map((field, idx) => (
-                <div key={field.label} className={`${field.cls} px-3 py-2 ${idx < fields.length - 1 ? "border-r border-border" : ""}`}>
-                  <p className="text-xs text-muted-foreground">{field.label}</p>
+                <div key={field.label} className={`${field.cls} px-3 py-2 flex items-center ${idx < fields.length - 1 ? "border-r border-border" : ""}`}>
                   <p className={`text-sm font-medium ${field.label === "Patient Name" ? "whitespace-normal" : "truncate"}`}>{field.value}</p>
                 </div>
               ))}
