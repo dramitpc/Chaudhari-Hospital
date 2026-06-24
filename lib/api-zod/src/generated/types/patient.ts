@@ -46,6 +46,12 @@ export interface Patient {
   referringDoctorPhone?: string | null;
   /** @nullable */
   preferredLanguage?: string | null;
+  /** @nullable */
+  abhaId?: string | null;
+  /** @nullable */
+  abhaAddress?: string | null;
+  /** @nullable */
+  abhaLinkedAt?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;

@@ -278,6 +278,9 @@ export const ListPatientsResponse = zod.object({
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
   "preferredLanguage": zod.string().nullish(),
+  "abhaId": zod.string().nullish(),
+  "abhaAddress": zod.string().nullish(),
+  "abhaLinkedAt": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -343,6 +346,9 @@ export const GetPatientResponse = zod.object({
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
   "preferredLanguage": zod.string().nullish(),
+  "abhaId": zod.string().nullish(),
+  "abhaAddress": zod.string().nullish(),
+  "abhaLinkedAt": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -373,7 +379,9 @@ export const UpdatePatientBody = zod.object({
   "familyHistory": zod.string().optional(),
   "currentMedications": zod.string().optional(),
   "referringDoctorName": zod.string().optional(),
-  "referringDoctorPhone": zod.string().optional()
+  "referringDoctorPhone": zod.string().optional(),
+  "abhaId": zod.string().optional(),
+  "abhaAddress": zod.string().optional()
 })
 
 export const UpdatePatientResponse = zod.object({
@@ -398,6 +406,9 @@ export const UpdatePatientResponse = zod.object({
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
   "preferredLanguage": zod.string().nullish(),
+  "abhaId": zod.string().nullish(),
+  "abhaAddress": zod.string().nullish(),
+  "abhaLinkedAt": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -434,6 +445,9 @@ export const GetPatientHistoryResponse = zod.object({
   "referringDoctorName": zod.string().nullish(),
   "referringDoctorPhone": zod.string().nullish(),
   "preferredLanguage": zod.string().nullish(),
+  "abhaId": zod.string().nullish(),
+  "abhaAddress": zod.string().nullish(),
+  "abhaLinkedAt": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
@@ -2136,6 +2150,121 @@ export const UpdateInvestigationResponse = zod.object({
  */
 export const DeleteInvestigationParams = zod.object({
   "id": zod.coerce.string()
+})
+
+
+/**
+ * @summary Generate OTP for ABHA mobile verification
+ */
+export const AbdmGenerateOtpBody = zod.object({
+  "mobile": zod.string()
+})
+
+export const AbdmGenerateOtpResponse = zod.object({
+  "txnId": zod.string()
+})
+
+
+/**
+ * @summary Verify OTP and retrieve ABHA profiles
+ */
+export const AbdmVerifyOtpBody = zod.object({
+  "txnId": zod.string(),
+  "otp": zod.string()
+})
+
+export const AbdmVerifyOtpResponse = zod.object({
+  "txnId": zod.string(),
+  "profiles": zod.array(zod.object({
+  "abhaNumber": zod.string(),
+  "abhaAddress": zod.string(),
+  "name": zod.string(),
+  "gender": zod.string().nullish(),
+  "yearOfBirth": zod.string().nullish(),
+  "mobile": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Link selected ABHA to patient
+ */
+export const AbdmLinkAbhaParams = zod.object({
+  "patientId": zod.coerce.string()
+})
+
+export const AbdmLinkAbhaBody = zod.object({
+  "abhaNumber": zod.string(),
+  "abhaAddress": zod.string(),
+  "name": zod.string().optional()
+})
+
+export const AbdmLinkAbhaResponse = zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "salutation": zod.string().nullish(),
+  "fullName": zod.string(),
+  "dateOfBirth": zod.string().nullish(),
+  "age": zod.string().nullish(),
+  "gender": zod.enum(['male', 'female', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "bloodGroup": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "allergies": zod.string().nullish(),
+  "medicalHistory": zod.string().nullish(),
+  "surgicalHistory": zod.string().nullish(),
+  "familyHistory": zod.string().nullish(),
+  "currentMedications": zod.string().nullish(),
+  "referringDoctorName": zod.string().nullish(),
+  "referringDoctorPhone": zod.string().nullish(),
+  "preferredLanguage": zod.string().nullish(),
+  "abhaId": zod.string().nullish(),
+  "abhaAddress": zod.string().nullish(),
+  "abhaLinkedAt": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Unlink ABHA from patient
+ */
+export const AbdmUnlinkAbhaParams = zod.object({
+  "patientId": zod.coerce.string()
+})
+
+export const AbdmUnlinkAbhaResponse = zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "salutation": zod.string().nullish(),
+  "fullName": zod.string(),
+  "dateOfBirth": zod.string().nullish(),
+  "age": zod.string().nullish(),
+  "gender": zod.enum(['male', 'female', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "bloodGroup": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "allergies": zod.string().nullish(),
+  "medicalHistory": zod.string().nullish(),
+  "surgicalHistory": zod.string().nullish(),
+  "familyHistory": zod.string().nullish(),
+  "currentMedications": zod.string().nullish(),
+  "referringDoctorName": zod.string().nullish(),
+  "referringDoctorPhone": zod.string().nullish(),
+  "preferredLanguage": zod.string().nullish(),
+  "abhaId": zod.string().nullish(),
+  "abhaAddress": zod.string().nullish(),
+  "abhaLinkedAt": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
 })
 
 

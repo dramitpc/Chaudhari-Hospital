@@ -164,6 +164,12 @@ export interface Patient {
   referringDoctorPhone?: string | null;
   /** @nullable */
   preferredLanguage?: string | null;
+  /** @nullable */
+  abhaId?: string | null;
+  /** @nullable */
+  abhaAddress?: string | null;
+  /** @nullable */
+  abhaLinkedAt?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -218,6 +224,8 @@ export interface PatientUpdate {
   currentMedications?: string;
   referringDoctorName?: string;
   referringDoctorPhone?: string;
+  abhaId?: string;
+  abhaAddress?: string;
 }
 
 export interface PatientListResponse {
@@ -1267,6 +1275,42 @@ export interface InvestigationUpdate {
 
 export interface InvestigationListResponse {
   data: Investigation[];
+}
+
+export interface AbdmGenerateOtpInput {
+  mobile: string;
+}
+
+export interface AbdmOtpResponse {
+  txnId: string;
+}
+
+export interface AbdmVerifyOtpInput {
+  txnId: string;
+  otp: string;
+}
+
+export interface AbdmProfile {
+  abhaNumber: string;
+  abhaAddress: string;
+  name: string;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  yearOfBirth?: string | null;
+  /** @nullable */
+  mobile?: string | null;
+}
+
+export interface AbdmVerificationResult {
+  txnId: string;
+  profiles: AbdmProfile[];
+}
+
+export interface AbdmLinkInput {
+  abhaNumber: string;
+  abhaAddress: string;
+  name?: string;
 }
 
 export type ListDoctors200 = {

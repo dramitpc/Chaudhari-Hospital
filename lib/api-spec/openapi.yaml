@@ -1552,6 +1552,86 @@ paths:
         "204":
           description: Deleted
 
+  /abdm/generate-otp:
+    post:
+      operationId: abdmGenerateOtp
+      tags: [abdm]
+      summary: Generate OTP for ABHA mobile verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbdmGenerateOtpInput"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbdmOtpResponse"
+
+  /abdm/verify-otp:
+    post:
+      operationId: abdmVerifyOtp
+      tags: [abdm]
+      summary: Verify OTP and retrieve ABHA profiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbdmVerifyOtpInput"
+      responses:
+        "200":
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AbdmVerificationResult"
+
+  /abdm/link/{patientId}:
+    post:
+      operationId: abdmLinkAbha
+      tags: [abdm]
+      summary: Link selected ABHA to patient
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbdmLinkInput"
+      responses:
+        "200":
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    delete:
+      operationId: abdmUnlinkAbha
+      tags: [abdm]
+      summary: Unlink ABHA from patient
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unlinked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
 components:
   schemas:
     HealthStatus:
@@ -1748,6 +1828,12 @@ components:
           type: ["string", "null"]
         preferredLanguage:
           type: ["string", "null"]
+        abhaId:
+          type: ["string", "null"]
+        abhaAddress:
+          type: ["string", "null"]
+        abhaLinkedAt:
+          type: ["string", "null"]
         isActive:
           type: boolean
         createdAt:
@@ -1835,6 +1921,10 @@ components:
         referringDoctorName:
           type: string
         referringDoctorPhone:
+          type: string
+        abhaId:
+          type: string
+        abhaAddress:
           type: string
 
     PatientListResponse:
@@ -3254,3 +3344,65 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Investigation"
+
+    AbdmGenerateOtpInput:
+      type: object
+      required: [mobile]
+      properties:
+        mobile:
+          type: string
+
+    AbdmOtpResponse:
+      type: object
+      required: [txnId]
+      properties:
+        txnId:
+          type: string
+
+    AbdmVerifyOtpInput:
+      type: object
+      required: [txnId, otp]
+      properties:
+        txnId:
+          type: string
+        otp:
+          type: string
+
+    AbdmProfile:
+      type: object
+      required: [abhaNumber, abhaAddress, name]
+      properties:
+        abhaNumber:
+          type: string
+        abhaAddress:
+          type: string
+        name:
+          type: string
+        gender:
+          type: ["string", "null"]
+        yearOfBirth:
+          type: ["string", "null"]
+        mobile:
+          type: ["string", "null"]
+
+    AbdmVerificationResult:
+      type: object
+      required: [txnId, profiles]
+      properties:
+        txnId:
+          type: string
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/AbdmProfile"
+
+    AbdmLinkInput:
+      type: object
+      required: [abhaNumber, abhaAddress]
+      properties:
+        abhaNumber:
+          type: string
+        abhaAddress:
+          type: string
+        name:
+          type: string

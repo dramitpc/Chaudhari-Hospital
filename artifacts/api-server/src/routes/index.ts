@@ -15,6 +15,7 @@ import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
 import settingsRouter from "./settings";
 import investigationsRouter from "./investigations";
+import abdmRouter from "./abdm";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(dashboardRouter);
 router.use(reportsRouter);
 router.use(settingsRouter);
 router.use(investigationsRouter);
+router.use(abdmRouter);
 
 export default router;

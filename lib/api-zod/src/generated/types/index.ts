@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './abdmGenerateOtpInput';
+export * from './abdmLinkInput';
+export * from './abdmOtpResponse';
+export * from './abdmProfile';
+export * from './abdmVerificationResult';
+export * from './abdmVerifyOtpInput';
 export * from './adminResetPasswordInput';
 export * from './appointment';
 export * from './appointmentInput';

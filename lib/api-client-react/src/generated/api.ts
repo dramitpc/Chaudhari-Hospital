@@ -20,6 +20,11 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AbdmGenerateOtpInput,
+  AbdmLinkInput,
+  AbdmOtpResponse,
+  AbdmVerificationResult,
+  AbdmVerifyOtpInput,
   AdminResetPasswordInput,
   Appointment,
   AppointmentInput,
@@ -5565,5 +5570,289 @@ export const useDeleteInvestigation = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteInvestigationMutationOptions(options));
+    }
+
+export const getAbdmGenerateOtpUrl = () => {
+
+
+
+
+  return `/api/abdm/generate-otp`
+}
+
+/**
+ * @summary Generate OTP for ABHA mobile verification
+ */
+export const abdmGenerateOtp = async (abdmGenerateOtpInput: AbdmGenerateOtpInput, options?: RequestInit): Promise<AbdmOtpResponse> => {
+
+  return customFetch<AbdmOtpResponse>(getAbdmGenerateOtpUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      abdmGenerateOtpInput,)
+  }
+);}
+
+
+
+
+export const getAbdmGenerateOtpMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmGenerateOtp>>, TError,{data: BodyType<AbdmGenerateOtpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof abdmGenerateOtp>>, TError,{data: BodyType<AbdmGenerateOtpInput>}, TContext> => {
+
+const mutationKey = ['abdmGenerateOtp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof abdmGenerateOtp>>, {data: BodyType<AbdmGenerateOtpInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  abdmGenerateOtp(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AbdmGenerateOtpMutationResult = NonNullable<Awaited<ReturnType<typeof abdmGenerateOtp>>>
+    export type AbdmGenerateOtpMutationBody = BodyType<AbdmGenerateOtpInput>
+    export type AbdmGenerateOtpMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate OTP for ABHA mobile verification
+ */
+export const useAbdmGenerateOtp = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmGenerateOtp>>, TError,{data: BodyType<AbdmGenerateOtpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof abdmGenerateOtp>>,
+        TError,
+        {data: BodyType<AbdmGenerateOtpInput>},
+        TContext
+      > => {
+      return useMutation(getAbdmGenerateOtpMutationOptions(options));
+    }
+
+export const getAbdmVerifyOtpUrl = () => {
+
+
+
+
+  return `/api/abdm/verify-otp`
+}
+
+/**
+ * @summary Verify OTP and retrieve ABHA profiles
+ */
+export const abdmVerifyOtp = async (abdmVerifyOtpInput: AbdmVerifyOtpInput, options?: RequestInit): Promise<AbdmVerificationResult> => {
+
+  return customFetch<AbdmVerificationResult>(getAbdmVerifyOtpUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      abdmVerifyOtpInput,)
+  }
+);}
+
+
+
+
+export const getAbdmVerifyOtpMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmVerifyOtp>>, TError,{data: BodyType<AbdmVerifyOtpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof abdmVerifyOtp>>, TError,{data: BodyType<AbdmVerifyOtpInput>}, TContext> => {
+
+const mutationKey = ['abdmVerifyOtp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof abdmVerifyOtp>>, {data: BodyType<AbdmVerifyOtpInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  abdmVerifyOtp(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AbdmVerifyOtpMutationResult = NonNullable<Awaited<ReturnType<typeof abdmVerifyOtp>>>
+    export type AbdmVerifyOtpMutationBody = BodyType<AbdmVerifyOtpInput>
+    export type AbdmVerifyOtpMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verify OTP and retrieve ABHA profiles
+ */
+export const useAbdmVerifyOtp = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmVerifyOtp>>, TError,{data: BodyType<AbdmVerifyOtpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof abdmVerifyOtp>>,
+        TError,
+        {data: BodyType<AbdmVerifyOtpInput>},
+        TContext
+      > => {
+      return useMutation(getAbdmVerifyOtpMutationOptions(options));
+    }
+
+export const getAbdmLinkAbhaUrl = (patientId: string,) => {
+
+
+
+
+  return `/api/abdm/link/${patientId}`
+}
+
+/**
+ * @summary Link selected ABHA to patient
+ */
+export const abdmLinkAbha = async (patientId: string,
+    abdmLinkInput: AbdmLinkInput, options?: RequestInit): Promise<Patient> => {
+
+  return customFetch<Patient>(getAbdmLinkAbhaUrl(patientId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      abdmLinkInput,)
+  }
+);}
+
+
+
+
+export const getAbdmLinkAbhaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmLinkAbha>>, TError,{patientId: string;data: BodyType<AbdmLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof abdmLinkAbha>>, TError,{patientId: string;data: BodyType<AbdmLinkInput>}, TContext> => {
+
+const mutationKey = ['abdmLinkAbha'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof abdmLinkAbha>>, {patientId: string;data: BodyType<AbdmLinkInput>}> = (props) => {
+          const {patientId,data} = props ?? {};
+
+          return  abdmLinkAbha(patientId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AbdmLinkAbhaMutationResult = NonNullable<Awaited<ReturnType<typeof abdmLinkAbha>>>
+    export type AbdmLinkAbhaMutationBody = BodyType<AbdmLinkInput>
+    export type AbdmLinkAbhaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Link selected ABHA to patient
+ */
+export const useAbdmLinkAbha = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmLinkAbha>>, TError,{patientId: string;data: BodyType<AbdmLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof abdmLinkAbha>>,
+        TError,
+        {patientId: string;data: BodyType<AbdmLinkInput>},
+        TContext
+      > => {
+      return useMutation(getAbdmLinkAbhaMutationOptions(options));
+    }
+
+export const getAbdmUnlinkAbhaUrl = (patientId: string,) => {
+
+
+
+
+  return `/api/abdm/link/${patientId}`
+}
+
+/**
+ * @summary Unlink ABHA from patient
+ */
+export const abdmUnlinkAbha = async (patientId: string, options?: RequestInit): Promise<Patient> => {
+
+  return customFetch<Patient>(getAbdmUnlinkAbhaUrl(patientId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getAbdmUnlinkAbhaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmUnlinkAbha>>, TError,{patientId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof abdmUnlinkAbha>>, TError,{patientId: string}, TContext> => {
+
+const mutationKey = ['abdmUnlinkAbha'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof abdmUnlinkAbha>>, {patientId: string}> = (props) => {
+          const {patientId} = props ?? {};
+
+          return  abdmUnlinkAbha(patientId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AbdmUnlinkAbhaMutationResult = NonNullable<Awaited<ReturnType<typeof abdmUnlinkAbha>>>
+
+    export type AbdmUnlinkAbhaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Unlink ABHA from patient
+ */
+export const useAbdmUnlinkAbha = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof abdmUnlinkAbha>>, TError,{patientId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof abdmUnlinkAbha>>,
+        TError,
+        {patientId: string},
+        TContext
+      > => {
+      return useMutation(getAbdmUnlinkAbhaMutationOptions(options));
     }
 

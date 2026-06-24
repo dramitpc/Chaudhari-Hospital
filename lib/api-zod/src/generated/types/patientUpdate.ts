@@ -24,4 +24,6 @@ export interface PatientUpdate {
   currentMedications?: string;
   referringDoctorName?: string;
   referringDoctorPhone?: string;
+  abhaId?: string;
+  abhaAddress?: string;
 }

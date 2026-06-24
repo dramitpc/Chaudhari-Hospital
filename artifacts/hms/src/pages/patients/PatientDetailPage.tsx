@@ -3,6 +3,7 @@ import { Link, useLocation, useRoute } from "wouter";
 import { fmtDate, calcAge as calcAgeUtil } from "@/lib/dateUtils";
 import {
   useGetPatient, useGetPatientHistory, useAddVitals, useGetPatientTimeline,
+  useAbdmUnlinkAbha,
   getGetPatientQueryKey, getGetPatientHistoryQueryKey, getGetPatientTimelineQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { ArrowLeft, Edit, FileText, Receipt } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Receipt, ShieldCheck, LinkIcon, Unlink } from "lucide-react";
+import AbhaLinkDialog, { AbhaLinkedBadge } from "@/components/AbhaLinkDialog";
 
 function calcAge(dob: string | null | undefined) {
   if (!dob) return null;
@@ -50,6 +52,8 @@ export default function PatientDetailPage() {
   });
 
   const addVitalsMutation = useAddVitals();
+  const unlinkAbha = useAbdmUnlinkAbha();
+  const [showAbhaDialog, setShowAbhaDialog] = useState(false);
   const { register, handleSubmit, reset } = useForm();
 
   const onVitalsSubmit = (data: Record<string, string>) => {
@@ -95,9 +99,10 @@ export default function PatientDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="font-mono text-xs">{patient.patientId}</Badge>
               {patient.bloodGroup && <Badge variant="secondary">{patient.bloodGroup}</Badge>}
+              {patient.abhaId && <AbhaLinkedBadge abhaId={patient.abhaId} abhaAddress={patient.abhaAddress} />}
             </div>
             <h1 className="text-2xl font-bold mt-1">{patient.salutation ? `${patient.salutation} ${patient.fullName}` : patient.fullName}</h1>
             <p className="text-sm text-muted-foreground">
@@ -148,6 +153,45 @@ export default function PatientDetailPage() {
             <FieldRow label="Address" value={patient.address} />
             <FieldRow label="Emergency Contact" value={patient.emergencyContactName} />
             <FieldRow label="Emergency Phone" value={patient.emergencyContactPhone} />
+          </div>
+
+          {/* ABHA / ABDM M1 Section */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold">ABHA Health ID (ABDM)</h3>
+              </div>
+              {patient.abhaId ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={unlinkAbha.isPending}
+                  onClick={() => unlinkAbha.mutate({ patientId: patient.id }, {
+                    onSuccess: () => { toast({ title: "ABHA unlinked" }); queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) }); },
+                    onError: () => toast({ title: "Unlink failed", variant: "destructive" }),
+                  })}
+                >
+                  <Unlink className="h-3.5 w-3.5 mr-1.5" />Unlink
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setShowAbhaDialog(true)}>
+                  <LinkIcon className="h-3.5 w-3.5 mr-1.5" />Link ABHA
+                </Button>
+              )}
+            </div>
+            {patient.abhaId ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FieldRow label="ABHA Number" value={patient.abhaId} />
+                <FieldRow label="ABHA Address" value={patient.abhaAddress} />
+                <FieldRow label="Linked On" value={patient.abhaLinkedAt ? fmtDate(patient.abhaLinkedAt) : null} />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No ABHA Health ID linked. Click <strong>Link ABHA</strong> to verify the patient's Ayushman Bharat Health Account via mobile OTP.
+              </p>
+            )}
           </div>
           {(patient.allergies || patient.medicalHistory || patient.currentMedications) && (
             <div className="rounded-lg border border-border bg-card p-6 space-y-4">
@@ -307,6 +351,13 @@ export default function PatientDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <AbhaLinkDialog
+        open={showAbhaDialog}
+        onOpenChange={setShowAbhaDialog}
+        patientId={patient.id}
+        onLinked={() => queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) })}
+      />
     </div>
   );
 }
