@@ -56,7 +56,7 @@ type RxFormat = {
 const DEFAULT_FORMAT: RxFormat = {
   showDiagnosis: true,
   showSoap: false,
-  showInvestigations: false,
+  showInvestigations: true,
   showAdvice: true,
   showFollowUp: true,
   showReferenceTo: true,
@@ -69,7 +69,7 @@ const DEFAULT_FORMAT: RxFormat = {
   displayMode: "bilingual",
 };
 
-const LS_KEY = "clinicos_rx_format";
+const LS_KEY = "clinicos_rx_format_v2";
 
 function loadFormat(): RxFormat {
   try {
