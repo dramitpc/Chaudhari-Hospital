@@ -431,9 +431,6 @@ export default function PrescriptionDetailPage() {
             {prescription.doctorSpecialization && (
               <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
             )}
-            {prescription.doctorConsultingHours && (
-              <p className="text-xs text-muted-foreground mt-0.5">🕐 {prescription.doctorConsultingHours}</p>
-            )}
           </div>
         </div>
 
@@ -657,6 +654,15 @@ export default function PrescriptionDetailPage() {
             <p className="text-xs text-muted-foreground">Signature &amp; Stamp</p>
           </div>
         </div>
+
+        {/* Footnote */}
+        {prescription.doctorConsultingHours && (
+          <div className="mt-6 pt-3 border-t border-border/60 text-center">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Consulting Hours:</span> {prescription.doctorConsultingHours}
+            </p>
+          </div>
+        )}
       </div>
 
       <style>{`
