@@ -655,11 +655,11 @@ export default function PrescriptionDetailPage() {
           </div>
         </div>
 
-        {/* Footnote */}
+        {/* Footer */}
         {prescription.doctorConsultingHours && (
-          <div className="mt-6 pt-3 border-t border-border/60 text-center">
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Consulting Hours:</span> {prescription.doctorConsultingHours}
+          <div className="mt-8 -mx-8 -mb-8 px-8 py-2 border-t-2 border-primary/30 bg-muted/40 print:-mx-4 print:-mb-4 print:px-4">
+            <p className="text-xs text-center text-muted-foreground">
+              <span className="font-semibold text-foreground">Consulting Hours:</span>&ensp;{prescription.doctorConsultingHours}
             </p>
           </div>
         )}
