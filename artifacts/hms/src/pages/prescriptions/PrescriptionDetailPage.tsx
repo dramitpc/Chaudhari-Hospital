@@ -435,14 +435,14 @@ export default function PrescriptionDetailPage() {
         </div>
 
         {prescription.doctorConsultingHours && (
-          <div className="mb-1 -mt-4 text-center">
+          <div className="-mt-4 mb-0 text-center">
             <p className="text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">Consulting Hours:</span>&ensp;{prescription.doctorConsultingHours}
             </p>
           </div>
         )}
 
-        <div className="mb-4 text-right">
+        <div className="mt-0.5 mb-4 text-right">
           <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
         </div>
 
