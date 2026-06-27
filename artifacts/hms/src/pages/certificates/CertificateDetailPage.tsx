@@ -82,7 +82,13 @@ export default function CertificateDetailPage() {
   const updateMutation = useUpdateCertificate();
   const deleteMutation = useDeleteCertificate();
   const search = useSearch();
-  const isPrintFlow = new URLSearchParams(search).get("print") === "1";
+  const searchParams = new URLSearchParams(search);
+  const isPrintFlow = searchParams.get("print") === "1";
+  const fromParam = searchParams.get("from") ?? "";
+  const fromConsultationId = searchParams.get("consultationId") ?? "";
+  const backUrl = fromParam === "consultation" && fromConsultationId
+    ? `/consultations/${fromConsultationId}`
+    : "/certificates";
   const didAutoPrint = useRef(false);
   const certRef = useRef<HTMLDivElement>(null);
 
@@ -98,8 +104,13 @@ export default function CertificateDetailPage() {
   useEffect(() => {
     if (!isLoading && cert && isPrintFlow && !didAutoPrint.current) {
       didAutoPrint.current = true;
+      const onAfterPrint = () => setLocation(backUrl);
+      window.addEventListener("afterprint", onAfterPrint, { once: true });
       setTimeout(() => window.print(), 400);
+      return () => window.removeEventListener("afterprint", onAfterPrint);
     }
+    return undefined;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, cert, isPrintFlow]);
 
   const certTitle = cert ? (certTitles[cert.type] ?? "Medical Certificate") : "Certificate";
@@ -219,7 +230,7 @@ export default function CertificateDetailPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 print:hidden">
-        <Button variant="ghost" size="icon" onClick={() => setLocation("/certificates")}>
+        <Button variant="ghost" size="icon" onClick={() => setLocation(backUrl)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">

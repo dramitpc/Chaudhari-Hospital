@@ -1200,7 +1200,7 @@ export default function ConsultationDetailPage() {
           >
             <ScanLine className="mr-1.5 h-3 w-3" /> Order Investigation
           </Button>
-          <Link href={`/certificates?patientId=${consultation?.patientId ?? ""}&doctorId=${consultation?.doctorId ?? ""}`}>
+          <Link href={`/certificates?patientId=${consultation?.patientId ?? ""}&doctorId=${consultation?.doctorId ?? ""}&from=consultation&consultationId=${consultation?.id ?? ""}`}>
             <Button size="sm" variant="outline">
               <FileText className="mr-1.5 h-3 w-3" /> Generate Certificate
             </Button>

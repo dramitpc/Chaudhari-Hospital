@@ -292,7 +292,7 @@ export default function CertificatesPage() {
         setShowCreate(false);
         setForm(f => ({ ...f, patientId: "", issuedDate: "", diagnosis: "", content: "", fromDate: "", toDate: "" }));
         resetPatientSearch();
-        setLocation(`/certificates/${cert.id}?print=1`);
+        setLocation(`/certificates/${cert.id}?print=1&from=certificates`);
       },
       onError: () => toast({ title: "Error", variant: "destructive" }),
     });
