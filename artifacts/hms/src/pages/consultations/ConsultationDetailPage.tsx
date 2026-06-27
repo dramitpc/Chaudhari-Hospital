@@ -7,7 +7,7 @@ import {
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
   useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation, useListInvestigations, useUpdateInvestigation, useDeleteInvestigation,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getGetPrescriptionQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey,
   type Investigation
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1075,6 +1075,7 @@ export default function ConsultationDetailPage() {
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey({ consultationId: id }) });
+            queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(editRxId) });
             setShowPrescriptionModal(false);
             setEditRxId(null);
             setDrugItems([{ drugName: "", dosage: "", frequency: "", duration: "", instructions: "" }]);
