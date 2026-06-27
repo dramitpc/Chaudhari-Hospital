@@ -28,6 +28,8 @@ export * from './certificateInput';
 export * from './certificateInputType';
 export * from './certificateListResponse';
 export * from './certificateType';
+export * from './certificateUpdateInput';
+export * from './certificateUpdateInputType';
 export * from './changePasswordInput';
 export * from './chargeType';
 export * from './chargeTypeBreakdownRow';

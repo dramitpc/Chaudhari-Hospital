@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Link, useSearch } from "wouter";
 import {
-  useListCertificates, useCreateCertificate, useListPatients, useListUsers, useGetClinicSettings,
+  useListCertificates, useCreateCertificate, useDeleteCertificate, useUpdateCertificate,
+  useListPatients, useListUsers, useGetClinicSettings,
   getListCertificatesQueryKey, getListPatientsQueryKey, getListUsersQueryKey, getGetClinicSettingsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
+import { CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, FilePlus, Pencil, Trash2, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtDate } from "@/lib/dateUtils";
 
@@ -259,6 +260,10 @@ export default function CertificatesPage() {
   const { data: doctors } = useListUsers({ role: "doctor" }, { query: { queryKey: getListUsersQueryKey({ role: "doctor" }) } });
   const { data: settings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
   const createMutation = useCreateCertificate();
+  const deleteMutation = useDeleteCertificate();
+  const updateMutation = useUpdateCertificate();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingCert, setEditingCert] = useState<{ id: string; type: string; issuedDate: string; fromDate: string; toDate: string; diagnosis: string; content: string } | null>(null);
 
   const selectedPatient = selectedPatientObj ?? (patients?.data ?? []).find(p => p.id === form.patientId);
   const selectedDoctor = (doctors?.data ?? []).find(d => d.id === form.doctorId);
@@ -380,9 +385,17 @@ export default function CertificatesPage() {
                   {c.fromDate && c.toDate ? `${c.fromDate.split("-").reverse().join("/")} to ${c.toDate.split("-").reverse().join("/")}` : "—"}
                 </td>
                 <td className="px-4 py-3">
-                  <Link href={`/certificates/${c.id}`}>
-                    <Button size="sm" variant="outline">View</Button>
-                  </Link>
+                  <div className="flex items-center gap-1.5">
+                    <Link href={`/certificates/${c.id}`}>
+                      <Button size="sm" variant="outline">View</Button>
+                    </Link>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingCert({ id: c.id, type: c.type, issuedDate: c.issuedDate ?? "", fromDate: c.fromDate ?? "", toDate: c.toDate ?? "", diagnosis: c.diagnosis ?? "", content: c.content ?? "" })}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeletingId(c.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -512,6 +525,81 @@ export default function CertificatesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Inline edit dialog */}
+      {editingCert && (
+        <Dialog open={!!editingCert} onOpenChange={v => { if (!v) setEditingCert(null); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Certificate</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Certificate Type</Label>
+                <Select value={editingCert.type} onValueChange={v => setEditingCert(e => e && ({ ...e, type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CERT_TYPES.map(t => <SelectItem key={t} value={t}>{certTitles[t] ?? t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <DatePickerField label="Issued Date" value={editingCert.issuedDate} onChange={v => setEditingCert(e => e && ({ ...e, issuedDate: v }))} />
+                <DatePickerField label="From Date" value={editingCert.fromDate} onChange={v => setEditingCert(e => e && ({ ...e, fromDate: v }))} />
+                <DatePickerField label="To Date" value={editingCert.toDate} onChange={v => setEditingCert(e => e && ({ ...e, toDate: v }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Diagnosis</Label>
+                <Input value={editingCert.diagnosis} onChange={e => setEditingCert(f => f && ({ ...f, diagnosis: e.target.value }))} placeholder="Diagnosis / reason" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Certificate Content</Label>
+                <Textarea rows={3} value={editingCert.content} onChange={e => setEditingCert(f => f && ({ ...f, content: e.target.value }))} placeholder="Certificate body text…" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingCert(null)}>Cancel</Button>
+              <Button
+                disabled={updateMutation.isPending}
+                onClick={() => {
+                  const { id, ...data } = editingCert;
+                  updateMutation.mutate({ id, data: data as import("@workspace/api-client-react").CertificateUpdateInput }, {
+                    onSuccess: () => { toast({ title: "Certificate updated" }); queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() }); setEditingCert(null); },
+                    onError: () => toast({ title: "Update failed", variant: "destructive" }),
+                  });
+                }}
+              >
+                {updateMutation.isPending ? "Saving…" : "Save Changes"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deletingId && (
+        <Dialog open={!!deletingId} onOpenChange={v => { if (!v) setDeletingId(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete Certificate</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">This will permanently delete this certificate. This action cannot be undone.</p>
+            <div className="flex justify-end gap-2 mt-2">
+              <Button variant="outline" onClick={() => setDeletingId(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate({ id: deletingId }, {
+                  onSuccess: () => { toast({ title: "Certificate deleted" }); queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() }); setDeletingId(null); },
+                  onError: () => toast({ title: "Delete failed", variant: "destructive" }),
+                })}
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

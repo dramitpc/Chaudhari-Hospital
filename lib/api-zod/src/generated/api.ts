@@ -1786,6 +1786,49 @@ export const GetCertificateResponse = zod.object({
 
 
 /**
+ * @summary Update a medical certificate
+ */
+export const UpdateCertificateParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateCertificateBody = zod.object({
+  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination', 'referral_thank_you']).optional(),
+  "issuedDate": zod.string().optional(),
+  "fromDate": zod.string().optional(),
+  "toDate": zod.string().optional(),
+  "diagnosis": zod.string().optional(),
+  "content": zod.string().optional()
+})
+
+export const UpdateCertificateResponse = zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "patientName": zod.string().optional(),
+  "doctorId": zod.string(),
+  "doctorName": zod.string().optional(),
+  "doctorSignatureData": zod.string().nullish(),
+  "consultationId": zod.string().nullish(),
+  "type": zod.enum(['sick_leave', 'fitness', 'medical', 'procedure', 'vaccination', 'referral_thank_you']),
+  "issuedDate": zod.string(),
+  "fromDate": zod.string().nullish(),
+  "toDate": zod.string().nullish(),
+  "diagnosis": zod.string().nullish(),
+  "content": zod.string().nullish(),
+  "qrCode": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a medical certificate
+ */
+export const DeleteCertificateParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+/**
  * @summary List HIPAA audit logs
  */
 export const ListAuditLogsQueryParams = zod.object({

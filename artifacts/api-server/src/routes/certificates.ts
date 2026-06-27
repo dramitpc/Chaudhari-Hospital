@@ -5,6 +5,7 @@ import {
   ListCertificatesQueryParams,
   CreateCertificateBody,
   GetCertificateParams,
+  UpdateCertificateBody,
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
@@ -80,6 +81,31 @@ router.get("/certificates/:id", authenticate, async (req, res): Promise<void> =>
   }
   await logAudit(req, req.user!.id, "VIEW_CERTIFICATE", "certificates", cert.id);
   res.json(await formatCertificate(cert));
+});
+
+router.put("/certificates/:id", authenticate, async (req, res): Promise<void> => {
+  const params = GetCertificateParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
+  const parsed = UpdateCertificateBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const [existing] = await db.select().from(certificatesTable).where(eq(certificatesTable.id, params.data.id));
+  if (!existing) { res.status(404).json({ error: "Certificate not found" }); return; }
+  const [updated] = await db.update(certificatesTable)
+    .set(parsed.data as Partial<typeof certificatesTable.$inferInsert>)
+    .where(eq(certificatesTable.id, params.data.id))
+    .returning();
+  await logAudit(req, req.user!.id, "UPDATE_CERTIFICATE", "certificates", updated.id);
+  res.json(await formatCertificate(updated));
+});
+
+router.delete("/certificates/:id", authenticate, async (req, res): Promise<void> => {
+  const params = GetCertificateParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [existing] = await db.select().from(certificatesTable).where(eq(certificatesTable.id, params.data.id));
+  if (!existing) { res.status(404).json({ error: "Certificate not found" }); return; }
+  await db.delete(certificatesTable).where(eq(certificatesTable.id, params.data.id));
+  await logAudit(req, req.user!.id, "DELETE_CERTIFICATE", "certificates", params.data.id);
+  res.status(204).send();
 });
 
 export default router;

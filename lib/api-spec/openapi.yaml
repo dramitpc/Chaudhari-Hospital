@@ -1245,6 +1245,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Certificate"
+    put:
+      operationId: updateCertificate
+      tags: [certificates]
+      summary: Update a medical certificate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateUpdateInput"
+      responses:
+        "200":
+          description: Updated certificate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certificate"
+    delete:
+      operationId: deleteCertificate
+      tags: [certificates]
+      summary: Delete a medical certificate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
   # ── AUDIT LOGS ────────────────────────────────────────────────────────────
   /audit-logs:
@@ -2888,6 +2924,23 @@ components:
           type: string
         consultationId:
           type: string
+        type:
+          type: string
+          enum: [sick_leave, fitness, medical, procedure, vaccination, referral_thank_you]
+        issuedDate:
+          type: string
+        fromDate:
+          type: string
+        toDate:
+          type: string
+        diagnosis:
+          type: string
+        content:
+          type: string
+
+    CertificateUpdateInput:
+      type: object
+      properties:
         type:
           type: string
           enum: [sick_leave, fitness, medical, procedure, vaccination, referral_thank_you]

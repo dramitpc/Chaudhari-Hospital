@@ -2,14 +2,55 @@ import { useRef, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetCertificate, useGetClinicSettings, useGetPatient,
-  getGetCertificateQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey
+  useUpdateCertificate, useDeleteCertificate,
+  getGetCertificateQueryKey, getGetClinicSettingsQueryKey, getGetPatientQueryKey,
+  getListCertificatesQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Printer, Share2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { ArrowLeft, Printer, Share2, Pencil, Trash2, CalendarIcon, X } from "lucide-react";
 import ShareDialog from "@/components/ShareDialog";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { fmtDate } from "@/lib/dateUtils";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+
+const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"] as const;
+const certTypeLabels: Record<string, string> = {
+  sick_leave: "Sick Leave Certificate", fitness: "Fitness Certificate",
+  medical: "Medical Certificate", procedure: "Procedure Certificate",
+  vaccination: "Vaccination Certificate", referral_thank_you: "Thanking Letter",
+};
+
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? new Date(value + "T00:00:00") : undefined;
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
+            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+            {value ? <span>{fmtDate(value + "T00:00:00")}</span> : <span className="text-muted-foreground">Pick date</span>}
+            {value && <X className="ml-auto h-3.5 w-3.5 text-muted-foreground hover:text-foreground" onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }} />}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar mode="single" selected={selected} onSelect={d => { onChange(d ? d.toLocaleDateString("en-CA") : ""); setOpen(false); }} captionLayout="dropdown" defaultMonth={selected ?? new Date()} />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 const certTitles: Record<string, string> = {
   sick_leave: "Sick Leave Certificate",
@@ -31,6 +72,15 @@ export default function CertificateDetailPage() {
   const id = params?.id ?? "";
   const [, setLocation] = useLocation();
   const [showShare, setShowShare] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    type: string; issuedDate: string; fromDate: string; toDate: string; diagnosis: string; content: string;
+  } | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const updateMutation = useUpdateCertificate();
+  const deleteMutation = useDeleteCertificate();
   const certRef = useRef<HTMLDivElement>(null);
 
   const { data: cert, isLoading } = useGetCertificate(id, {
@@ -113,6 +163,49 @@ export default function CertificateDetailPage() {
     ? (patient?.referringDoctorName ? `Dr. ${patient.referringDoctorName}` : "Referring Doctor")
     : (cert.patientName ?? "Patient");
 
+  const openEdit = () => {
+    if (!cert) return;
+    setEditForm({
+      type: cert.type,
+      issuedDate: cert.issuedDate ?? "",
+      fromDate: cert.fromDate ?? "",
+      toDate: cert.toDate ?? "",
+      diagnosis: cert.diagnosis ?? "",
+      content: cert.content ?? "",
+    });
+    setShowEdit(true);
+  };
+
+  const handleUpdate = () => {
+    if (!editForm) return;
+    updateMutation.mutate(
+      { id, data: editForm as import("@workspace/api-client-react").CertificateUpdateInput },
+      {
+        onSuccess: () => {
+          toast({ title: "Certificate updated" });
+          queryClient.invalidateQueries({ queryKey: getGetCertificateQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
+          setShowEdit(false);
+        },
+        onError: () => toast({ title: "Update failed", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          toast({ title: "Certificate deleted" });
+          queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
+          setLocation("/certificates");
+        },
+        onError: () => toast({ title: "Delete failed", variant: "destructive" }),
+      }
+    );
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 print:hidden">
@@ -122,6 +215,12 @@ export default function CertificateDetailPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowShare(true)}>
             <Share2 className="mr-1.5 h-4 w-4" /> Share
+          </Button>
+          <Button variant="outline" size="sm" onClick={openEdit}>
+            <Pencil className="mr-1.5 h-4 w-4" /> Edit
+          </Button>
+          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setShowDelete(true)}>
+            <Trash2 className="mr-1.5 h-4 w-4" /> Delete
           </Button>
           <Button onClick={() => window.print()} data-testid="btn-print-certificate">
             <Printer className="mr-2 h-4 w-4" /> Print
@@ -302,6 +401,66 @@ export default function CertificateDetailPage() {
         onDownloadPdf={handleDownloadPdf}
         pdfFileName={`${certTitle}_${cert.patientName ?? "patient"}.pdf`}
       />
+
+      {/* Edit dialog */}
+      {editForm && (
+        <Dialog open={showEdit} onOpenChange={setShowEdit}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Certificate</DialogTitle>
+              <DialogDescription>Update the certificate details below.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Certificate Type</Label>
+                <Select value={editForm.type} onValueChange={v => setEditForm(f => f && ({ ...f, type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CERT_TYPES.map(t => <SelectItem key={t} value={t}>{certTypeLabels[t]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <DateField label="Issued Date" value={editForm.issuedDate} onChange={v => setEditForm(f => f && ({ ...f, issuedDate: v }))} />
+                <DateField label="From Date" value={editForm.fromDate} onChange={v => setEditForm(f => f && ({ ...f, fromDate: v }))} />
+                <DateField label="To Date" value={editForm.toDate} onChange={v => setEditForm(f => f && ({ ...f, toDate: v }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Diagnosis</Label>
+                <Input value={editForm.diagnosis} onChange={e => setEditForm(f => f && ({ ...f, diagnosis: e.target.value }))} placeholder="Diagnosis / reason" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Certificate Content</Label>
+                <Textarea rows={3} value={editForm.content} onChange={e => setEditForm(f => f && ({ ...f, content: e.target.value }))} placeholder="Certificate body text…" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
+              <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Saving…" : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Certificate</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the <strong>{certTitle}</strong> for <strong>{cert.patientName}</strong>. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

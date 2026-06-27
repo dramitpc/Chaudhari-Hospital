@@ -1017,6 +1017,27 @@ export interface CertificateInput {
   content?: string;
 }
 
+export type CertificateUpdateInputType = typeof CertificateUpdateInputType[keyof typeof CertificateUpdateInputType];
+
+
+export const CertificateUpdateInputType = {
+  sick_leave: 'sick_leave',
+  fitness: 'fitness',
+  medical: 'medical',
+  procedure: 'procedure',
+  vaccination: 'vaccination',
+  referral_thank_you: 'referral_thank_you',
+} as const;
+
+export interface CertificateUpdateInput {
+  type?: CertificateUpdateInputType;
+  issuedDate?: string;
+  fromDate?: string;
+  toDate?: string;
+  diagnosis?: string;
+  content?: string;
+}
+
 export interface CertificateListResponse {
   data: Certificate[];
   total: number;
