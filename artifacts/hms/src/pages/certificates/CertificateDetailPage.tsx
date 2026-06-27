@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRef, useState, useEffect } from "react";
+import { useRoute, useLocation, useSearch } from "wouter";
 import {
   useGetCertificate, useGetClinicSettings, useGetPatient,
   useUpdateCertificate, useDeleteCertificate,
@@ -81,6 +81,9 @@ export default function CertificateDetailPage() {
   const queryClient = useQueryClient();
   const updateMutation = useUpdateCertificate();
   const deleteMutation = useDeleteCertificate();
+  const search = useSearch();
+  const isPrintFlow = new URLSearchParams(search).get("print") === "1";
+  const didAutoPrint = useRef(false);
   const certRef = useRef<HTMLDivElement>(null);
 
   const { data: cert, isLoading } = useGetCertificate(id, {
@@ -91,6 +94,13 @@ export default function CertificateDetailPage() {
   const { data: patient } = useGetPatient(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
+
+  useEffect(() => {
+    if (!isLoading && cert && isPrintFlow && !didAutoPrint.current) {
+      didAutoPrint.current = true;
+      setTimeout(() => window.print(), 400);
+    }
+  }, [isLoading, cert, isPrintFlow]);
 
   const certTitle = cert ? (certTitles[cert.type] ?? "Medical Certificate") : "Certificate";
   const isThankingLetter = cert?.type === "referral_thank_you";

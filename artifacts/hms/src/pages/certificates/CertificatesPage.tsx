@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Link, useSearch } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
 import {
   useListCertificates, useCreateCertificate, useDeleteCertificate, useUpdateCertificate,
   useListPatients, useListUsers, useGetClinicSettings,
@@ -224,6 +224,7 @@ export default function CertificatesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const search = useSearch();
   const urlParams = new URLSearchParams(search);
   const urlPatientId = urlParams.get("patientId") ?? "";
@@ -286,12 +287,12 @@ export default function CertificatesPage() {
   const handleCreate = () => {
     if (!form.patientId || !form.doctorId) return;
     createMutation.mutate({ data: form as Parameters<typeof createMutation.mutate>[0]["data"] }, {
-      onSuccess: () => {
-        toast({ title: "Certificate issued" });
+      onSuccess: (cert) => {
         queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
         setShowCreate(false);
         setForm(f => ({ ...f, patientId: "", issuedDate: "", diagnosis: "", content: "", fromDate: "", toDate: "" }));
         resetPatientSearch();
+        setLocation(`/certificates/${cert.id}?print=1`);
       },
       onError: () => toast({ title: "Error", variant: "destructive" }),
     });
