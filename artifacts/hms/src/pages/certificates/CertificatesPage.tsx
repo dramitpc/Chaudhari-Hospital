@@ -286,13 +286,17 @@ export default function CertificatesPage() {
 
   const handleCreate = () => {
     if (!form.patientId || !form.doctorId) return;
+    const fromSource = urlParams.get("from") ?? "certificates";
+    const fromConsultationId = urlParams.get("consultationId") ?? "";
     createMutation.mutate({ data: form as Parameters<typeof createMutation.mutate>[0]["data"] }, {
       onSuccess: (cert) => {
         queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
         setShowCreate(false);
         setForm(f => ({ ...f, patientId: "", issuedDate: "", diagnosis: "", content: "", fromDate: "", toDate: "" }));
         resetPatientSearch();
-        setLocation(`/certificates/${cert.id}?print=1&from=certificates`);
+        const printParams = new URLSearchParams({ print: "1", from: fromSource });
+        if (fromConsultationId) printParams.set("consultationId", fromConsultationId);
+        setLocation(`/certificates/${cert.id}?${printParams.toString()}`);
       },
       onError: () => toast({ title: "Error", variant: "destructive" }),
     });
