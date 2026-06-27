@@ -435,16 +435,12 @@ export default function PrescriptionDetailPage() {
         </div>
 
         {prescription.doctorConsultingHours && (
-          <div className="-mt-4 mb-0 text-center">
+          <div className="-mt-4 mb-2 text-center">
             <p className="text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">Consulting Hours:</span>&ensp;{prescription.doctorConsultingHours}
             </p>
           </div>
         )}
-
-        <div className="mt-0.5 mb-4 text-right">
-          <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
-        </div>
 
         {(() => {
           const genderMap: Record<string, string> = { male: "M", female: "F", other: "O" };
@@ -459,7 +455,7 @@ export default function PrescriptionDetailPage() {
             ...(patient?.address        ? [{ label: "Address",    value: patient.address,                                            cls: "flex-[2] min-w-0" }] : []),
           ];
           return (
-            <div className="flex items-stretch mb-6 border border-border rounded overflow-hidden bg-muted/30 w-full">
+            <div className="flex items-stretch mb-1 border border-border rounded overflow-hidden bg-muted/30 w-full">
               {fields.map((field, idx) => (
                 <div key={field.label} className={`${field.cls} px-3 py-2 flex items-center ${idx < fields.length - 1 ? "border-r border-border" : ""}`}>
                   <p className={`text-sm font-medium ${field.label === "Patient Name" ? "whitespace-normal" : "truncate"}`}>{field.value}</p>
@@ -468,6 +464,10 @@ export default function PrescriptionDetailPage() {
             </div>
           );
         })()}
+
+        <div className="mt-0.5 mb-4 text-right">
+          <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
+        </div>
 
         {/* Known Allergies */}
         {patient?.allergies && (
