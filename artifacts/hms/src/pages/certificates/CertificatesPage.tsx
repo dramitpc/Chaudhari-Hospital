@@ -503,7 +503,7 @@ export default function CertificatesPage() {
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
                   <Button onClick={handleCreate} disabled={!form.patientId || !form.doctorId || createMutation.isPending}>
-                    {createMutation.isPending ? "Issuing..." : "Issue Certificate"}
+                    {createMutation.isPending ? "Issuing..." : "Issue & Print Certificate"}
                   </Button>
                 </div>
               </div>
