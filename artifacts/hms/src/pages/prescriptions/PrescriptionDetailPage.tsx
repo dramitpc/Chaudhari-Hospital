@@ -434,6 +434,14 @@ export default function PrescriptionDetailPage() {
           </div>
         </div>
 
+        {prescription.doctorConsultingHours && (
+          <div className="mb-1 text-right">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Consulting Hours:</span>&ensp;{prescription.doctorConsultingHours}
+            </p>
+          </div>
+        )}
+
         <div className="mb-4 text-right">
           <p className="text-sm text-muted-foreground">Date: {fmtDate(prescription.visitDate)}</p>
         </div>
@@ -655,14 +663,6 @@ export default function PrescriptionDetailPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        {prescription.doctorConsultingHours && (
-          <div className="mt-8 -mx-8 -mb-8 px-8 py-2 border-t-2 border-primary/30 bg-muted/40 print:-mx-4 print:-mb-4 print:px-4">
-            <p className="text-xs text-center text-muted-foreground">
-              <span className="font-semibold text-foreground">Consulting Hours:</span>&ensp;{prescription.doctorConsultingHours}
-            </p>
-          </div>
-        )}
       </div>
 
       <style>{`
