@@ -1,0 +1,30 @@
+# Exclude files that don't belong in the Docker build context
+
+.git
+.gitignore
+.github
+
+# Local dependency caches (Docker installs fresh with pnpm)
+node_modules
+**/node_modules
+
+# Compiled outputs (Docker rebuilds from source)
+artifacts/*/dist
+lib/*/dist
+**/dist
+**/.tsbuildinfo
+
+# Replit-specific
+.replit
+.local
+.cache
+replit.nix
+attached_assets
+
+# Deploy artifacts that aren't needed inside the image
+deploy/SYNOLOGY_DEPLOY_GUIDE.md
+deploy/.env
+deploy/.env.example
+
+# Logs
+*.log

@@ -1,0 +1,34 @@
+# ── Stage 1: builder ──────────────────────────────────────────────
+FROM node:24-slim AS builder
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+WORKDIR /app
+
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+
+# Build composite lib packages (generates JS that workspace resolution needs)
+RUN pnpm run typecheck:libs
+
+# Bundle the API server into a single ESM file via esbuild
+ENV NODE_ENV=production
+RUN pnpm --filter @workspace/api-server run build
+
+# ── Stage 2: runner ───────────────────────────────────────────────
+FROM node:24-slim AS runner
+
+WORKDIR /app
+
+# Copy only the compiled bundle (includes pino worker files)
+COPY --from=builder /app/artifacts/api-server/dist ./dist
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+EXPOSE 8080
+
+CMD ["node", "--enable-source-maps", "./dist/index.mjs"]

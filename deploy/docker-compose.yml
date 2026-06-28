@@ -1,0 +1,90 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────
+#  ClinicOS — self-hosted docker-compose for Synology NAS
+#  Run from the project root:  docker compose -f deploy/docker-compose.yml up -d
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL database ────────────────────────────────────────
+  clinicos-postgres:
+    image: postgres:16-alpine
+    container_name: clinicos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       clinicos
+      POSTGRES_USER:     clinicos
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U clinicos -d clinicos"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - clinicos
+
+  # ── Express API server ─────────────────────────────────────────
+  clinicos-api:
+    build:
+      context:    ..
+      dockerfile: deploy/Dockerfile.api
+    container_name: clinicos-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV:       production
+      PORT:           "8080"
+      DATABASE_URL:   postgres://clinicos:${DB_PASSWORD}@clinicos-postgres:5432/clinicos
+      SESSION_SECRET: ${SESSION_SECRET}
+    depends_on:
+      clinicos-postgres:
+        condition: service_healthy
+    networks:
+      - clinicos
+
+  # ── Frontend (nginx + static files) ───────────────────────────
+  clinicos-frontend:
+    build:
+      context:    ..
+      dockerfile: deploy/Dockerfile.hms
+    container_name: clinicos-frontend
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-80}:80"
+    depends_on:
+      - clinicos-api
+    networks:
+      - clinicos
+
+  # ── One-shot: run DB migrations + seed (first-time setup only) ─
+  # Usage:  docker compose -f deploy/docker-compose.yml run --rm clinicos-init
+  clinicos-init:
+    build:
+      context:    ..
+      dockerfile: deploy/Dockerfile.api
+      target:     builder          # reuse the builder stage (has full pnpm workspace)
+    container_name: clinicos-init
+    environment:
+      DATABASE_URL: postgres://clinicos:${DB_PASSWORD}@clinicos-postgres:5432/clinicos
+    command: >
+      sh -c "
+        pnpm --filter @workspace/db run push &&
+        pnpm --filter @workspace/scripts run seed
+      "
+    depends_on:
+      clinicos-postgres:
+        condition: service_healthy
+    networks:
+      - clinicos
+    profiles:
+      - init
+
+volumes:
+  postgres_data:
+    name: clinicos_postgres_data
+
+networks:
+  clinicos:
+    name: clinicos_network

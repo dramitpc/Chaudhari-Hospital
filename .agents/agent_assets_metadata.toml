@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Zh_XPRpBiQF3oyuLSlpqQ"
+uri = "file://deploy/SYNOLOGY_DEPLOY_GUIDE.md"
+type = "text"
+title = "Synology DS420+ Deployment Guide"
