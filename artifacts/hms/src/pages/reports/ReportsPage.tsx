@@ -184,7 +184,7 @@ export default function ReportsPage() {
                             <tr>
                               <td colSpan={8} className="px-4 py-2.5 text-xs font-medium text-muted-foreground text-right">Collected Revenue</td>
                               <td className="px-4 py-2.5 text-right font-bold tabular-nums text-green-700 dark:text-green-400">
-                                ₹{(opdReport.revenueList ?? []).reduce((s, inv) => s + (inv.amountPaid ?? inv.total), 0).toFixed(2)}
+                                ₹{(opdReport.revenueList ?? []).reduce((s, inv) => s + (inv.amountPaid ?? 0), 0).toFixed(2)}
                               </td>
                             </tr>
                           </tfoot>
