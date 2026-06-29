@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, gte, lt, sql } from "drizzle-orm";
+import { eq, and, gte, lt, sql, notInArray } from "drizzle-orm";
 import { db, patientsTable, queueTokensTable, invoicesTable, consultationsTable, prescriptionsTable, certificatesTable, usersTable, chargeTypesTable } from "@workspace/db";
 import { authenticate, requireRole } from "../middlewares/authenticate";
 import { localDateStr, dayBounds, rangeBounds } from "../lib/date";
@@ -22,11 +22,12 @@ router.get("/reports/daily-opd", authenticate, async (req, res): Promise<void> =
   const doctors = await db.select().from(usersTable).where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)));
   const byDoctor = await Promise.all(doctors.map(async (doc) => {
     const docTokens = tokens.filter(t => t.doctorId === doc.id);
-    const docInvoices = await db.select({ total: sql<number>`coalesce(sum(total),0)` }).from(invoicesTable)
+    const docInvoices = await db.select({ total: sql<number>`coalesce(sum(amount_paid),0)` }).from(invoicesTable)
       .where(and(
         gte(invoicesTable.createdAt, dayStart),
         lt(invoicesTable.createdAt, dayEnd),
         eq(invoicesTable.doctorId, doc.id),
+        notInArray(invoicesTable.status, ["draft", "cancelled"]),
       ));
     return {
       doctorId: doc.id,
@@ -172,8 +173,8 @@ router.get("/reports/doctor-productivity", authenticate, async (req, res): Promi
   const rows = await Promise.all(doctors.map(async (doc) => {
     const consultations = await db.select().from(consultationsTable)
       .where(and(eq(consultationsTable.doctorId, doc.id), sql`visit_date between ${startDate} and ${endDate}`));
-    const invoices = await db.select({ total: sql<number>`coalesce(sum(total),0)` }).from(invoicesTable)
-      .where(and(eq(invoicesTable.doctorId, doc.id), gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd)));
+    const invoices = await db.select({ total: sql<number>`coalesce(sum(amount_paid),0)` }).from(invoicesTable)
+      .where(and(eq(invoicesTable.doctorId, doc.id), gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd), notInArray(invoicesTable.status, ["draft", "cancelled"])));
     const prescriptions = await db.select({ count: sql<number>`count(*)` }).from(prescriptionsTable)
       .where(and(eq(prescriptionsTable.doctorId, doc.id), sql`visit_date between ${startDate} and ${endDate}`));
     const certs = await db.select({ count: sql<number>`count(*)` }).from(certificatesTable)
