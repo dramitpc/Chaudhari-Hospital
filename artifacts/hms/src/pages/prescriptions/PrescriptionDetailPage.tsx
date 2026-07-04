@@ -448,7 +448,7 @@ export default function PrescriptionDetailPage() {
           const ageValue = String(calcAge(patient?.dateOfBirth) ?? patient?.age ?? "—");
           const fields: { label: string; value: string; cls: string }[] = [
             { label: "Patient Name", value: prescription.patientName ?? "—",  cls: "flex-[3] min-w-0" },
-            { label: "Patient ID",   value: patient?.patientId ?? "—",        cls: "flex-none w-24 shrink-0" },
+            { label: "Patient ID",   value: patient?.patientId ?? "—",        cls: "flex-none w-28 shrink-0" },
             { label: "Age",          value: ageValue,                          cls: "flex-none w-16 shrink-0" },
             { label: "Sex",          value: genderCode,                                                                              cls: "flex-none w-10 shrink-0" },
             ...(consultation?.visitType ? [{ label: "Visit Type", value: consultation.visitType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), cls: "flex-1 min-w-0" }] : []),
