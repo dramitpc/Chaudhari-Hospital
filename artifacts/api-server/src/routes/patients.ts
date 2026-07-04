@@ -86,9 +86,12 @@ router.post("/patients", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const count = await db.select().from(patientsTable);
-  const nextNum = count.length + 1001;
-  const patientId = `P${String(nextNum).padStart(5, "0")}`;
+  const existing = await db.select({ patientId: patientsTable.patientId }).from(patientsTable);
+  const maxNum = existing.reduce((max, p) => {
+    const m = p.patientId.match(/^CH(\d+)$/);
+    return m ? Math.max(max, parseInt(m[1], 10)) : max;
+  }, 0);
+  const patientId = `CH${String(maxNum + 1).padStart(6, "0")}`;
   const [patient] = await db.insert(patientsTable).values({ ...parsed.data, patientId }).returning();
   await logAudit(req, req.user!.id, "CREATE_PATIENT", "patients", patient.id);
   res.status(201).json(formatPatient(patient));
