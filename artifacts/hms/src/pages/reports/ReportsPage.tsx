@@ -105,7 +105,7 @@ export default function ReportsPage() {
                   {opdReport.byPaymentMode && opdReport.byPaymentMode.length > 0 ? (
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
-                        <Pie data={opdReport.byPaymentMode} dataKey="amount" nameKey="mode" cx="50%" cy="50%" outerRadius={70} label={({ mode, percent }) => `${mode} ${(percent * 100).toFixed(0)}%`}>
+                        <Pie data={opdReport.byPaymentMode} dataKey="amount" nameKey="mode" cx="50%" cy="50%" outerRadius={70} label={({ mode, amount, percent }) => `${mode} ₹${amount.toFixed(0)} (${(percent * 100).toFixed(0)}%)`}>
                           {opdReport.byPaymentMode.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} />
