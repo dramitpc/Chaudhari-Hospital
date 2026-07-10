@@ -1723,7 +1723,7 @@ export default function ConsultationDetailPage() {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {visit.doctorName ? `Dr. ${visit.doctorName}` : "—"}
+                                {visit.doctorName ?? "—"}
                                 {visit.chiefComplaint ? ` · ${visit.chiefComplaint}` : ""}
                               </p>
                               {hasDiagnosis && (
@@ -2194,7 +2194,7 @@ export default function ConsultationDetailPage() {
                   {clinicSettings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {clinicSettings.registrationNumber}</p>}
                 </div>
                 <div className="flex-1 text-right">
-                  <p className="text-sm font-semibold">Dr. {consultation?.doctorName ?? "—"}</p>
+                  <p className="text-sm font-semibold">{consultation?.doctorName ?? "—"}</p>
                   <p className="text-xs text-muted-foreground">{fmtDate(new Date())}</p>
                 </div>
               </div>

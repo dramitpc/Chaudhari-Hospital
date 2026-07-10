@@ -126,7 +126,7 @@ export default function InvoiceDetailPage() {
     lines.push(`Invoice No: ${invoice.invoiceNumber}`);
     lines.push(`Date: ${fmtDate(invoice.createdAt)}`);
     lines.push(`Patient: ${invoice.patientName}`);
-    if (invoice.doctorName) lines.push(`Doctor: Dr. ${invoice.doctorName}`);
+    if (invoice.doctorName) lines.push(`Doctor: ${invoice.doctorName}`);
     lines.push("");
     lines.push("*Items:*");
     items.forEach(item => {
@@ -377,7 +377,7 @@ export default function InvoiceDetailPage() {
           {invoice.doctorName && (
             <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px 12px" }}>
               <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>Consulting Doctor</div>
-              <div style={{ fontWeight: 600, fontSize: "13px" }}>Dr. {invoice.doctorName}</div>
+              <div style={{ fontWeight: 600, fontSize: "13px" }}>{invoice.doctorName}</div>
             </div>
           )}
           <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px 12px" }}>

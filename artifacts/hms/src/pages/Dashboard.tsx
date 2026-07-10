@@ -40,7 +40,7 @@ export default function Dashboard() {
           )}
         </div>
         <p className="text-muted-foreground">
-          Welcome back, {user?.role === "doctor" ? `Dr. ${user?.fullName}` : user?.fullName}
+          Welcome back, {user?.fullName}
         </p>
       </div>
 

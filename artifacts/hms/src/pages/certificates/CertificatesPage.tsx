@@ -101,7 +101,7 @@ function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress,
             <p>
               We sincerely thank you for referring <strong>{pt}</strong> to our clinic.
               The patient was examined and treated on <strong>{form.issuedDate || "—"}</strong> by{" "}
-              <strong>Dr. {dr}</strong>.
+              <strong>{dr}</strong>.
             </p>
             {form.diagnosis && <p><strong>Diagnosis: </strong>{form.diagnosis}</p>}
             {form.fromDate && form.toDate && (
@@ -116,7 +116,7 @@ function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress,
             <p>Thanking you,</p>
           </div>
           <div className="mt-8 pt-2 border-t border-gray-800 w-40">
-            <p className="font-medium">Dr. {dr}</p>
+            <p className="font-medium">{dr}</p>
             <p className="text-gray-500">Signature &amp; Stamp</p>
           </div>
         </>
@@ -156,7 +156,7 @@ function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress,
           <div className="mt-10 grid grid-cols-2 gap-6">
             <div className="text-center">
               <div className="border-t border-gray-800 pt-1">
-                <p className="font-medium">Dr. {dr}</p>
+                <p className="font-medium">{dr}</p>
                 <p className="text-gray-500">Signature &amp; Stamp</p>
               </div>
             </div>

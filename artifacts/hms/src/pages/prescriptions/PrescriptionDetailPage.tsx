@@ -245,7 +245,7 @@ export default function PrescriptionDetailPage() {
     lines.push("");
     lines.push(`Patient: ${prescription.patientName}`);
     lines.push(`Date: ${fmtDate(prescription.visitDate)}`);
-    lines.push(`Doctor: Dr. ${prescription.doctorName}`);
+    lines.push(`Doctor: ${prescription.doctorName}`);
     if (prescription.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${prescription.diagnosis}`); }
     lines.push("");
     lines.push("*Medicines:*");
@@ -427,7 +427,7 @@ export default function PrescriptionDetailPage() {
             {settings?.registrationNumber && <p className="text-xs text-muted-foreground">Reg: {settings.registrationNumber}</p>}
           </div>
           <div className="flex-1 text-right">
-            <p className="text-base font-semibold text-foreground">Dr. {prescription.doctorName}</p>
+            <p className="text-base font-semibold text-foreground">{prescription.doctorName}</p>
             {prescription.doctorSpecialization && (
               <p className="text-sm text-muted-foreground">{prescription.doctorSpecialization}</p>
             )}
@@ -655,7 +655,7 @@ export default function PrescriptionDetailPage() {
                 className="h-14 max-w-[200px] object-contain ml-auto mb-1"
               />
             )}
-            <p className="text-sm font-medium">Dr. {prescription.doctorName}</p>
+            <p className="text-sm font-medium">{prescription.doctorName}</p>
             {prescription.doctorRegistrationNumber && (
               <p className="text-xs text-muted-foreground">Reg. No: {prescription.doctorRegistrationNumber}</p>
             )}

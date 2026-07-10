@@ -154,12 +154,12 @@ export default function CertificateDetailPage() {
       lines.push(`Dear Dr. ${patient?.referringDoctorName ?? "Doctor"},`);
       lines.push("");
       lines.push(`We sincerely thank you for referring ${cert.patientName} to our clinic.`);
-      lines.push(`The patient was seen on ${fmtDDMMYYYY(cert.issuedDate)} by Dr. ${cert.doctorName}.`);
+      lines.push(`The patient was seen on ${fmtDDMMYYYY(cert.issuedDate)} by ${cert.doctorName}.`);
       if (cert.diagnosis) lines.push(`Diagnosis: ${cert.diagnosis}`);
       if (cert.content) { lines.push(""); lines.push(cert.content); }
       lines.push("");
       lines.push(`We look forward to continued collaboration.`);
-      lines.push(`Regards, Dr. ${cert.doctorName} — ${clinic}`);
+      lines.push(`Regards, ${cert.doctorName} — ${clinic}`);
     } else {
       lines.push(`*${certTitle} — ${clinic}*`);
       if (settings?.phone) lines.push(settings.phone);
@@ -167,7 +167,7 @@ export default function CertificateDetailPage() {
       lines.push("");
       lines.push(`Patient: ${cert.patientName}`);
       lines.push(`Date: ${fmtDDMMYYYY(cert.issuedDate)}`);
-      lines.push(`Doctor: Dr. ${cert.doctorName}`);
+      lines.push(`Doctor: ${cert.doctorName}`);
       if (cert.diagnosis) { lines.push(""); lines.push(`Diagnosis: ${cert.diagnosis}`); }
       if (cert.fromDate && cert.toDate) lines.push(`Period: ${fmtDDMMYYYY(cert.fromDate)} to ${fmtDDMMYYYY(cert.toDate)}`);
       if (cert.content) { lines.push(""); lines.push(cert.content); }
@@ -286,7 +286,7 @@ export default function CertificateDetailPage() {
                 We sincerely thank you for referring{" "}
                 <strong>{cert.patientName}</strong> to our clinic. The patient was
                 examined and treated on <strong>{fmtDDMMYYYY(cert.issuedDate)}</strong> by{" "}
-                <strong>Dr. {cert.doctorName}</strong>.
+                <strong>{cert.doctorName}</strong>.
               </p>
 
               {cert.diagnosis && (
@@ -326,7 +326,7 @@ export default function CertificateDetailPage() {
                       className="h-14 max-w-[200px] object-contain mb-1"
                     />
                   )}
-                  <p className="text-sm font-medium">Dr. {cert.doctorName}</p>
+                  <p className="text-sm font-medium">{cert.doctorName}</p>
                   <p className="text-xs text-muted-foreground">{clinic}</p>
                   <p className="text-xs text-muted-foreground">Signature &amp; Stamp</p>
                 </div>
@@ -389,7 +389,7 @@ export default function CertificateDetailPage() {
                       className="h-14 max-w-[200px] object-contain mx-auto mb-1"
                     />
                   )}
-                  <p className="text-sm font-medium">Dr. {cert.doctorName}</p>
+                  <p className="text-sm font-medium">{cert.doctorName}</p>
                   <p className="text-xs text-muted-foreground">Signature &amp; Stamp</p>
                 </div>
               </div>
