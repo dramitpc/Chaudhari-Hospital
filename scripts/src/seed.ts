@@ -49,7 +49,7 @@ async function seed() {
       username: "dr.smith",
       passwordHash: hashPassword("Doctor@123"),
       role: "doctor",
-      fullName: "Dr. John Smith",
+      fullName: "John Smith",
       email: "john.smith@citygeneralhospital.com",
       phone: "+1-555-0101",
       registrationNumber: "MED-12345",

@@ -25,6 +25,8 @@ const roleColors: Record<string, string> = {
 
 const ROLES = ["admin", "doctor", "staff", "radiographer"] as const;
 
+const stripDrPrefix = (name: string) => name.replace(/^\s*dr\.?\s+/i, "").trim();
+
 type EditForm = {
   fullName: string;
   role: string;
@@ -78,7 +80,8 @@ export default function UsersPage() {
   const users = data?.data ?? [];
 
   const handleCreate = () => {
-    createMutation.mutate({ data: form as Parameters<typeof createMutation.mutate>[0]["data"] }, {
+    const data = { ...form, fullName: form.role === "doctor" ? stripDrPrefix(form.fullName) : form.fullName };
+    createMutation.mutate({ data: data as Parameters<typeof createMutation.mutate>[0]["data"] }, {
       onSuccess: () => {
         toast({ title: "User created" });
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
@@ -99,8 +102,9 @@ export default function UsersPage() {
 
   const handleEdit = () => {
     if (!editTarget || !editForm) return;
+    const data = { ...editForm, fullName: editForm.role === "doctor" ? stripDrPrefix(editForm.fullName) : editForm.fullName };
     updateMutation.mutate(
-      { id: editTarget.id, data: editForm as Parameters<typeof updateMutation.mutate>[0]["data"] },
+      { id: editTarget.id, data: data as Parameters<typeof updateMutation.mutate>[0]["data"] },
       {
         onSuccess: () => {
           toast({ title: "User updated" });
