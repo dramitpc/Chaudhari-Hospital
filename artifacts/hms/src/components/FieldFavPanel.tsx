@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { FavEntry } from "@/lib/favUtils";
+import { useSavedItems } from "@/lib/useSavedItems";
 
 interface FieldFavPanelProps {
   lsKey: string;
@@ -13,30 +13,23 @@ interface FieldFavPanelProps {
   onApply: (value: string) => void;
 }
 
+type FieldPayload = { value: string };
+
 export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [favName, setFavName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [, forceRefresh] = useState(0);
 
-  const favKey    = `${lsKey}_fav`;
-  const recentKey = `${lsKey}_recent`;
-  const getFavs   = (): FavEntry[] => JSON.parse(localStorage.getItem(favKey)    ?? "[]");
-  const getRecent = (): FavEntry[] => JSON.parse(localStorage.getItem(recentKey) ?? "[]");
-
-  const persist = (key: string, list: FavEntry[]) => {
-    localStorage.setItem(key, JSON.stringify(list));
-    forceRefresh(n => n + 1);
-  };
+  const { favorites, recents, saveFavorite, deleteItem } = useSavedItems<FieldPayload>(`field:${lsKey}`);
 
   const toggle = (id: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const applySelected = () => {
-    const all = [...getFavs(), ...getRecent()];
+    const all = [...favorites, ...recents];
     const vals = [...selected]
-      .map(id => all.find(e => e.id === id)?.value ?? "")
+      .map(id => all.find(e => e.id === id)?.payload.value ?? "")
       .filter(Boolean)
       .join("\n");
     if (!vals) return;
@@ -47,29 +40,25 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
     toast({ title: `${selected.size} item${selected.size > 1 ? "s" : ""} added to field` });
   };
 
-  const saveFav = () => {
+  const saveFav = async () => {
     if (!favName.trim()) return;
     if (!currentValue.trim()) {
       toast({ title: "Nothing to save — field is empty", variant: "destructive" });
       return;
     }
-    persist(favKey, [
-      ...getFavs(),
-      { id: Date.now().toString(), name: favName.trim(), value: currentValue, savedAt: Date.now() },
-    ]);
+    await saveFavorite(favName.trim(), { value: currentValue });
     setFavName("");
     toast({ title: "Saved to favourites" });
   };
 
-  const deleteFav    = (id: string) => { persist(favKey,    getFavs().filter(e => e.id !== id));    setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
-  const deleteRecent = (id: string) => { persist(recentKey, getRecent().filter(e => e.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
-  const entryLabel   = (e: FavEntry) => e.name || (e.value.slice(0, 60) + (e.value.length > 60 ? "…" : ""));
+  const deleteFav = (id: string) => { deleteItem(id); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
+  const deleteRecent = (id: string) => { deleteItem(id); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
+  const entryLabel = (e: { name: string; payload: FieldPayload }) =>
+    e.name || (e.payload.value.slice(0, 60) + (e.payload.value.length > 60 ? "…" : ""));
 
-  const favs   = getFavs();
-  const recent = getRecent();
-  const total  = favs.length + recent.length;
+  const total = favorites.length + recents.length;
 
-  const EntryRow = ({ e, onDelete }: { e: FavEntry; onDelete: () => void }) => {
+  const EntryRow = ({ e, onDelete }: { e: { id: string; name: string; payload: FieldPayload }; onDelete: () => void }) => {
     const isSelected = selected.has(e.id);
     return (
       <div
@@ -93,7 +82,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
     );
   };
 
-  const RecentRow = ({ e, onDelete }: { e: FavEntry; onDelete: () => void }) => {
+  const RecentRow = ({ e, onDelete }: { e: { id: string; name: string; payload: FieldPayload; createdAt: string }; onDelete: () => void }) => {
     const isSelected = selected.has(e.id);
     return (
       <div
@@ -107,7 +96,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
         </div>
         <div className="flex-1 min-w-0">
           <span className="block break-words leading-snug">{entryLabel(e)}</span>
-          <span className="text-muted-foreground text-[10px]">{fmtDateTime(e.savedAt)}</span>
+          <span className="text-muted-foreground text-[10px]">{fmtDateTime(new Date(e.createdAt).getTime())}</span>
         </div>
         <Button
           type="button" size="sm" variant="ghost"
@@ -128,7 +117,7 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
         onClick={() => { setIsOpen(true); setFavName(""); setSelected(new Set()); }}
       >
         <BookMarked className="h-3 w-3" />
-        {total > 0 ? `${favs.length} fav · ${recent.length} recent` : "Favourites & Recent"}
+        {total > 0 ? `${favorites.length} fav · ${recents.length} recent` : "Favourites & Recent"}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={open => { setIsOpen(open); if (!open) setSelected(new Set()); }}>
@@ -147,21 +136,21 @@ export function FieldFavPanel({ lsKey, currentValue, onApply }: FieldFavPanelPro
               </p>
             )}
 
-            {favs.length > 0 && (
+            {favorites.length > 0 && (
               <div className="space-y-1">
                 <p className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 py-1 sticky top-0 bg-background z-10">
                   <Star className="h-3.5 w-3.5" /> Favourites
                 </p>
-                {favs.map(e => <EntryRow key={e.id} e={e} onDelete={() => deleteFav(e.id)} />)}
+                {favorites.map(e => <EntryRow key={e.id} e={e} onDelete={() => deleteFav(e.id)} />)}
               </div>
             )}
 
-            {recent.length > 0 && (
+            {recents.length > 0 && (
               <div className="space-y-1">
                 <p className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 py-1 sticky top-0 bg-background z-10">
                   <Clock className="h-3.5 w-3.5" /> Recently Used
                 </p>
-                {recent.map(e => <RecentRow key={e.id} e={e} onDelete={() => deleteRecent(e.id)} />)}
+                {recents.map(e => <RecentRow key={e.id} e={e} onDelete={() => deleteRecent(e.id)} />)}
               </div>
             )}
           </div>

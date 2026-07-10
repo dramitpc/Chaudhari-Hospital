@@ -2197,6 +2197,46 @@ export const DeleteInvestigationParams = zod.object({
 
 
 /**
+ * @summary List the current user's favourites/recents for a namespace
+ */
+export const ListSavedItemsQueryParams = zod.object({
+  "namespace": zod.coerce.string(),
+  "kind": zod.enum(['favorite', 'recent']).optional()
+})
+
+export const ListSavedItemsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "namespace": zod.string(),
+  "kind": zod.enum(['favorite', 'recent']),
+  "name": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Save a favourite or track a recent item for the current user
+ */
+export const CreateSavedItemBody = zod.object({
+  "namespace": zod.string(),
+  "kind": zod.enum(['favorite', 'recent']),
+  "name": zod.string().optional(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "dedupeKey": zod.string().optional().describe('When provided for a \"recent\" item, existing entries with the same dedupeKey are removed before insert; the list is also capped to the most recent 8.')
+})
+
+
+/**
+ * @summary Delete a saved favourite/recent item
+ */
+export const DeleteSavedItemParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+/**
  * @summary Generate OTP for ABHA mobile verification
  */
 export const AbdmGenerateOtpBody = zod.object({

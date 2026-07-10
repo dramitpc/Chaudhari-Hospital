@@ -1,12 +1,17 @@
+import { createSavedItem, getListSavedItemsQueryKey } from "@workspace/api-client-react";
+import { queryClient } from "@/App";
+
 export type FavEntry = { id: string; name: string; value: string; savedAt: number };
 
-export function trackFieldRecent(lsKey: string, value: string) {
+export async function trackFieldRecent(lsKey: string, value: string) {
   if (!value.trim()) return;
-  const key = `${lsKey}_recent`;
-  const stored: FavEntry[] = JSON.parse(localStorage.getItem(key) ?? "[]");
-  const deduped = stored.filter(e => e.value !== value).slice(0, 8);
-  localStorage.setItem(key, JSON.stringify([
-    { id: Date.now().toString(), name: "", value, savedAt: Date.now() },
-    ...deduped,
-  ]));
+  const namespace = `field:${lsKey}`;
+  await createSavedItem({
+    namespace,
+    kind: "recent",
+    name: "",
+    payload: { value },
+    dedupeKey: value,
+  });
+  queryClient.invalidateQueries({ queryKey: getListSavedItemsQueryKey({ namespace }) });
 }

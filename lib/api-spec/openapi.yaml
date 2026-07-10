@@ -23,6 +23,7 @@ tags:
   - name: reports
   - name: settings
   - name: investigations
+  - name: saved-items
 
 paths:
   /healthz:
@@ -1588,6 +1589,62 @@ paths:
         "204":
           description: Deleted
 
+  /saved-items:
+    get:
+      operationId: listSavedItems
+      tags: [saved-items]
+      summary: List the current user's favourites/recents for a namespace
+      parameters:
+        - name: namespace
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [favorite, recent]
+      responses:
+        "200":
+          description: Saved items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedItemListResponse"
+    post:
+      operationId: createSavedItem
+      tags: [saved-items]
+      summary: Save a favourite or track a recent item for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedItemInput"
+      responses:
+        "201":
+          description: Saved item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedItem"
+
+  /saved-items/{id}:
+    delete:
+      operationId: deleteSavedItem
+      tags: [saved-items]
+      summary: Delete a saved favourite/recent item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /abdm/generate-otp:
     post:
       operationId: abdmGenerateOtp
@@ -2649,6 +2706,52 @@ components:
           type: boolean
         createdAt:
           type: string
+
+    SavedItem:
+      type: object
+      required: [id, namespace, kind, name, payload, createdAt]
+      properties:
+        id:
+          type: string
+        namespace:
+          type: string
+        kind:
+          type: string
+          enum: [favorite, recent]
+        name:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+
+    SavedItemListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedItem"
+
+    SavedItemInput:
+      type: object
+      required: [namespace, kind, payload]
+      properties:
+        namespace:
+          type: string
+        kind:
+          type: string
+          enum: [favorite, recent]
+        name:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        dedupeKey:
+          type: string
+          description: When provided for a "recent" item, existing entries with the same dedupeKey are removed before insert; the list is also capped to the most recent 8.
 
     DrugInput:
       type: object

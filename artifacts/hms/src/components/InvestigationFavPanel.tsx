@@ -5,30 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { createSavedItem, getListSavedItemsQueryKey } from "@workspace/api-client-react";
+import { queryClient } from "@/App";
+import { useSavedItems } from "@/lib/useSavedItems";
 
-export type InvEntry = {
-  id: string;
-  name: string;
-  type: string;
-  bodyPart: string;
-  notes: string;
-  savedAt: number;
-};
+const NAMESPACE = "investigation";
 
-const FAV_KEY    = "clinicos_inv_fav";
-const RECENT_KEY = "clinicos_inv_recent";
+type InvPayload = { type: string; bodyPart: string; notes: string };
 
-function getFavs():   InvEntry[] { return JSON.parse(localStorage.getItem(FAV_KEY)    ?? "[]"); }
-function getRecent(): InvEntry[] { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); }
-
-export function trackInvestigationRecent(entry: { type: string; bodyPart: string; notes: string }) {
+export async function trackInvestigationRecent(entry: InvPayload) {
   if (!entry.type.trim()) return;
-  const stored = getRecent();
-  const deduped = stored.filter(e => !(e.type === entry.type && e.bodyPart === entry.bodyPart)).slice(0, 8);
-  localStorage.setItem(RECENT_KEY, JSON.stringify([
-    { id: Date.now().toString(), name: "", ...entry, savedAt: Date.now() },
-    ...deduped,
-  ]));
+  await createSavedItem({
+    namespace: NAMESPACE,
+    kind: "recent",
+    name: "",
+    payload: entry,
+    dedupeKey: `${entry.type}::${entry.bodyPart}`,
+  });
+  queryClient.invalidateQueries({ queryKey: getListSavedItemsQueryKey({ namespace: NAMESPACE }) });
 }
 
 interface InvestigationFavPanelProps {
@@ -44,22 +38,18 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
   const [isOpen, setIsOpen] = useState(false);
   const [favName, setFavName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [, forceRefresh] = useState(0);
 
-  const persist = (key: string, list: InvEntry[]) => {
-    localStorage.setItem(key, JSON.stringify(list));
-    forceRefresh(n => n + 1);
-  };
+  const { favorites, recents, saveFavorite, deleteItem } = useSavedItems<InvPayload>(NAMESPACE);
 
   const toggle = (id: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const applySelected = () => {
-    const all = [...getFavs(), ...getRecent()];
+    const all = [...favorites, ...recents];
     const entries = [...selected]
       .map(id => all.find(e => e.id === id))
-      .filter((e): e is InvEntry => !!e)
-      .map(e => ({ type: e.type, bodyPart: e.bodyPart, notes: e.notes }));
+      .filter((e): e is (typeof all)[number] => !!e)
+      .map(e => e.payload);
     if (!entries.length) return;
     if (entries.length === 1) {
       onApply(entries[0]);
@@ -72,25 +62,23 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
     setIsOpen(false);
   };
 
-  const saveFav = () => {
+  const saveFav = async () => {
     if (!type.trim()) {
       toast({ title: "Select an investigation type first", variant: "destructive" });
       return;
     }
     const name = favName.trim() || `${type}${bodyPart ? ` — ${bodyPart}` : ""}`;
-    persist(FAV_KEY, [...getFavs(), { id: Date.now().toString(), name, type, bodyPart, notes, savedAt: Date.now() }]);
+    await saveFavorite(name, { type, bodyPart, notes });
     setFavName("");
     toast({ title: "Saved to favourites" });
   };
 
-  const deleteFav    = (id: string) => { persist(FAV_KEY,    getFavs().filter(e => e.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
-  const deleteRecent = (id: string) => { persist(RECENT_KEY, getRecent().filter(e => e.id !== id)); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
+  const deleteFav = (id: string) => { deleteItem(id); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
+  const deleteRecent = (id: string) => { deleteItem(id); setSelected(p => { const n = new Set(p); n.delete(id); return n; }); };
 
-  const favs   = getFavs();
-  const recent = getRecent();
-  const total  = favs.length + recent.length;
+  const total = favorites.length + recents.length;
 
-  const EntryRow = ({ entry, onDelete }: { entry: InvEntry; onDelete: () => void }) => {
+  const EntryRow = ({ entry, onDelete }: { entry: { id: string; name: string; payload: InvPayload }; onDelete: () => void }) => {
     const isSelected = selected.has(entry.id);
     return (
       <div
@@ -105,13 +93,13 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
         <div className="flex-1 min-w-0">
           {entry.name && <p className="text-xs font-semibold truncate">{entry.name}</p>}
           <div className="flex items-center gap-1 flex-wrap mt-0.5">
-            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{entry.type}</Badge>
-            {entry.bodyPart && (
-              <Badge variant="outline" className="text-[10px] h-4 px-1.5">{entry.bodyPart}</Badge>
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{entry.payload.type}</Badge>
+            {entry.payload.bodyPart && (
+              <Badge variant="outline" className="text-[10px] h-4 px-1.5">{entry.payload.bodyPart}</Badge>
             )}
           </div>
-          {entry.notes && (
-            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{entry.notes}</p>
+          {entry.payload.notes && (
+            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{entry.payload.notes}</p>
           )}
         </div>
         <Button
@@ -136,7 +124,7 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
           onClick={() => { setIsOpen(v => !v); setFavName(""); setSelected(new Set()); }}
         >
           <BookMarked className="h-3 w-3" />
-          {total > 0 ? `${favs.length} fav · ${recent.length} recent` : "Favourites & Recent"}
+          {total > 0 ? `${favorites.length} fav · ${recents.length} recent` : "Favourites & Recent"}
         </Button>
       </div>
 
@@ -150,26 +138,26 @@ export function InvestigationFavPanel({ type, bodyPart, notes, onApply, onApplyM
               </p>
             )}
 
-            {favs.length > 0 && (
+            {favorites.length > 0 && (
               <div className="space-y-1">
                 <p className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400 sticky top-0 bg-muted/30 py-0.5">
                   <Star className="h-3 w-3" /> Favourites
                 </p>
-                {favs.map(e => (
+                {favorites.map(e => (
                   <EntryRow key={e.id} entry={e} onDelete={() => deleteFav(e.id)} />
                 ))}
               </div>
             )}
 
-            {recent.length > 0 && (
+            {recents.length > 0 && (
               <div className="space-y-1">
                 <p className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 sticky top-0 bg-muted/30 py-0.5">
                   <Clock className="h-3 w-3" /> Recently Ordered
                 </p>
-                {recent.map(e => (
+                {recents.map(e => (
                   <div key={e.id}>
                     <EntryRow entry={e} onDelete={() => deleteRecent(e.id)} />
-                    <p className="text-[10px] text-muted-foreground pl-2 mt-0.5">{fmtDateTime(e.savedAt)}</p>
+                    <p className="text-[10px] text-muted-foreground pl-2 mt-0.5">{fmtDateTime(new Date(e.createdAt).getTime())}</p>
                   </div>
                 ))}
               </div>

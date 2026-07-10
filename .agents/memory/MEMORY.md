@@ -1,0 +1,1 @@
+- [Query invalidation outside React hooks](query-client-outside-hooks.md) — plain functions (onBlur handlers, non-component helpers) must use raw generated API calls + an exported `queryClient`, not custom hooks.

@@ -13,3 +13,4 @@ export * from "./settings";
 export * from "./investigations";
 export * from "./conversations";
 export * from "./messages";
+export * from "./savedItems";

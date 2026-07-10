@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2, Pencil, Trash2 } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
+import { useSavedItems } from "@/lib/useSavedItems";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
 
 type DrugItem = {
@@ -625,34 +626,29 @@ export default function ConsultationDetailPage() {
   }, [queueText, clinicalInit]);
 
   // ── Prescription templates ─────────────────────────────────────────────────
-  type RxTemplate = { id: string; name: string; items: DrugItem[]; savedAt: number };
+  type RxPayload = { items: DrugItem[] };
+  type RxTemplate = { id: string; name: string; payload: RxPayload; createdAt: string };
   const [showRxTemplateDialog, setShowRxTemplateDialog] = useState(false);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
   const [rxFavName, setRxFavName] = useState("");
-  const [, forceRxRefresh] = useState(0);
 
-  const LS_RX_FAV    = "clinicos_rx_fav";
-  const LS_RX_RECENT = "clinicos_rx_recent";
-  const getRxFavs    = (): RxTemplate[] => JSON.parse(localStorage.getItem(LS_RX_FAV)    ?? "[]");
-  const getRxRecent  = (): RxTemplate[] => JSON.parse(localStorage.getItem(LS_RX_RECENT) ?? "[]");
-  const persistRxFavs    = (list: RxTemplate[]) => { localStorage.setItem(LS_RX_FAV,    JSON.stringify(list)); forceRxRefresh(n => n + 1); };
-  const persistRxRecent  = (list: RxTemplate[]) => { localStorage.setItem(LS_RX_RECENT, JSON.stringify(list)); forceRxRefresh(n => n + 1); };
+  const { favorites: rxFavs, recents: rxRecent, saveFavorite: saveRxFavorite, trackRecent: trackRxRecentItem, deleteItem: deleteRxItem } = useSavedItems<RxPayload>("rx");
 
   const applyRxTemplate = (tpl: RxTemplate) => {
-    setDrugItems(tpl.items.map(i => ({ ...i })));
+    setDrugItems(tpl.payload.items.map(i => ({ ...i })));
     setShowRxTemplateDialog(false);
     setSelectedTemplateIds(new Set());
     toast({ title: "Template applied" });
   };
 
   const applySelectedTemplates = () => {
-    const allTemplates = [...getRxFavs(), ...getRxRecent()];
+    const allTemplates = [...rxFavs, ...rxRecent];
     const selected = allTemplates.filter(t => selectedTemplateIds.has(t.id));
     if (!selected.length) return;
     const seen = new Set<string>();
     const merged: DrugItem[] = [];
     for (const tpl of selected) {
-      for (const item of tpl.items) {
+      for (const item of tpl.payload.items) {
         if (!item.drugName.trim()) continue;
         const key = item.drugName.toLowerCase();
         if (!seen.has(key)) { seen.add(key); merged.push({ ...item }); }
@@ -664,24 +660,23 @@ export default function ConsultationDetailPage() {
     toast({ title: `${selected.length} template${selected.length > 1 ? "s" : ""} applied` });
   };
 
-  const saveRxFav = () => {
+  const saveRxFav = async () => {
     if (!rxFavName.trim()) return;
     if (!drugItems.some(i => i.drugName.trim())) {
       toast({ title: "Add at least one drug first", variant: "destructive" }); return;
     }
-    persistRxFavs([...getRxFavs(), { id: Date.now().toString(), name: rxFavName.trim(), items: drugItems, savedAt: Date.now() }]);
+    await saveRxFavorite(rxFavName.trim(), { items: drugItems });
     setRxFavName("");
     toast({ title: "Saved as prescription template" });
   };
 
   const trackRxRecent = () => {
     if (!drugItems.some(i => i.drugName.trim())) return;
-    const deduped = getRxRecent().slice(0, 8);
-    persistRxRecent([{ id: Date.now().toString(), name: "", items: drugItems, savedAt: Date.now() }, ...deduped]);
+    trackRxRecentItem({ items: drugItems }, Date.now().toString());
   };
 
   const rxTemplateLabel = (t: RxTemplate) =>
-    t.name || t.items.filter(i => i.drugName).map(i => i.drugName).join(", ").slice(0, 50) || "Untitled";
+    t.name || t.payload.items.filter(i => i.drugName).map(i => i.drugName).join(", ").slice(0, 50) || "Untitled";
   // ──────────────────────────────────────────────────────────────────────────
 
   // ── SOAP per-field state ──────────────────────────────────────────────────
@@ -2128,7 +2123,7 @@ export default function ConsultationDetailPage() {
                   onClick={() => { setShowRxTemplateDialog(true); setRxFavName(""); setSelectedTemplateIds(new Set()); }}
                 >
                   <BookMarked className="h-3 w-3" />
-                  {(() => { const f = getRxFavs().length; const r = getRxRecent().length; return f > 0 || r > 0 ? `${f} fav · ${r} recent` : "Templates"; })()}
+                  {(() => { const f = rxFavs.length; const r = rxRecent.length; return f > 0 || r > 0 ? `${f} fav · ${r} recent` : "Templates"; })()}
                 </Button>
               )}
             </div>
@@ -2692,8 +2687,8 @@ export default function ConsultationDetailPage() {
 
           <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-sm">
             {(() => {
-              const favs   = getRxFavs();
-              const recent = getRxRecent();
+              const favs   = rxFavs;
+              const recent = rxRecent;
               if (favs.length === 0 && recent.length === 0) return (
                 <p className="text-muted-foreground text-center py-6 text-xs">
                   No templates yet — fill in drugs and save as a template to reuse them.
@@ -2718,15 +2713,15 @@ export default function ConsultationDetailPage() {
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{rxTemplateLabel(t)}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {t.items.filter(i => i.drugName).map(i => i.drugName).join(", ")}
+                                {t.payload.items.filter(i => i.drugName).map(i => i.drugName).join(", ")}
                               </p>
                               <p className="text-[10px] text-muted-foreground mt-0.5">
-                                {t.items.filter(i => i.drugName).length} drug(s)
+                                {t.payload.items.filter(i => i.drugName).length} drug(s)
                               </p>
                             </div>
                             <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                               <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => applyRxTemplate(t)}>Apply</Button>
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => persistRxFavs(getRxFavs().filter(f => f.id !== t.id))}>
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => deleteRxItem(t.id)}>
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>
@@ -2753,15 +2748,15 @@ export default function ConsultationDetailPage() {
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{rxTemplateLabel(t)}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {t.items.filter(i => i.drugName).map(i => i.drugName).join(", ")}
+                                {t.payload.items.filter(i => i.drugName).map(i => i.drugName).join(", ")}
                               </p>
                               <p className="text-[10px] text-muted-foreground mt-0.5">
-                                {fmtDateTime(t.savedAt)} · {t.items.filter(i => i.drugName).length} drug(s)
+                                {fmtDateTime(new Date(t.createdAt).getTime())} · {t.payload.items.filter(i => i.drugName).length} drug(s)
                               </p>
                             </div>
                             <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                               <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => applyRxTemplate(t)}>Apply</Button>
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => persistRxRecent(getRxRecent().filter(r => r.id !== t.id))}>
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => deleteRxItem(t.id)}>
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>

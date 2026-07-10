@@ -820,6 +820,48 @@ export interface Drug {
   createdAt: string;
 }
 
+export type SavedItemKind = typeof SavedItemKind[keyof typeof SavedItemKind];
+
+
+export const SavedItemKind = {
+  favorite: 'favorite',
+  recent: 'recent',
+} as const;
+
+export type SavedItemPayload = { [key: string]: unknown };
+
+export interface SavedItem {
+  id: string;
+  namespace: string;
+  kind: SavedItemKind;
+  name: string;
+  payload: SavedItemPayload;
+  createdAt: string;
+}
+
+export interface SavedItemListResponse {
+  data: SavedItem[];
+}
+
+export type SavedItemInputKind = typeof SavedItemInputKind[keyof typeof SavedItemInputKind];
+
+
+export const SavedItemInputKind = {
+  favorite: 'favorite',
+  recent: 'recent',
+} as const;
+
+export type SavedItemInputPayload = { [key: string]: unknown };
+
+export interface SavedItemInput {
+  namespace: string;
+  kind: SavedItemInputKind;
+  name?: string;
+  payload: SavedItemInputPayload;
+  /** When provided for a "recent" item, existing entries with the same dedupeKey are removed before insert; the list is also capped to the most recent 8. */
+  dedupeKey?: string;
+}
+
 export interface DrugInput {
   name: string;
   genericName?: string;
@@ -1477,5 +1519,18 @@ export const ListInvestigationsStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
   cancelled: 'cancelled',
+} as const;
+
+export type ListSavedItemsParams = {
+namespace: string;
+kind?: ListSavedItemsKind;
+};
+
+export type ListSavedItemsKind = typeof ListSavedItemsKind[keyof typeof ListSavedItemsKind];
+
+
+export const ListSavedItemsKind = {
+  favorite: 'favorite',
+  recent: 'recent',
 } as const;
 

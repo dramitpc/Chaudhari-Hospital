@@ -82,6 +82,7 @@ import type {
   ListPatientsParams,
   ListPrescriptionTemplatesParams,
   ListPrescriptionsParams,
+  ListSavedItemsParams,
   ListUsersParams,
   LoginInput,
   Patient,
@@ -102,6 +103,9 @@ import type {
   RefreshTokenInput,
   RevenueChartPoint,
   RevenueReport,
+  SavedItem,
+  SavedItemInput,
+  SavedItemListResponse,
   TimelineEvent,
   TokenInput,
   TokenStatusUpdate,
@@ -5713,6 +5717,231 @@ export const useDeleteInvestigation = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteInvestigationMutationOptions(options));
+    }
+
+export const getListSavedItemsUrl = (params: ListSavedItemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/saved-items?${stringifiedParams}` : `/api/saved-items`
+}
+
+/**
+ * @summary List the current user's favourites/recents for a namespace
+ */
+export const listSavedItems = async (params: ListSavedItemsParams, options?: RequestInit): Promise<SavedItemListResponse> => {
+
+  return customFetch<SavedItemListResponse>(getListSavedItemsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSavedItemsQueryKey = (params?: ListSavedItemsParams,) => {
+    return [
+    `/api/saved-items`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSavedItemsQueryOptions = <TData = Awaited<ReturnType<typeof listSavedItems>>, TError = ErrorType<unknown>>(params: ListSavedItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSavedItemsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedItems>>> = ({ signal }) => listSavedItems(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSavedItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSavedItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listSavedItems>>>
+export type ListSavedItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the current user's favourites/recents for a namespace
+ */
+
+export function useListSavedItems<TData = Awaited<ReturnType<typeof listSavedItems>>, TError = ErrorType<unknown>>(
+ params: ListSavedItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSavedItemsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSavedItemUrl = () => {
+
+
+
+
+  return `/api/saved-items`
+}
+
+/**
+ * @summary Save a favourite or track a recent item for the current user
+ */
+export const createSavedItem = async (savedItemInput: SavedItemInput, options?: RequestInit): Promise<SavedItem> => {
+
+  return customFetch<SavedItem>(getCreateSavedItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      savedItemInput,)
+  }
+);}
+
+
+
+
+export const getCreateSavedItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSavedItem>>, TError,{data: BodyType<SavedItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSavedItem>>, TError,{data: BodyType<SavedItemInput>}, TContext> => {
+
+const mutationKey = ['createSavedItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSavedItem>>, {data: BodyType<SavedItemInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSavedItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSavedItemMutationResult = NonNullable<Awaited<ReturnType<typeof createSavedItem>>>
+    export type CreateSavedItemMutationBody = BodyType<SavedItemInput>
+    export type CreateSavedItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save a favourite or track a recent item for the current user
+ */
+export const useCreateSavedItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSavedItem>>, TError,{data: BodyType<SavedItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSavedItem>>,
+        TError,
+        {data: BodyType<SavedItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSavedItemMutationOptions(options));
+    }
+
+export const getDeleteSavedItemUrl = (id: string,) => {
+
+
+
+
+  return `/api/saved-items/${id}`
+}
+
+/**
+ * @summary Delete a saved favourite/recent item
+ */
+export const deleteSavedItem = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteSavedItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteSavedItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedItem>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSavedItem>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteSavedItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSavedItem>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSavedItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSavedItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSavedItem>>>
+
+    export type DeleteSavedItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a saved favourite/recent item
+ */
+export const useDeleteSavedItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedItem>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSavedItem>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteSavedItemMutationOptions(options));
     }
 
 export const getAbdmGenerateOtpUrl = () => {

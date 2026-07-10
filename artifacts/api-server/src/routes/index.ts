@@ -16,6 +16,7 @@ import reportsRouter from "./reports";
 import settingsRouter from "./settings";
 import investigationsRouter from "./investigations";
 import abdmRouter from "./abdm";
+import savedItemsRouter from "./savedItems";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(reportsRouter);
 router.use(settingsRouter);
 router.use(investigationsRouter);
 router.use(abdmRouter);
+router.use(savedItemsRouter);
 
 export default router;
