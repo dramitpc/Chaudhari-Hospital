@@ -86,12 +86,13 @@ It takes **5–15 minutes** on the first run (subsequent builds are faster due t
 ```bash
 cd /volume1/docker/clinicos
 
-docker compose -f deploy/docker-compose.yml build
+BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker compose -f deploy/docker-compose.yml build
 ```
+
+The `BUILDX_NO_DEFAULT_ATTESTATIONS=1` prefix disables Docker Buildx's git provenance check, which fails because the `.git` folder is not included in the build context. Without it you will see: *"failed to read current commit information with git rev-parse"*.
 
 Watch for any errors. Common issues:
 - **Out of memory during build** — the DS420+ has 4 GB RAM which is enough, but make sure no other heavy process is running.
-- **pnpm frozen-lockfile error** — add `--no-frozen-lockfile` to the `pnpm install` line in the Dockerfile temporarily.
 
 ---
 
@@ -216,7 +217,7 @@ docker compose -f deploy/docker-compose.yml down
 ```bash
 cd /volume1/docker/clinicos
 git pull
-docker compose -f deploy/docker-compose.yml build
+BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker compose -f deploy/docker-compose.yml build
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
