@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true
+  },
+  "include": ["."],
+  "references": [
+    { "path": "../lib/db" },
+    { "path": "../lib/api-zod" },
+    { "path": "../lib/integrations-openai-ai-server" }
+  ]
+}
