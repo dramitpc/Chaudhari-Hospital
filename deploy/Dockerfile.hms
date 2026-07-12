@@ -20,7 +20,7 @@ RUN PORT=80 BASE_PATH=/ NODE_ENV=production \
 # ── Stage 2: nginx static server ─────────────────────────────────
 FROM nginx:alpine AS runner
 
-COPY --from=builder /app/artifacts/hms/dist/public /usr/share/nginx/html
+COPY --from=builder /app/artifacts/hms/dist /usr/share/nginx/html
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
