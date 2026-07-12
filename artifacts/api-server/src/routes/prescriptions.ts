@@ -15,7 +15,12 @@ import {
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
 import { localDateStr } from "../lib/date";
-import { openai } from "@workspace/integrations-openai-ai-server";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getOpenAI(): any | null {
+  if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (require("@workspace/integrations-openai-ai-server") as any).openai;
+}
 
 const router = Router();
 
@@ -165,9 +170,11 @@ Rules:
 - Return ONLY a valid JSON object with the same keys, values translated. No commentary.`;
   const userPrompt = `Translate these prescription fields to ${langName}:\n${JSON.stringify(fieldsToTranslate, null, 2)}`;
 
+  const openaiClient = getOpenAI();
+  if (!openaiClient) { res.status(503).json({ error: "Translation is not available on this deployment." }); return; }
   let translated: Record<string, string> = {};
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-5-mini",
       max_completion_tokens: 4096,
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
@@ -227,9 +234,11 @@ Rules:
 
   const userPrompt = `Translate these prescription fields to ${langName}:\n${JSON.stringify(fieldsToTranslate, null, 2)}`;
 
+  const openaiClient2 = getOpenAI();
+  if (!openaiClient2) { res.status(503).json({ error: "Translation is not available on this deployment." }); return; }
   let translated: Record<string, string> = {};
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient2.chat.completions.create({
       model: "gpt-5-mini",
       max_completion_tokens: 8192,
       messages: [
