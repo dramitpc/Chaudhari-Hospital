@@ -31,6 +31,7 @@ services:
     build:
       context:    ..
       dockerfile: deploy/Dockerfile.api
+      provenance: false
     container_name: clinicos-api
     restart: unless-stopped
     environment:
@@ -49,6 +50,7 @@ services:
     build:
       context:    ..
       dockerfile: deploy/Dockerfile.hms
+      provenance: false
     container_name: clinicos-frontend
     restart: unless-stopped
     ports:
@@ -65,6 +67,7 @@ services:
       context:    ..
       dockerfile: deploy/Dockerfile.api
       target:     builder          # reuse the builder stage (has full pnpm workspace)
+      provenance: false
     container_name: clinicos-init
     environment:
       DATABASE_URL: postgres://clinicos:${DB_PASSWORD}@clinicos-postgres:5432/clinicos
