@@ -1,9 +1,7 @@
 # ── Stage 1: builder ──────────────────────────────────────────────
-FROM node:24-slim AS builder
+FROM node:24 AS builder
 
 RUN npm install -g pnpm@10.26.1
-
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
