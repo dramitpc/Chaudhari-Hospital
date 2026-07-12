@@ -238,7 +238,7 @@ cat clinicos_backup_20260627.sql | \
 
 | Symptom | Fix |
 |---|---|
-| Build fails with `ERR_PNPM_FROZEN_LOCKFILE` | Change `--frozen-lockfile` to `--no-frozen-lockfile` in `Dockerfile.api` and `Dockerfile.hms` |
+| Build fails with pnpm version error | Make sure you pulled the latest code — the Dockerfiles now pin `pnpm@10.26.1` via `npm install -g` which avoids all lockfile version issues |
 | Frontend loads but API calls fail (network error) | Check the API container is running and `nginx.conf` upstream name matches `clinicos-api` |
 | `clinicos-init` exits with "connection refused" | The postgres container isn't healthy yet — wait 30 s and retry |
 | Port 80 already in use | Set `HOST_PORT=8888` (or any free port) in `deploy/.env` and restart frontend |
