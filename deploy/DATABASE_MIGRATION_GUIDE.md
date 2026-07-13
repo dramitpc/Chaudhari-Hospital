@@ -123,12 +123,12 @@ sudo docker exec clinicos-postgres psql -U clinicos clinicos \
 ```bash
 sudo docker exec clinicos-postgres psql -U clinicos clinicos -c "
 SELECT
-  (SELECT COUNT(*) FROM patients)         AS patients,
-  (SELECT COUNT(*) FROM users)            AS users,
-  (SELECT COUNT(*) FROM appointments)     AS appointments,
-  (SELECT COUNT(*) FROM consultations)    AS consultations,
-  (SELECT COUNT(*) FROM prescriptions)    AS prescriptions,
-  (SELECT COUNT(*) FROM billing_invoices) AS invoices;
+  (SELECT COUNT(*) FROM patients)      AS patients,
+  (SELECT COUNT(*) FROM users)         AS users,
+  (SELECT COUNT(*) FROM appointments)  AS appointments,
+  (SELECT COUNT(*) FROM consultations) AS consultations,
+  (SELECT COUNT(*) FROM prescriptions) AS prescriptions,
+  (SELECT COUNT(*) FROM invoices)      AS invoices;
 "
 ```
 
