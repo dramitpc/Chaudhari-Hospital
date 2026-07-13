@@ -2,7 +2,7 @@
 
 This guide covers three things:
 
-1. **Export** — dump the live database from Replit
+1. **Export** — dump the live production database from Replit
 2. **Import** — restore it into your NAS PostgreSQL container
 3. **Auto-backup** — schedule daily backups on the NAS with 30-day retention
 
@@ -14,62 +14,39 @@ After migration the NAS is the **primary database**. Replit becomes read-only/ar
 
 ---
 
-## Part 1 — Export the Replit Database
+## Part 1 — Get the Production DATABASE_URL
 
-### 1a. Open the Replit Shell
+The Replit **development** shell connects to the development database (which has
+only a small amount of test data). Your real patient data lives in the
+**production** database, which has a different connection string.
 
-In your Replit project, open the **Shell** tab (not the Console — the full terminal).
+1. In Replit, click the **Deployments** tab (rocket icon in the left sidebar)
+2. Click your active deployment
+3. Open **"Environment variables"** (or "Secrets")
+4. Find `DATABASE_URL` and copy the full value — it looks like:
+   ```
+   postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+   ```
 
-### 1b. Dump the database to a file
-
-```bash
-pg_dump "$DATABASE_URL" \
-  --no-owner \
-  --no-acl \
-  --format=plain \
-  --file=/tmp/clinicos_export.sql
-```
-
-Verify it worked:
-
-```bash
-wc -l /tmp/clinicos_export.sql
-# Should print several thousand lines (not 0)
-```
-
-### 1c. Download the file to your computer
-
-The `/tmp` directory is not visible in the Replit file browser. Copy it into
-the project folder first:
-
-```bash
-cp /tmp/clinicos_export.sql ./clinicos_export.sql
-```
-
-Now it appears in the file tree — right-click it and choose **Download**.
+Keep this value ready for the next step.
 
 ---
 
-## Part 2 — Import into the NAS
+## Part 2 — Export from the NAS (SSL-safe)
 
-### 2a. Copy the dump file to the NAS
+Do **not** run `pg_dump` from your computer — local PostgreSQL clients are often
+compiled without SSL support and will fail to connect to Neon. Instead, run
+`pg_dump` from inside the NAS postgres container, which always has full SSL
+support.
 
-From your computer (Terminal / Command Prompt / WSL):
-
-```bash
-scp ~/Desktop/clinicos_export.sql admin@<NAS-IP>:/volume1/docker/clinicos/
-```
-
-Replace `<NAS-IP>` with your NAS's local IP (e.g. `192.168.1.100`).
-
-### 2b. SSH into the NAS
+### 2a. SSH into the NAS
 
 ```bash
 ssh admin@<NAS-IP>
 cd /volume1/docker/clinicos
 ```
 
-### 2c. Make sure the database container is running
+### 2b. Make sure the database container is running
 
 ```bash
 sudo docker compose -f deploy/docker-compose.yml up -d clinicos-postgres
@@ -78,17 +55,34 @@ sudo docker compose -f deploy/docker-compose.yml ps
 # clinicos-postgres should show "(healthy)"
 ```
 
-If you already ran `clinicos-init` (migrations + seed), the tables exist.
-If not, run it now:
+### 2c. Dump the production database from inside the container
 
 ```bash
-sudo docker compose -f deploy/docker-compose.yml \
-  --profile init run --rm clinicos-init
+sudo docker exec clinicos-postgres pg_dump \
+  "postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require" \
+  --no-owner \
+  --no-acl \
+  --format=plain \
+  --file=/tmp/clinicos_prod_export.sql
 ```
 
-### 2d. Reset the database (remove seeded demo data)
+Replace the connection string with your actual production `DATABASE_URL`.
 
-Drop the entire public schema and recreate it — one command, no quoting issues:
+Verify the dump is not empty:
+
+```bash
+sudo docker exec clinicos-postgres wc -l /tmp/clinicos_prod_export.sql
+# Should be tens of thousands of lines
+```
+
+---
+
+## Part 3 — Import into the NAS Database
+
+The dump file is already inside the container at `/tmp/clinicos_prod_export.sql`
+— no extra copy step needed.
+
+### 3a. Reset the local database (remove seeded demo data)
 
 ```bash
 sudo docker exec clinicos-postgres psql -U clinicos clinicos \
@@ -97,28 +91,21 @@ sudo docker exec clinicos-postgres psql -U clinicos clinicos \
 
 > **Caution:** This wipes all rows and table definitions. Only run before the import.
 
-### 2e. Copy the dump into the container, then restore
-
-Using `docker cp` avoids all pipe/permission issues:
-
-```bash
-# Copy the dump file into the container
-sudo docker cp clinicos_export.sql clinicos-postgres:/tmp/clinicos_export.sql
-
-# Restore — recreates all tables and loads data in one step
-sudo docker exec clinicos-postgres psql -U clinicos clinicos \
-  -f /tmp/clinicos_export.sql
-```
-
-`NOTICE` and `WARNING` lines in the output are harmless. To see only real
-errors:
+### 3b. Restore
 
 ```bash
 sudo docker exec clinicos-postgres psql -U clinicos clinicos \
-  -f /tmp/clinicos_export.sql 2>&1 | grep "^ERROR"
+  -f /tmp/clinicos_prod_export.sql
 ```
 
-### 2f. Verify the import
+`NOTICE` and `WARNING` lines are harmless. To see only real errors:
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos clinicos \
+  -f /tmp/clinicos_prod_export.sql 2>&1 | grep "^ERROR"
+```
+
+### 3c. Verify the import
 
 ```bash
 sudo docker exec clinicos-postgres psql -U clinicos clinicos -c "
@@ -132,9 +119,9 @@ SELECT
 "
 ```
 
-Compare the numbers against what you see in the Replit app.
+Compare the numbers against what you see in the Replit deployed app.
 
-### 2g. Start all services
+### 3d. Start all services
 
 ```bash
 sudo docker compose -f deploy/docker-compose.yml up -d
@@ -144,9 +131,12 @@ Open `http://<NAS-IP>:<HOST_PORT>` and log in with your existing credentials.
 
 ---
 
-## Part 3 — Automated Daily Backups
+## Part 4 — Automated Daily Backups
 
-### 3a. Create the backup script
+Once the NAS is live, set up a cron job that dumps the database every night and
+keeps 30 days of backups.
+
+### 4a. Create the backup script
 
 ```bash
 mkdir -p /volume1/docker/clinicos/backups
@@ -164,7 +154,7 @@ DATE=$(date +%Y%m%d_%H%M)
 FILE="$BACKUP_DIR/clinicos_$DATE.sql.gz"
 RETAIN_DAYS=30
 
-# Dump and compress (sudo required on Synology)
+# Dump the local NAS database and compress
 sudo docker exec clinicos-postgres \
   pg_dump -U clinicos clinicos \
   --no-owner --no-acl --format=plain \
@@ -177,24 +167,16 @@ find "$BACKUP_DIR" -name "clinicos_*.sql.gz" -mtime +"$RETAIN_DAYS" -delete
 echo "$(date): Pruned backups older than $RETAIN_DAYS days"
 ```
 
-Make it executable:
+Make it executable and test it:
 
 ```bash
 chmod +x /volume1/docker/clinicos/deploy/backup.sh
-```
-
-Test it manually:
-
-```bash
 sudo bash /volume1/docker/clinicos/deploy/backup.sh
 ls -lh /volume1/docker/clinicos/backups/
 # Should show a .sql.gz file
 ```
 
-### 3b. Schedule the cron job
-
-Synology's cron runs as root (which already has Docker access — no `sudo` needed
-inside the cron entry itself):
+### 4b. Schedule the cron job
 
 ```bash
 sudo crontab -e
@@ -206,13 +188,13 @@ Add this line (runs at 2:00 AM every night):
 0 2 * * * /volume1/docker/clinicos/deploy/backup.sh >> /volume1/docker/clinicos/backups/backup.log 2>&1
 ```
 
-Save and exit. Confirm it was saved:
+Save and confirm:
 
 ```bash
 sudo crontab -l
 ```
 
-### 3c. (Optional) Archive backups off-NAS with HyperBackup
+### 4c. (Optional) Archive off-NAS with HyperBackup
 
 1. DSM › Package Center → install **HyperBackup**
 2. Create a backup task targeting `/volume1/docker/clinicos/backups/`
@@ -231,8 +213,7 @@ sudo docker compose -f deploy/docker-compose.yml stop clinicos-api
 sudo docker exec clinicos-postgres psql -U clinicos clinicos \
   -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-# 3. Decompress, copy into container, restore
-# (replace the filename with the backup you want)
+# 3. Decompress the chosen backup, copy into container, then restore
 zcat /volume1/docker/clinicos/backups/clinicos_20260713_020001.sql.gz \
   > /tmp/clinicos_restore.sql
 sudo docker cp /tmp/clinicos_restore.sql clinicos-postgres:/tmp/clinicos_restore.sql
@@ -247,10 +228,10 @@ sudo docker compose -f deploy/docker-compose.yml start clinicos-api
 
 ## Summary
 
-| Step | Command prefix | What happens |
-|------|---------------|-------------|
-| Export on Replit | *(none — runs in Replit shell)* | Full plain-SQL dump of all tables |
-| All NAS docker commands | `sudo docker …` | Required — admin user lacks Docker socket access |
-| Import to NAS | `sudo docker cp` + `sudo docker exec psql -f` | Rebuilds tables and loads all data |
-| Daily backup cron | `sudo crontab -e` (root runs the job) | Compressed snapshot, 30-day retention |
+| Step | Where it runs | Key point |
+|------|--------------|-----------|
+| Get production `DATABASE_URL` | Replit Deployments UI | Dev shell uses a different DB — always use the production URL |
+| `pg_dump` | Inside NAS postgres container | Container has SSL compiled in; local pg_dump often does not |
+| Reset + restore | NAS (via `sudo docker exec`) | Drop schema first, then `psql -f` the dump |
+| Daily backup | NAS cron (`sudo crontab`) | Dumps local NAS DB nightly, 30-day retention |
 | HyperBackup (optional) | DSM GUI | Off-NAS copy for disaster recovery |
