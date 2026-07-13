@@ -165,6 +165,111 @@ Default login credentials (change them after first login):
 
 ---
 
+## Optional — Use the Replit-hosted database instead of a local one
+
+By default ClinicOS runs its own PostgreSQL container on the NAS. If you prefer the NAS to connect to the same database that your Replit deployment uses, follow these steps. The NAS containers will talk to Replit's cloud database over the internet — no local postgres container is needed.
+
+> **When to choose this:** You want both the Replit app and the NAS app to share one set of data (patients, records, etc.).  
+> **When to choose local:** You want the NAS to be fully self-contained and work without internet.
+
+---
+
+### Step A — Get the DATABASE_URL from Replit
+
+1. Open your project on **replit.com**.
+2. In the left sidebar click the **lock icon** (Secrets / Environment Variables).
+3. Find the secret named **`DATABASE_URL`**.
+4. Click the eye icon to reveal the value, then copy the full string.  
+   It looks like:  
+   `postgresql://user:password@host.neon.tech/dbname?sslmode=require`
+
+> **Keep this value private** — it contains your database password.
+
+---
+
+### Step B — Add DATABASE_URL to your NAS .env file
+
+SSH into the NAS and open the env file:
+
+```bash
+ssh admin@<NAS-IP>
+nano /volume1/docker/clinicos/deploy/.env
+```
+
+Add this line (paste the value you copied from Replit):
+
+```
+DATABASE_URL=postgresql://user:password@host.neon.tech/dbname?sslmode=require
+SESSION_SECRET=<same-or-new-long-random-secret>
+HOST_PORT=8888
+```
+
+You do **not** need `DB_PASSWORD` when using an external database.  
+Save and close (`Ctrl+O`, `Ctrl+X`).
+
+---
+
+### Step C — Build the images
+
+```bash
+cd /volume1/docker/clinicos
+DOCKER_BUILDKIT=0 docker compose -f deploy/docker-compose.remote-db.yml build
+```
+
+This uses `docker-compose.remote-db.yml` — a slimmed-down compose file that has no local postgres container.
+
+---
+
+### Step D — Run migrations (first time only)
+
+This pushes the schema to the Replit database and seeds default users and settings.  
+**Skip this step if the Replit app is already in use** — the tables already exist and the seed data is already there.
+
+```bash
+docker compose -f deploy/docker-compose.remote-db.yml \
+  --profile init \
+  run --rm clinicos-init
+```
+
+---
+
+### Step E — Start the app
+
+```bash
+docker compose -f deploy/docker-compose.remote-db.yml up -d
+```
+
+Check it is running:
+
+```bash
+docker compose -f deploy/docker-compose.remote-db.yml ps
+```
+
+Both `clinicos-api` and `clinicos-frontend` should show `running`.  
+Open: **`http://<NAS-IP>:8888`**
+
+---
+
+### Day-to-day commands (remote DB variant)
+
+```bash
+# View API logs
+docker compose -f deploy/docker-compose.remote-db.yml logs -f clinicos-api
+
+# Restart API
+docker compose -f deploy/docker-compose.remote-db.yml restart clinicos-api
+
+# Stop everything
+docker compose -f deploy/docker-compose.remote-db.yml down
+
+# Update to a new version
+cd /volume1/docker/clinicos && git pull
+DOCKER_BUILDKIT=0 docker compose -f deploy/docker-compose.remote-db.yml build
+docker compose -f deploy/docker-compose.remote-db.yml up -d
+```
+
+---
+
 ## Optional — HTTPS via Synology Reverse Proxy
 
 To get HTTPS without buying a certificate, use Synology's built-in Let's Encrypt support:
