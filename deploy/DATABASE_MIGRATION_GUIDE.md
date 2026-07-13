@@ -88,37 +88,30 @@ docker compose -f deploy/docker-compose.yml \
   --profile init run --rm clinicos-init
 ```
 
-### 2d. Wipe existing data (seeds) before restoring
+### 2d. Reset the database (drop all seeded data)
 
-The seed script inserts default users and demo data. Clear it so the real data
-from Replit doesn't collide:
+The seed script inserts default users and demo data. The safest way to clear
+everything is to drop the public schema and recreate it — this is a single
+command with no quoting pitfalls:
 
 ```bash
-docker exec -i clinicos-postgres psql -U clinicos clinicos <<'SQL'
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN (
-    SELECT tablename FROM pg_tables
-    WHERE schemaname = 'public'
-  ) LOOP
-    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
-  END LOOP;
-END $$;
-SQL
+docker exec clinicos-postgres psql -U clinicos clinicos \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 ```
 
-> **Caution:** This deletes all rows in every table. Only run it before the import.
+> **Caution:** This wipes all rows and table definitions. Only run it before the import.
 
 ### 2e. Restore the dump
+
+The `pg_dump` output contains `CREATE TABLE` statements, so restoring it
+rebuilds and populates every table in one step:
 
 ```bash
 cat clinicos_export.sql | \
   docker exec -i clinicos-postgres psql -U clinicos clinicos
 ```
 
-This will print many lines of SQL output. Ignore `NOTICE` messages — they are normal.
+This prints many lines of SQL output. Ignore `NOTICE` messages — they are normal.
 Watch for `ERROR` lines. A small number of errors on `CREATE EXTENSION` or `SET` are harmless.
 
 ### 2f. Verify the import
@@ -240,14 +233,8 @@ If you ever need to roll back:
 docker compose -f deploy/docker-compose.yml stop clinicos-api
 
 # 2. Wipe current data
-docker exec -i clinicos-postgres psql -U clinicos clinicos -c "
-DO \$\$
-DECLARE r RECORD;
-BEGIN
-  FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname='public') LOOP
-    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
-  END LOOP;
-END \$\$;"
+docker exec clinicos-postgres psql -U clinicos clinicos \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
 # 3. Restore the chosen backup
 zcat /volume1/docker/clinicos/backups/clinicos_20260713_020001.sql.gz | \
