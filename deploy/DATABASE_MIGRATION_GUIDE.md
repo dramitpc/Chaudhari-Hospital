@@ -103,16 +103,25 @@ docker exec clinicos-postgres psql -U clinicos clinicos \
 
 ### 2e. Restore the dump
 
-The `pg_dump` output contains `CREATE TABLE` statements, so restoring it
-rebuilds and populates every table in one step:
+Copy the file into the container first, then restore with `-f` (avoids pipe
+permission issues entirely):
 
 ```bash
-cat clinicos_export.sql | \
-  docker exec -i clinicos-postgres psql -U clinicos clinicos
+# Copy dump into the container
+docker cp clinicos_export.sql clinicos-postgres:/tmp/clinicos_export.sql
+
+# Restore — rebuilds tables and loads all data in one step
+docker exec clinicos-postgres psql -U clinicos clinicos \
+  -f /tmp/clinicos_export.sql
 ```
 
-This prints many lines of SQL output. Ignore `NOTICE` messages — they are normal.
-Watch for `ERROR` lines. A small number of errors on `CREATE EXTENSION` or `SET` are harmless.
+This prints many lines of SQL output. `NOTICE` and `WARNING` messages are harmless.
+To see only real problems, run:
+
+```bash
+docker exec clinicos-postgres psql -U clinicos clinicos \
+  -f /tmp/clinicos_export.sql 2>&1 | grep "^ERROR"
+```
 
 ### 2f. Verify the import
 
@@ -236,9 +245,12 @@ docker compose -f deploy/docker-compose.yml stop clinicos-api
 docker exec clinicos-postgres psql -U clinicos clinicos \
   -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-# 3. Restore the chosen backup
-zcat /volume1/docker/clinicos/backups/clinicos_20260713_020001.sql.gz | \
-  docker exec -i clinicos-postgres psql -U clinicos clinicos
+# 3. Decompress and copy into the container, then restore
+zcat /volume1/docker/clinicos/backups/clinicos_20260713_020001.sql.gz \
+  > /tmp/clinicos_restore.sql
+docker cp /tmp/clinicos_restore.sql clinicos-postgres:/tmp/clinicos_restore.sql
+docker exec clinicos-postgres psql -U clinicos clinicos \
+  -f /tmp/clinicos_restore.sql
 
 # 4. Restart the API
 docker compose -f deploy/docker-compose.yml start clinicos-api
