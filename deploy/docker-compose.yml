@@ -54,7 +54,8 @@ services:
     ports:
       - "${HOST_PORT:-80}:80"
     depends_on:
-      - clinicos-api
+      clinicos-api:
+        condition: service_started
     networks:
       - clinicos
 
