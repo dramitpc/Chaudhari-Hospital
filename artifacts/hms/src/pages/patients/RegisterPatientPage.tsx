@@ -171,7 +171,7 @@ export default function RegisterPatientPage() {
                     <SelectValue placeholder="—" />
                   </SelectTrigger>
                   <SelectContent>
-                    {["Mr.", "Mrs.", "Ms.", "Miss", "Dr.", "Master", "Baby"].map(s => (
+                    {["Mr.", "Mrs.", "Ms.", "Miss", "Dr.", "Master", "Baby", "Baby of"].map(s => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>
