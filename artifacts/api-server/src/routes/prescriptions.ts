@@ -18,12 +18,14 @@ import { localDateStr } from "../lib/date";
 import OpenAI from "openai";
 
 function getOpenAI(): OpenAI | null {
-  // Replit-hosted deployment: use the managed proxy
-  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return (require("@workspace/integrations-openai-ai-server") as { openai: OpenAI }).openai;
+  // Replit-hosted: use the managed proxy (both vars injected by Replit integration)
+  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+    return new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
   }
-  // Self-hosted deployment: use a plain OpenAI API key
+  // Self-hosted NAS: use a plain OpenAI API key
   if (process.env.OPENAI_API_KEY) {
     return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
