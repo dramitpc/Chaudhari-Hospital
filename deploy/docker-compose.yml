@@ -38,6 +38,7 @@ services:
       PORT:           "8080"
       DATABASE_URL:   postgres://clinicos:${DB_PASSWORD}@clinicos-postgres:5432/clinicos
       SESSION_SECRET: ${SESSION_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       clinicos-postgres:
         condition: service_healthy

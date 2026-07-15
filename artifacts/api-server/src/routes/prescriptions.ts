@@ -15,11 +15,19 @@ import {
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
 import { localDateStr } from "../lib/date";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getOpenAI(): any | null {
-  if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) return null;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require("@workspace/integrations-openai-ai-server") as any).openai;
+import OpenAI from "openai";
+
+function getOpenAI(): OpenAI | null {
+  // Replit-hosted deployment: use the managed proxy
+  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require("@workspace/integrations-openai-ai-server") as { openai: OpenAI }).openai;
+  }
+  // Self-hosted deployment: use a plain OpenAI API key
+  if (process.env.OPENAI_API_KEY) {
+    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return null;
 }
 
 const router = Router();
