@@ -247,7 +247,7 @@ export default function RegisterPatientPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Gender *</Label>
-              <Select onValueChange={(v) => setValue("gender", v as "male" | "female" | "other")}>
+              <Select value={selectedGender ?? ""} onValueChange={(v) => setValue("gender", v as "male" | "female" | "other")}>
                 <SelectTrigger data-testid="select-gender" className={!selectedGender ? "border-muted-foreground/40" : ""}>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
