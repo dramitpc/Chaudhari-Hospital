@@ -166,7 +166,11 @@ export default function RegisterPatientPage() {
             <div className="md:col-span-2 flex gap-2 items-start">
               <div className="space-y-1.5 w-28 shrink-0">
                 <Label>Salutation</Label>
-                <Select onValueChange={(v) => setValue("salutation", v)}>
+                <Select onValueChange={(v) => {
+                  setValue("salutation", v);
+                  if (["Mr.", "Master"].includes(v)) setValue("gender", "male");
+                  else if (["Mrs.", "Ms.", "Miss"].includes(v)) setValue("gender", "female");
+                }}>
                   <SelectTrigger data-testid="select-salutation">
                     <SelectValue placeholder="—" />
                   </SelectTrigger>

@@ -879,7 +879,11 @@ export default function QueuePage() {
                 <div className="flex gap-2 items-start">
                   <div className="space-y-1.5 w-24 shrink-0">
                     <Label className="text-xs">Salutation</Label>
-                    <Select onValueChange={v => setNewSalutation(v)} value={newSalutation}>
+                    <Select onValueChange={v => {
+                      setNewSalutation(v);
+                      if (["Mr.", "Master"].includes(v)) setNewGender("male");
+                      else if (["Mrs.", "Ms.", "Miss"].includes(v)) setNewGender("female");
+                    }} value={newSalutation}>
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue placeholder="—" />
                       </SelectTrigger>
