@@ -904,6 +904,15 @@ export default function QueuePage() {
                     />
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Address</Label>
+                  <Input
+                    type="text"
+                    value={newAddress}
+                    onChange={e => setNewAddress(e.target.value)}
+                    placeholder="Street, City"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Gender <span className="text-destructive">*</span></Label>
@@ -943,15 +952,6 @@ export default function QueuePage() {
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">d</span>
                     </div>
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Address</Label>
-                  <Input
-                    type="text"
-                    value={newAddress}
-                    onChange={e => setNewAddress(e.target.value)}
-                    placeholder="Street, City"
-                  />
                 </div>
               </div>
             )}
