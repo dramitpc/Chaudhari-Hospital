@@ -185,7 +185,7 @@ Rules:
   let translated: Record<string, string> = {};
   try {
     const completion = await openaiClient.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       max_completion_tokens: 4096,
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
     });
@@ -249,7 +249,7 @@ Rules:
   let translated: Record<string, string> = {};
   try {
     const completion = await openaiClient2.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       max_completion_tokens: 8192,
       messages: [
         { role: "system", content: systemPrompt },
