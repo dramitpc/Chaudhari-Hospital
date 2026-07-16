@@ -905,6 +905,23 @@ export default function QueuePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
+                  <Label className="text-xs">Age</Label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Input type="number" min="0" max="150" value={newAgeYears} onChange={e => setNewAgeYears(e.target.value)} placeholder="0" className="pr-8 text-xs h-9" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">yr</span>
+                    </div>
+                    <div className="flex-1 relative">
+                      <Input type="number" min="0" max="11" value={newAgeMonths} onChange={e => setNewAgeMonths(e.target.value)} placeholder="0" className="pr-8 text-xs h-9" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">mo</span>
+                    </div>
+                    <div className="flex-1 relative">
+                      <Input type="number" min="0" max="31" value={newAgeDays} onChange={e => setNewAgeDays(e.target.value)} placeholder="0" className="pr-6 text-xs h-9" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">d</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs">Address</Label>
                   <Input
                     type="text"
@@ -934,23 +951,6 @@ export default function QueuePage() {
                       onChange={e => setNewPhone(e.target.value)}
                       placeholder="+91 98765 43210"
                     />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Age</Label>
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <Input type="number" min="0" max="150" value={newAgeYears} onChange={e => setNewAgeYears(e.target.value)} placeholder="0" className="pr-8 text-xs h-9" />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">yr</span>
-                    </div>
-                    <div className="flex-1 relative">
-                      <Input type="number" min="0" max="11" value={newAgeMonths} onChange={e => setNewAgeMonths(e.target.value)} placeholder="0" className="pr-8 text-xs h-9" />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">mo</span>
-                    </div>
-                    <div className="flex-1 relative">
-                      <Input type="number" min="0" max="31" value={newAgeDays} onChange={e => setNewAgeDays(e.target.value)} placeholder="0" className="pr-6 text-xs h-9" />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">d</span>
-                    </div>
                   </div>
                 </div>
               </div>
