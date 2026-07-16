@@ -1,7 +1,13 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { setAuthTokenGetter, setTokenRefresher } from "@workspace/api-client-react";
+import { setBaseUrl, setAuthTokenGetter, setTokenRefresher } from "@workspace/api-client-react";
+
+// When VITE_API_BASE_URL is set (e.g. Vercel deployment pointing at a remote
+// API server), prepend it to every relative /api/... call.  Leave blank for
+// Replit and NAS deployments where the API is on the same origin.
+const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+setBaseUrl(apiBase || null);
 
 setAuthTokenGetter(() => localStorage.getItem("accessToken"));
 
@@ -10,7 +16,7 @@ async function doRefresh(): Promise<string | null> {
   if (!refreshToken) return null;
 
   try {
-    const res = await fetch("/api/auth/refresh", {
+    const res = await fetch(`${apiBase}/api/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
