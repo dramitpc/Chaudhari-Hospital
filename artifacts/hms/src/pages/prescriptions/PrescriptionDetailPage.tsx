@@ -436,7 +436,7 @@ export default function PrescriptionDetailPage() {
 
         {prescription.doctorConsultingHours && (
           <div className="-mt-4 mb-2 text-center">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">Consulting Hours:</span>&ensp;{prescription.doctorConsultingHours}
             </p>
           </div>
