@@ -411,9 +411,31 @@ export default function InvoiceDetailPage() {
           )}
           <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px 12px" }}>
             <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>Payment</div>
-            {invoice.paymentMode && <div style={{ fontWeight: 600, fontSize: "13px", textTransform: "capitalize" }}>{invoice.paymentMode}</div>}
-            <div style={{ color: "#166534", fontWeight: 600, marginTop: "2px" }}>Paid: ₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
-            {(invoice.balance ?? 0) > 0 && <div style={{ color: "#92400e", fontWeight: 600, marginTop: "2px" }}>Balance: ₹{(invoice.balance ?? 0).toFixed(2)}</div>}
+            {payments && payments.length > 0 ? (
+              <div>
+                {payments.map((p, idx) => (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: idx < payments.length - 1 ? "4px" : "0", paddingBottom: idx < payments.length - 1 ? "4px" : "0", borderBottom: idx < payments.length - 1 ? "1px dashed #e2e8f0" : "none" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "11px", textTransform: "capitalize", color: "#1e3a5f" }}>{p.paymentMode}</div>
+                      <div style={{ fontSize: "9px", color: "#888" }}>{fmtDate(p.paidAt)}</div>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: "12px", color: "#166534" }}>₹{p.amount.toFixed(2)}</div>
+                  </div>
+                ))}
+                {payments.length > 1 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #cbd5e1", marginTop: "4px", paddingTop: "3px" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#1e3a5f" }}>Total Paid</div>
+                    <div style={{ fontWeight: 700, fontSize: "11px", color: "#166534" }}>₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {invoice.paymentMode && <div style={{ fontWeight: 600, fontSize: "13px", textTransform: "capitalize" }}>{invoice.paymentMode}</div>}
+                <div style={{ color: "#166534", fontWeight: 600, marginTop: "2px" }}>Paid: ₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
+              </>
+            )}
+            {(invoice.balance ?? 0) > 0 && <div style={{ color: "#92400e", fontWeight: 600, marginTop: "4px", fontSize: "11px" }}>Balance: ₹{(invoice.balance ?? 0).toFixed(2)}</div>}
           </div>
         </div>
 
