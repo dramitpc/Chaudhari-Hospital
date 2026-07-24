@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, desc, gte, lt, and } from "drizzle-orm";
-import { db, invoicesTable, chargeTypesTable, patientsTable, usersTable } from "@workspace/db";
+import { db, invoicesTable, invoicePaymentsTable, chargeTypesTable, patientsTable, usersTable } from "@workspace/db";
 import {
   ListInvoicesQueryParams,
   CreateInvoiceBody,
@@ -163,6 +163,26 @@ router.patch("/billing/invoices/:id", authenticate, async (req, res): Promise<vo
   res.json(await formatInvoice(inv));
 });
 
+router.get("/billing/invoices/:id/payments", authenticate, async (req, res): Promise<void> => {
+  const params = GetInvoiceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const payments = await db.select().from(invoicePaymentsTable)
+    .where(eq(invoicePaymentsTable.invoiceId, params.data.id))
+    .orderBy(invoicePaymentsTable.paidAt);
+  res.json(payments.map(p => ({
+    id: p.id,
+    invoiceId: p.invoiceId,
+    amount: p.amount,
+    paymentMode: p.paymentMode,
+    notes: p.notes ?? null,
+    paidAt: p.paidAt.toISOString(),
+    createdAt: p.createdAt.toISOString(),
+  })));
+});
+
 router.post("/billing/invoices/:id/pay", authenticate, async (req, res): Promise<void> => {
   const params = RecordPaymentParams.safeParse(req.params);
   if (!params.success) {
@@ -179,16 +199,27 @@ router.post("/billing/invoices/:id/pay", authenticate, async (req, res): Promise
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
-  const newPaid = Math.min(existing.amountPaid + parsed.data.amount, existing.total);
+  const appliedAmount = Math.min(parsed.data.amount, existing.balance);
+  const newPaid = existing.amountPaid + appliedAmount;
   const newBalance = existing.total - newPaid;
   const status = newBalance <= 0 ? "paid" : "partial";
+
+  // Insert a ledger entry for this specific payment
+  await db.insert(invoicePaymentsTable).values({
+    invoiceId: params.data.id,
+    amount: appliedAmount,
+    paymentMode: parsed.data.paymentMode as typeof invoicePaymentsTable.$inferInsert["paymentMode"],
+    notes: parsed.data.notes ?? null,
+    createdById: req.user!.id,
+  });
+
   const [inv] = await db.update(invoicesTable).set({
     amountPaid: newPaid,
     balance: Math.max(0, newBalance),
     status,
     paymentMode: parsed.data.paymentMode as typeof invoicesTable.$inferInsert["paymentMode"],
   }).where(eq(invoicesTable.id, params.data.id)).returning();
-  await logAudit(req, req.user!.id, "RECORD_PAYMENT", "billing", inv.id, `Amount: ${parsed.data.amount}, Mode: ${parsed.data.paymentMode}`);
+  await logAudit(req, req.user!.id, "RECORD_PAYMENT", "billing", inv.id, `Amount: ${appliedAmount}, Mode: ${parsed.data.paymentMode}`);
   res.json(await formatInvoice(inv));
 });
 

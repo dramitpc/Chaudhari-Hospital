@@ -932,6 +932,27 @@ export const InvoiceStatus = {
   refunded: 'refunded',
 } as const;
 
+export type InvoicePaymentPaymentMode = typeof InvoicePaymentPaymentMode[keyof typeof InvoicePaymentPaymentMode];
+
+
+export const InvoicePaymentPaymentMode = {
+  cash: 'cash',
+  card: 'card',
+  upi: 'upi',
+  insurance: 'insurance',
+} as const;
+
+export interface InvoicePayment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  paymentMode: InvoicePaymentPaymentMode;
+  /** @nullable */
+  notes?: string | null;
+  paidAt: string;
+  createdAt: string;
+}
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -957,6 +978,7 @@ export interface Invoice {
   notes?: string | null;
   createdAt: string;
   updatedAt?: string;
+  payments?: InvoicePayment[];
 }
 
 export interface InvoiceInput {

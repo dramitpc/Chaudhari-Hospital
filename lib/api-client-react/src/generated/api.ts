@@ -70,6 +70,7 @@ import type {
   Invoice,
   InvoiceInput,
   InvoiceListResponse,
+  InvoicePayment,
   InvoiceUpdate,
   ListAppointmentsParams,
   ListAuditLogsParams,
@@ -3872,6 +3873,83 @@ export const useUpdateInvoice = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateInvoiceMutationOptions(options));
     }
+
+export const getListInvoicePaymentsUrl = (id: string,) => {
+
+
+
+
+  return `/api/billing/invoices/${id}/payments`
+}
+
+/**
+ * @summary List all payment entries for an invoice
+ */
+export const listInvoicePayments = async (id: string, options?: RequestInit): Promise<InvoicePayment[]> => {
+
+  return customFetch<InvoicePayment[]>(getListInvoicePaymentsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInvoicePaymentsQueryKey = (id: string,) => {
+    return [
+    `/api/billing/invoices/${id}/payments`
+    ] as const;
+    }
+
+
+export const getListInvoicePaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listInvoicePayments>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvoicePayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvoicePaymentsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvoicePayments>>> = ({ signal }) => listInvoicePayments(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvoicePayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInvoicePaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listInvoicePayments>>>
+export type ListInvoicePaymentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all payment entries for an invoice
+ */
+
+export function useListInvoicePayments<TData = Awaited<ReturnType<typeof listInvoicePayments>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvoicePayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInvoicePaymentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getRecordPaymentUrl = (id: string,) => {
 

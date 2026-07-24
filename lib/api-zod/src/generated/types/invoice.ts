@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { InvoiceItem } from './invoiceItem';
+import type { InvoicePayment } from './invoicePayment';
 import type { InvoicePaymentMode } from './invoicePaymentMode';
 import type { InvoiceStatus } from './invoiceStatus';
 
@@ -34,4 +35,5 @@ export interface Invoice {
   notes?: string | null;
   createdAt: string;
   updatedAt?: string;
+  payments?: InvoicePayment[];
 }

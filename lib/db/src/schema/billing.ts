@@ -46,8 +46,20 @@ export const invoicesTable = pgTable("invoices", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
+export const invoicePaymentsTable = pgTable("invoice_payments", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  invoiceId: text("invoice_id").notNull().references(() => invoicesTable.id),
+  amount: real("amount").notNull(),
+  paymentMode: paymentModeEnum("payment_mode").notNull(),
+  notes: text("notes"),
+  paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
+  createdById: text("created_by_id").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertInvoiceSchema = createInsertSchema(invoicesTable).omit({ id: true, invoiceNumber: true, createdAt: true, updatedAt: true });
 export const insertChargeTypeSchema = createInsertSchema(chargeTypesTable).omit({ id: true, createdAt: true });
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoicesTable.$inferSelect;
 export type ChargeType = typeof chargeTypesTable.$inferSelect;
+export type InvoicePayment = typeof invoicePaymentsTable.$inferSelect;

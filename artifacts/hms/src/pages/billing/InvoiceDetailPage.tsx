@@ -3,7 +3,9 @@ import { useRoute, useLocation, useSearch } from "wouter";
 import { fmtDate } from "@/lib/dateUtils";
 import {
   useGetInvoice, useRecordPayment, useUpdateInvoice, useGetPatient, useGetClinicSettings,
-  getGetInvoiceQueryKey, getListInvoicesQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey
+  useListInvoicePayments,
+  getGetInvoiceQueryKey, getListInvoicesQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey,
+  getListInvoicePaymentsQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +59,10 @@ export default function InvoiceDetailPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
+  const { data: payments } = useListInvoicePayments(id, {
+    query: { enabled: !!id, queryKey: getListInvoicePaymentsQueryKey(id) }
+  });
+
   const paymentMutation = useRecordPayment();
   const cancelMutation = useUpdateInvoice();
   const [payAmount, setPayAmount] = useState("");
@@ -106,6 +112,7 @@ export default function InvoiceDetailPage() {
         toast({ title: "Payment recorded" });
         queryClient.invalidateQueries({ queryKey: getGetInvoiceQueryKey(id) });
         queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListInvoicePaymentsQueryKey(id) });
         setPayAmount("");
       },
       onError: () => toast({ title: "Failed to record payment", variant: "destructive" }),
@@ -313,16 +320,38 @@ export default function InvoiceDetailPage() {
               <span className="font-mono">{invoice.invoiceNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Date</span>
+              <span className="text-muted-foreground">Invoice Date</span>
               <span>{fmtDate(invoice.createdAt)}</span>
             </div>
-            {invoice.paymentMode && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Payment Mode</span>
-                <span className="capitalize">{invoice.paymentMode}</span>
-              </div>
-            )}
           </div>
+
+          {payments && payments.length > 0 && (
+            <div className="rounded-lg border border-border bg-card p-5 space-y-3 text-sm">
+              <h3 className="font-semibold">Payment History</h3>
+              <div className="space-y-2">
+                {payments.map((p, idx) => (
+                  <div key={p.id} className="flex items-start justify-between gap-2 py-2 border-b border-border last:border-0">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground">#{idx + 1} — {fmtDate(p.paidAt)}</span>
+                      <span className="capitalize text-xs font-medium text-muted-foreground">{p.paymentMode}</span>
+                      {p.notes && <span className="text-xs text-muted-foreground italic">{p.notes}</span>}
+                    </div>
+                    <span className="font-semibold text-green-700 whitespace-nowrap">₹{p.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between pt-1 font-semibold border-t border-border">
+                <span>Total Collected</span>
+                <span className="text-green-700">₹{(invoice.amountPaid ?? 0).toFixed(2)}</span>
+              </div>
+              {(invoice.balance ?? 0) > 0 && (
+                <div className="flex justify-between font-semibold text-amber-600">
+                  <span>Balance Due</span>
+                  <span>₹{(invoice.balance ?? 0).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

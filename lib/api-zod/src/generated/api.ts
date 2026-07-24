@@ -1486,7 +1486,16 @@ export const ListInvoicesResponse = zod.object({
   "status": zod.enum(['draft', 'pending', 'paid', 'partial', 'cancelled', 'refunded']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "updatedAt": zod.string().optional()
+  "updatedAt": zod.string().optional(),
+  "payments": zod.array(zod.object({
+  "id": zod.string(),
+  "invoiceId": zod.string(),
+  "amount": zod.number(),
+  "paymentMode": zod.enum(['cash', 'card', 'upi', 'insurance']),
+  "notes": zod.string().nullish(),
+  "paidAt": zod.string(),
+  "createdAt": zod.string()
+})).optional()
 })),
   "total": zod.number(),
   "page": zod.number(),
@@ -1549,7 +1558,16 @@ export const GetInvoiceResponse = zod.object({
   "status": zod.enum(['draft', 'pending', 'paid', 'partial', 'cancelled', 'refunded']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "updatedAt": zod.string().optional()
+  "updatedAt": zod.string().optional(),
+  "payments": zod.array(zod.object({
+  "id": zod.string(),
+  "invoiceId": zod.string(),
+  "amount": zod.number(),
+  "paymentMode": zod.enum(['cash', 'card', 'upi', 'insurance']),
+  "notes": zod.string().nullish(),
+  "paidAt": zod.string(),
+  "createdAt": zod.string()
+})).optional()
 })
 
 
@@ -1602,8 +1620,36 @@ export const UpdateInvoiceResponse = zod.object({
   "status": zod.enum(['draft', 'pending', 'paid', 'partial', 'cancelled', 'refunded']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "updatedAt": zod.string().optional()
+  "updatedAt": zod.string().optional(),
+  "payments": zod.array(zod.object({
+  "id": zod.string(),
+  "invoiceId": zod.string(),
+  "amount": zod.number(),
+  "paymentMode": zod.enum(['cash', 'card', 'upi', 'insurance']),
+  "notes": zod.string().nullish(),
+  "paidAt": zod.string(),
+  "createdAt": zod.string()
+})).optional()
 })
+
+
+/**
+ * @summary List all payment entries for an invoice
+ */
+export const ListInvoicePaymentsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListInvoicePaymentsResponseItem = zod.object({
+  "id": zod.string(),
+  "invoiceId": zod.string(),
+  "amount": zod.number(),
+  "paymentMode": zod.enum(['cash', 'card', 'upi', 'insurance']),
+  "notes": zod.string().nullish(),
+  "paidAt": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListInvoicePaymentsResponse = zod.array(ListInvoicePaymentsResponseItem)
 
 
 /**
@@ -1647,7 +1693,16 @@ export const RecordPaymentResponse = zod.object({
   "status": zod.enum(['draft', 'pending', 'paid', 'partial', 'cancelled', 'refunded']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "updatedAt": zod.string().optional()
+  "updatedAt": zod.string().optional(),
+  "payments": zod.array(zod.object({
+  "id": zod.string(),
+  "invoiceId": zod.string(),
+  "amount": zod.number(),
+  "paymentMode": zod.enum(['cash', 'card', 'upi', 'insurance']),
+  "notes": zod.string().nullish(),
+  "paidAt": zod.string(),
+  "createdAt": zod.string()
+})).optional()
 })
 
 

@@ -1080,6 +1080,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Invoice"
 
+  /billing/invoices/{id}/payments:
+    get:
+      operationId: listInvoicePayments
+      tags: [billing]
+      summary: List all payment entries for an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of payment entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoicePayment"
+
   /billing/invoices/{id}/pay:
     post:
       operationId: recordPayment
@@ -2884,6 +2905,30 @@ components:
         createdAt:
           type: string
         updatedAt:
+          type: string
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoicePayment"
+
+    InvoicePayment:
+      type: object
+      required: [id, invoiceId, amount, paymentMode, paidAt, createdAt]
+      properties:
+        id:
+          type: string
+        invoiceId:
+          type: string
+        amount:
+          type: number
+        paymentMode:
+          type: string
+          enum: [cash, card, upi, insurance]
+        notes:
+          type: ["string", "null"]
+        paidAt:
+          type: string
+        createdAt:
           type: string
 
     InvoiceInput:
