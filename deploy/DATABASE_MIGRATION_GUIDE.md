@@ -177,7 +177,7 @@ sudo vi /etc/crontab
 **2. Add this line at the bottom** (the format requires a username field):
 
 ```
-0	2	*	*	*	root	sh /volume1/docker/clinicos/deploy/backup.sh >> /volume1/docker/clinicos/backups/backup.log 2>&1
+30	0	*	*	*	root	sh /volume1/docker/clinicos/deploy/backup.sh >> /volume1/docker/clinicos/backups/backup.log 2>&1
 ```
 
 > Use a real tab character between each field (not spaces).
