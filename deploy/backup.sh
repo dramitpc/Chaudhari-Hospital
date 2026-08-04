@@ -18,7 +18,6 @@ docker exec clinicos-postgres rm /tmp/clinicos_backup.sql
 
 echo "Compressing to $FILE..."
 gzip -c /tmp/clinicos_backup.sql > $FILE
-rm -f /tmp/clinicos_backup.sql
 
 echo "Done: $FILE"
 du -sh $FILE
