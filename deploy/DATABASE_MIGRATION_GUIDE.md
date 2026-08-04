@@ -203,6 +203,78 @@ sudo crontab -l
 
 ---
 
+## Part 5 — Applying Schema Updates After a Code Upgrade
+
+When you pull new code with `git reset --hard origin/main` and rebuild, some
+updates add new database tables or columns. These schema changes are **not**
+applied automatically on the NAS — you must run the SQL manually after the
+rebuild.
+
+### General pattern
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "
+<SQL goes here>
+"
+```
+
+You can confirm a table exists before running:
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "\dt invoice_payments"
+# "Did not find any relation named ..." means the migration is needed.
+```
+
+---
+
+### Migration index
+
+Apply each migration that is newer than your current NAS installation.
+They are safe to run repeatedly — all use `CREATE TABLE IF NOT EXISTS` /
+`ADD COLUMN IF NOT EXISTS` so re-running them on an already-updated database
+does nothing.
+
+---
+
+#### M-001 — Payment ledger (`invoice_payments`)
+
+**When added:** payment history per invoice (each collected amount gets its own
+dated entry instead of a single running total).
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "
+CREATE TABLE IF NOT EXISTS invoice_payments (
+  id              text        PRIMARY KEY,
+  invoice_id      text        NOT NULL REFERENCES invoices(id),
+  amount          real        NOT NULL,
+  payment_mode    payment_mode NOT NULL,
+  notes           text,
+  paid_at         timestamptz NOT NULL DEFAULT now(),
+  created_by_id   text        REFERENCES users(id) ON DELETE SET NULL,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+"
+```
+
+Verify:
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "\dt invoice_payments"
+# Should show: public | invoice_payments | table | clinicos
+```
+
+---
+
+### Rebuild after applying migrations
+
+```bash
+cd /volume1/docker/clinicos
+DOCKER_BUILDKIT=0 sudo docker compose -f deploy/docker-compose.yml build clinicos-api clinicos-frontend
+sudo docker compose -f deploy/docker-compose.yml up -d
+```
+
+---
+
 ## Restoring from a Backup
 
 ```bash
