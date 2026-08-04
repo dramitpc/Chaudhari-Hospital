@@ -1,24 +1,28 @@
 #!/bin/sh
+set -e
 
-BACKUP_DIR="/volume1/docker/clinicos/backups"
-DATE=$(date +%Y%m%d_%H%M)
-FILE="$BACKUP_DIR/clinicos_$DATE.sql.gz"
+BACKUP_DIR=/volume1/docker/clinicos/backups
 RETAIN_DAYS=30
 
-mkdir -p "$BACKUP_DIR"
+mkdir -p $BACKUP_DIR
 
-# Dump to a temp file inside the container, copy it out, then compress
-sudo docker exec clinicos-postgres \
-  pg_dump -U clinicos clinicos \
-  --no-owner --no-acl --format=plain \
-  --file=/tmp/clinicos_backup.sql
+TS=$(date +%Y%m%d_%H%M)
+FILE=$BACKUP_DIR/clinicos_$TS.sql.gz
 
-sudo docker cp clinicos-postgres:/tmp/clinicos_backup.sql /tmp/clinicos_backup.sql
-gzip -c /tmp/clinicos_backup.sql > "$FILE"
+echo "Dumping database..."
+docker exec clinicos-postgres pg_dump -U clinicos clinicos --no-owner --no-acl --format=plain --file=/tmp/clinicos_backup.sql
+
+echo "Copying dump..."
+docker cp clinicos-postgres:/tmp/clinicos_backup.sql /tmp/clinicos_backup.sql
+docker exec clinicos-postgres rm /tmp/clinicos_backup.sql
+
+echo "Compressing to $FILE..."
+gzip -c /tmp/clinicos_backup.sql > $FILE
 rm -f /tmp/clinicos_backup.sql
 
-echo "$(date): Backup written to $FILE ($(du -sh "$FILE" | cut -f1))"
+echo "Done: $FILE"
+du -sh $FILE
 
-# Delete backups older than RETAIN_DAYS (BusyBox-compatible)
-find "$BACKUP_DIR" -name "clinicos_*.sql.gz" -mtime +"$RETAIN_DAYS" -exec rm {} \;
-echo "$(date): Pruned backups older than $RETAIN_DAYS days"
+echo "Pruning backups older than $RETAIN_DAYS days..."
+find $BACKUP_DIR -name "clinicos_*.sql.gz" -mtime +$RETAIN_DAYS -exec rm {} \;
+echo "Pruning complete."
