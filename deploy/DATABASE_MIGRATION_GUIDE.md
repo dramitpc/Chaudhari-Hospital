@@ -136,67 +136,68 @@ Open `http://<NAS-IP>:<HOST_PORT>` and log in with your existing credentials.
 Once the NAS is live, set up a cron job that dumps the database every night and
 keeps 30 days of backups.
 
-### 4a. Create the backup script
+### 4a. Get the backup script from the repo
+
+The script lives at `deploy/backup.sh` in the repository. After pulling the
+latest code it is already present — no need to create it manually.
 
 ```bash
-mkdir -p /volume1/docker/clinicos/backups
-nano /volume1/docker/clinicos/deploy/backup.sh
+cd /volume1/docker/clinicos
+git fetch origin && git reset --hard origin/main
 ```
 
-Paste this content:
+> **Synology note:** Git on Windows adds Windows-style line endings (CRLF) to
+> files. Strip them before running the script, otherwise shell variable
+> assignments will silently break:
+>
+> ```bash
+> sed -i 's/\r//' deploy/backup.sh
+> chmod +x deploy/backup.sh
+> ```
+
+Test it once manually:
 
 ```bash
-#!/bin/sh
-
-BACKUP_DIR="/volume1/docker/clinicos/backups"
-DATE=$(date +%Y%m%d_%H%M)
-FILE="$BACKUP_DIR/clinicos_$DATE.sql.gz"
-RETAIN_DAYS=30
-
-mkdir -p "$BACKUP_DIR"
-
-# Dump to a temp SQL file inside the container, copy it out, compress
-sudo docker exec clinicos-postgres \
-  pg_dump -U clinicos clinicos \
-  --no-owner --no-acl --format=plain \
-  --file=/tmp/clinicos_backup.sql
-
-sudo docker cp clinicos-postgres:/tmp/clinicos_backup.sql /tmp/clinicos_backup.sql
-gzip -c /tmp/clinicos_backup.sql > "$FILE"
-rm -f /tmp/clinicos_backup.sql
-
-echo "$(date): Backup written to $FILE ($(du -sh "$FILE" | cut -f1))"
-
-# Delete backups older than RETAIN_DAYS (BusyBox-compatible)
-find "$BACKUP_DIR" -name "clinicos_*.sql.gz" -mtime +"$RETAIN_DAYS" -exec rm {} \;
-echo "$(date): Pruned backups older than $RETAIN_DAYS days"
-```
-
-Make it executable and test it:
-
-```bash
-chmod +x /volume1/docker/clinicos/deploy/backup.sh
-sudo bash /volume1/docker/clinicos/deploy/backup.sh
+sh /volume1/docker/clinicos/deploy/backup.sh
 ls -lh /volume1/docker/clinicos/backups/
 # Should show a .sql.gz file
 ```
 
 ### 4b. Schedule the cron job
 
-```bash
-sudo crontab -e
-```
+Synology DSM does **not** have the `crontab` or `synoservice` commands. Edit
+`/etc/crontab` directly and signal the daemon to reload it.
 
-Add this line (runs at 2:00 AM every night):
-
-```
-0 2 * * * /volume1/docker/clinicos/deploy/backup.sh >> /volume1/docker/clinicos/backups/backup.log 2>&1
-```
-
-Save and confirm:
+**1. Open `/etc/crontab` in the editor:**
 
 ```bash
-sudo crontab -l
+sudo vi /etc/crontab
+```
+
+**2. Add this line at the bottom** (the format requires a username field):
+
+```
+0	2	*	*	*	root	sh /volume1/docker/clinicos/deploy/backup.sh >> /volume1/docker/clinicos/backups/backup.log 2>&1
+```
+
+> Use a real tab character between each field (not spaces).
+
+**3. Save and exit** (`:wq`), then reload the daemon:
+
+```bash
+kill -HUP $(cat /var/run/crond.pid)
+```
+
+If `/var/run/crond.pid` does not exist:
+
+```bash
+killall -HUP crond
+```
+
+**4. Verify:**
+
+```bash
+cat /etc/crontab
 ```
 
 ### 4c. (Optional) Archive off-NAS with HyperBackup
