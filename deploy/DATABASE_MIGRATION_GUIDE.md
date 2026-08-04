@@ -163,7 +163,7 @@ sudo docker exec clinicos-postgres \
 echo "$(date): Backup written to $FILE ($(du -sh "$FILE" | cut -f1))"
 
 # Delete backups older than RETAIN_DAYS
-find "$BACKUP_DIR" -name "clinicos_*.sql.gz" -mtime +"$RETAIN_DAYS" -delete
+find "$BACKUP_DIR" -name "clinicos_*.sql.gz" -mtime +"$RETAIN_DAYS" -exec rm {} \;
 echo "$(date): Pruned backups older than $RETAIN_DAYS days"
 ```
 
