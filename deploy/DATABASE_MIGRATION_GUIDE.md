@@ -185,13 +185,13 @@ sudo vi /etc/crontab
 **3. Save and exit** (`:wq`), then reload the daemon:
 
 ```bash
-kill -HUP $(cat /var/run/crond.pid)
+sudo kill -HUP $(cat /var/run/crond.pid)
 ```
 
 If `/var/run/crond.pid` does not exist:
 
 ```bash
-killall -HUP crond
+sudo killall -HUP crond
 ```
 
 **4. Verify:**
