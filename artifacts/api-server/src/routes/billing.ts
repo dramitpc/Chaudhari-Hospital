@@ -14,6 +14,7 @@ import {
 import { authenticate, requireRole } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
 import { dayBounds } from "../lib/date";
+import { notifyPaymentReceived } from "../lib/whatsapp";
 
 const router = Router();
 
@@ -220,7 +221,18 @@ router.post("/billing/invoices/:id/pay", authenticate, async (req, res): Promise
     paymentMode: parsed.data.paymentMode as typeof invoicesTable.$inferInsert["paymentMode"],
   }).where(eq(invoicesTable.id, params.data.id)).returning();
   await logAudit(req, req.user!.id, "RECORD_PAYMENT", "billing", inv.id, `Amount: ${appliedAmount}, Mode: ${parsed.data.paymentMode}`);
-  res.json(await formatInvoice(inv));
+  const formattedInv = await formatInvoice(inv);
+  // Fetch phone separately (not included in formatInvoice)
+  const [patientRow] = await db.select({ phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, existing.patientId));
+  notifyPaymentReceived({
+    phone: patientRow?.phone ?? null,
+    patientName: formattedInv.patientName,
+    invoiceNumber: formattedInv.invoiceNumber,
+    amount: appliedAmount,
+    balance: Math.max(0, newBalance),
+    paymentMode: parsed.data.paymentMode,
+  }).catch((err) => console.error("[WhatsApp] payment notify error:", err));
+  res.json(formattedInv);
 });
 
 router.get("/billing/charge-types", authenticate, async (req, res): Promise<void> => {

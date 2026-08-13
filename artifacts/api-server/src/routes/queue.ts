@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { localDateStr } from "../lib/date";
+import { notifyTokenGenerated } from "../lib/whatsapp";
 
 const router = Router();
 
@@ -165,7 +166,16 @@ router.post("/queue/tokens", authenticate, async (req, res): Promise<void> => {
     status: "waiting",
   }).returning();
 
-  res.status(201).json(await formatToken(token));
+  const formatted = await formatToken(token);
+  // Fire-and-forget — don't block the response
+  notifyTokenGenerated({
+    phone: formatted.patientPhone,
+    patientName: formatted.patientName,
+    tokenNumber: formatted.tokenNumber,
+    doctorName: formatted.doctorName,
+    queueDate: formatted.queueDate,
+  }).catch((err) => console.error("[WhatsApp] token notify error:", err));
+  res.status(201).json(formatted);
 });
 
 router.patch("/queue/tokens/:id/status", authenticate, async (req, res): Promise<void> => {

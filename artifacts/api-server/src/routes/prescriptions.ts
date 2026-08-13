@@ -15,6 +15,7 @@ import {
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
 import { localDateStr } from "../lib/date";
+import { notifyPrescriptionSaved } from "../lib/whatsapp";
 import OpenAI from "openai";
 
 function getOpenAI(): OpenAI | null {
@@ -152,7 +153,17 @@ router.post("/prescriptions", authenticate, async (req, res): Promise<void> => {
   const visitDate = consultationRow?.visitDate ?? localDateStr();
   const [p] = await db.insert(prescriptionsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_PRESCRIPTION", "prescriptions", p.id);
-  res.status(201).json(await formatPrescription(p));
+  const formatted = await formatPrescription(p);
+  // Fetch phone separately (not included in formatPrescription)
+  const [patientRow] = await db.select({ phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, p.patientId));
+  notifyPrescriptionSaved({
+    phone: patientRow?.phone ?? null,
+    patientName: formatted.patientName,
+    doctorName: formatted.doctorName,
+    visitDate: formatted.visitDate,
+    medicineCount: (formatted.items as unknown[]).length,
+  }).catch((err) => console.error("[WhatsApp] prescription notify error:", err));
+  res.status(201).json(formatted);
 });
 
 router.post("/prescriptions/translate-preview", authenticate, async (req, res): Promise<void> => {
