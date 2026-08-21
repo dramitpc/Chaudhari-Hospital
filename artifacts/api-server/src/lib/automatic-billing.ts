@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { automaticInvoiceChargesTable, chargeTypesTable, consultationsTable, db, invoicesTable } from "@workspace/db";
 
 type AutomaticChargeKind = "consultation" | "xray";
@@ -23,7 +23,6 @@ type AutomaticChargeInput = {
   sourceId: string;
 };
 
-const OPEN_INVOICE_STATUSES = ["draft", "pending", "partial"] as const;
 const AUTO_BILLING_KEYS: Record<AutomaticChargeKind, string> = {
   consultation: "new_visit_consultation",
   xray: "xray",
@@ -110,8 +109,8 @@ export async function addAutomaticCharge(input: AutomaticChargeInput): Promise<A
           .from(invoicesTable)
           .where(eq(invoicesTable.consultationId, input.consultationId))
           .orderBy(asc(invoicesTable.createdAt));
-        const openInvoice = consultationInvoices.find((invoice) =>
-          OPEN_INVOICE_STATUSES.includes(invoice.status as typeof OPEN_INVOICE_STATUSES[number]),
+        const visitInvoice = consultationInvoices.find((invoice) =>
+          invoice.status !== "cancelled" && invoice.status !== "refunded",
         );
 
         const lineItem: InvoiceLineItem = {
@@ -125,7 +124,7 @@ export async function addAutomaticCharge(input: AutomaticChargeInput): Promise<A
           autoSourceKey: marker,
         };
 
-        if (!openInvoice) {
+        if (!visitInvoice) {
           const totals = calculateInvoiceTotals([lineItem], 0);
           const invoice = await createAutomaticInvoice(tx, {
             patientId: input.patientId,
@@ -146,17 +145,20 @@ export async function addAutomaticCharge(input: AutomaticChargeInput): Promise<A
           return { status: "added", invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber };
         }
 
-        const items = [...((openInvoice.items as InvoiceLineItem[]) ?? []), lineItem];
-        const totals = calculateInvoiceTotals(items, openInvoice.discount ?? 0);
+        const items = [...((visitInvoice.items as InvoiceLineItem[]) ?? []), lineItem];
+        const totals = calculateInvoiceTotals(items, visitInvoice.discount ?? 0);
+        const amountPaid = visitInvoice.amountPaid ?? 0;
+        const status = totals.total <= amountPaid
+          ? "paid"
+          : amountPaid > 0
+            ? "partial"
+            : "pending";
         const [invoice] = await tx.update(invoicesTable).set({
           items,
           ...totals,
-          balance: Math.max(0, totals.total - (openInvoice.amountPaid ?? 0)),
-          status: openInvoice.amountPaid > 0 ? "partial" : "pending",
-        }).where(and(
-          eq(invoicesTable.id, openInvoice.id),
-          inArray(invoicesTable.status, OPEN_INVOICE_STATUSES),
-        )).returning();
+          balance: Math.max(0, totals.total - amountPaid),
+          status,
+        }).where(eq(invoicesTable.id, visitInvoice.id)).returning();
         if (!invoice) throw new RetryAutomaticBillingError();
 
         await tx.insert(automaticInvoiceChargesTable).values({
