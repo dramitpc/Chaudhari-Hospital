@@ -271,6 +271,47 @@ sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "\dt invoice_
 
 ---
 
+#### M-002 — Automatic visit billing
+
+**When added:** Automatically adds the configured new-visit consultation fee and
+X-Ray fee to invoices. This migration adds the charge-master mapping and a
+unique source ledger so a retried action cannot bill the same visit or X-Ray
+twice.
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "
+ALTER TABLE charge_types
+  ADD COLUMN IF NOT EXISTS auto_billing_key text;
+
+CREATE UNIQUE INDEX IF NOT EXISTS charge_types_auto_billing_key_unique
+  ON charge_types (auto_billing_key)
+  WHERE auto_billing_key IS NOT NULL;
+
+CREATE SEQUENCE IF NOT EXISTS invoice_number_sequence;
+
+CREATE TABLE IF NOT EXISTS automatic_invoice_charges (
+  id          text        PRIMARY KEY,
+  source_key  text        NOT NULL UNIQUE,
+  invoice_id  text        NOT NULL REFERENCES invoices(id),
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+"
+```
+
+After the API is rebuilt, go to **Admin → Charges Master** and set:
+
+1. The appropriate consultation charge to **New visit consultation fee**.
+2. The appropriate X-Ray charge to **X-Ray fee**.
+
+Verify:
+
+```bash
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "\d charge_types"
+sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "\dt automatic_invoice_charges"
+```
+
+---
+
 ### Rebuild after applying migrations
 
 ```bash

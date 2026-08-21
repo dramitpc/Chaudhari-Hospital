@@ -24,8 +24,9 @@ const categoryColors: Record<Category, string> = {
   other:         "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
 };
 
-type ChargeForm = { name: string; category: Category; unitPrice: string; taxPercent: string };
-const emptyForm: ChargeForm = { name: "", category: "consultation", unitPrice: "", taxPercent: "0" };
+type AutomaticBillingKey = "" | "new_visit_consultation" | "xray";
+type ChargeForm = { name: string; category: Category; unitPrice: string; taxPercent: string; autoBillingKey: AutomaticBillingKey };
+const emptyForm: ChargeForm = { name: "", category: "consultation", unitPrice: "", taxPercent: "0", autoBillingKey: "" };
 
 export default function ChargesMasterPage() {
   const { toast } = useToast();
@@ -59,6 +60,7 @@ export default function ChargesMasterPage() {
       category: c.category as Category,
       unitPrice: String(c.unitPrice),
       taxPercent: String(c.taxPercent ?? 0),
+      autoBillingKey: (c.autoBillingKey as AutomaticBillingKey | null) ?? "",
     });
     setShowModal(true);
   };
@@ -69,6 +71,7 @@ export default function ChargesMasterPage() {
       category: form.category,
       unitPrice: parseFloat(form.unitPrice) || 0,
       taxPercent: parseFloat(form.taxPercent) || 0,
+      autoBillingKey: form.autoBillingKey || null,
     };
 
     if (editId) {
@@ -240,6 +243,21 @@ export default function ChargesMasterPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Automatic billing</Label>
+              <Select value={form.autoBillingKey || "none"} onValueChange={v => setForm(f => ({ ...f, autoBillingKey: v === "none" ? "" : v as AutomaticBillingKey }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not used automatically</SelectItem>
+                  <SelectItem value="new_visit_consultation">New visit consultation fee</SelectItem>
+                  <SelectItem value="xray">X-Ray fee</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Only one charge can be assigned to each automatic billing rule.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

@@ -1715,6 +1715,7 @@ export const ListChargeTypesResponseItem = zod.object({
   "category": zod.enum(['consultation', 'procedure', 'investigation', 'other']),
   "unitPrice": zod.number(),
   "taxPercent": zod.number().optional(),
+  "autoBillingKey": zod.string().nullish(),
   "isActive": zod.boolean().optional()
 })
 export const ListChargeTypesResponse = zod.array(ListChargeTypesResponseItem)
@@ -1727,7 +1728,8 @@ export const CreateChargeTypeBody = zod.object({
   "name": zod.string(),
   "category": zod.enum(['consultation', 'procedure', 'investigation', 'other']),
   "unitPrice": zod.number(),
-  "taxPercent": zod.number().optional()
+  "taxPercent": zod.number().optional(),
+  "autoBillingKey": zod.string().nullish()
 })
 
 
@@ -1742,7 +1744,8 @@ export const UpdateChargeTypeBody = zod.object({
   "name": zod.string(),
   "category": zod.enum(['consultation', 'procedure', 'investigation', 'other']),
   "unitPrice": zod.number(),
-  "taxPercent": zod.number().optional()
+  "taxPercent": zod.number().optional(),
+  "autoBillingKey": zod.string().nullish()
 })
 
 export const UpdateChargeTypeResponse = zod.object({
@@ -1751,6 +1754,7 @@ export const UpdateChargeTypeResponse = zod.object({
   "category": zod.enum(['consultation', 'procedure', 'investigation', 'other']),
   "unitPrice": zod.number(),
   "taxPercent": zod.number().optional(),
+  "autoBillingKey": zod.string().nullish(),
   "isActive": zod.boolean().optional()
 })
 

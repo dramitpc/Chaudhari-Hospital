@@ -13,5 +13,7 @@ export interface ChargeType {
   category: ChargeTypeCategory;
   unitPrice: number;
   taxPercent?: number;
+  /** @nullable */
+  autoBillingKey?: string | null;
   isActive?: boolean;
 }

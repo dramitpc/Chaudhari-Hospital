@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
+import { addAutomaticCharge } from "../lib/automatic-billing";
 
 const router = Router();
 
@@ -62,6 +63,24 @@ router.post(
       .returning();
 
     await logAudit(req, req.user!.id, "create", "investigation", row.id);
+    if (row.type.trim().toLowerCase().replace(/[^a-z]/g, "") === "xray" && row.consultationId) {
+      try {
+        const billing = await addAutomaticCharge({
+          kind: "xray",
+          consultationId: row.consultationId,
+          patientId: row.patientId,
+          doctorId: row.requestedById,
+          createdById: req.user!.id,
+          sourceId: row.id,
+        });
+        if (billing.status === "missing_charge") {
+          req.log.warn({ investigationId: row.id }, billing.message);
+        }
+      } catch (error) {
+        req.log.error({ err: error, investigationId: row.id }, "Unable to add automatic X-Ray charge");
+      }
+    }
+
     return res.status(201).json(row);
   }
 );

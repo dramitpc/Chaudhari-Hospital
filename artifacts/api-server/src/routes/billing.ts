@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, gte, lt, and } from "drizzle-orm";
+import { eq, desc, gte, lt, and, sql } from "drizzle-orm";
 import { db, invoicesTable, invoicePaymentsTable, chargeTypesTable, patientsTable, usersTable } from "@workspace/db";
 import {
   ListInvoicesQueryParams,
@@ -15,6 +15,7 @@ import { authenticate, requireRole } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
 import { dayBounds } from "../lib/date";
 import { notifyPaymentReceived } from "../lib/whatsapp";
+import { calculateInvoiceTotals, nextInvoiceNumber, type InvoiceLineItem } from "../lib/automatic-billing";
 
 const router = Router();
 
@@ -42,15 +43,6 @@ async function formatInvoice(inv: typeof invoicesTable.$inferSelect) {
     createdAt: inv.createdAt.toISOString(),
     updatedAt: inv.updatedAt.toISOString(),
   };
-}
-
-function generateInvoiceNumber() {
-  const now = new Date();
-  const y = now.getFullYear().toString().slice(-2);
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const rand = Math.floor(Math.random() * 9000) + 1000;
-  return `INV-${y}${m}${d}-${rand}`;
 }
 
 router.get("/billing/invoices", authenticate, async (req, res): Promise<void> => {
@@ -83,24 +75,20 @@ router.post("/billing/invoices", authenticate, async (req, res): Promise<void> =
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const items = (parsed.data.items as Array<{ quantity: number; unitPrice: number; discount?: number; tax?: number; total: number }>) ?? [];
-  const subtotal = items.reduce((s, i) => s + i.total, 0);
+  const items = (parsed.data.items as InvoiceLineItem[]) ?? [];
   const discountAmt = parsed.data.discount ?? 0;
-  const taxAmt = items.reduce((s, i) => s + (i.tax ?? 0), 0);
-  const total = subtotal - discountAmt + taxAmt;
+  const totals = calculateInvoiceTotals(items, discountAmt);
 
   const [inv] = await db.insert(invoicesTable).values({
-    invoiceNumber: generateInvoiceNumber(),
+    invoiceNumber: nextInvoiceNumber(),
     patientId: parsed.data.patientId,
     consultationId: parsed.data.consultationId,
     doctorId: parsed.data.doctorId,
     items: parsed.data.items as typeof invoicesTable.$inferInsert["items"],
-    subtotal,
+    ...totals,
     discount: discountAmt,
-    tax: taxAmt,
-    total,
     amountPaid: 0,
-    balance: total,
+    balance: totals.total,
     status: "pending",
     notes: parsed.data.notes,
     createdById: req.user!.id,
@@ -135,33 +123,45 @@ router.patch("/billing/invoices/:id", authenticate, async (req, res): Promise<vo
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const updates: Partial<typeof invoicesTable.$inferInsert> = {};
-  if (parsed.data.items) {
-    const existing = await db.query.invoicesTable.findFirst({ where: eq(invoicesTable.id, params.data.id) });
-    if (!existing) {
-      res.status(404).json({ error: "Invoice not found" });
-      return;
+  const outcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM ${invoicesTable} WHERE ${invoicesTable.id} = ${params.data.id} FOR UPDATE`);
+    const [existing] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id));
+    if (!existing) return { type: "not_found" as const };
+    if (existing.status === "paid") return { type: "paid" as const };
+    if (parsed.data.status === "paid") return { type: "direct_paid_status" as const };
+
+    const updates: Partial<typeof invoicesTable.$inferInsert> = {};
+    if (parsed.data.items) {
+      const items = parsed.data.items as InvoiceLineItem[];
+      const discountAmt = parsed.data.discount ?? 0;
+      const totals = calculateInvoiceTotals(items, discountAmt);
+      updates.items = parsed.data.items as typeof invoicesTable.$inferInsert["items"];
+      updates.subtotal = totals.subtotal;
+      updates.tax = totals.tax;
+      updates.discount = discountAmt;
+      updates.total = totals.total;
+      updates.balance = Math.max(0, totals.total - (existing.amountPaid ?? 0));
     }
-    const items = parsed.data.items as Array<{ quantity: number; unitPrice: number; discount?: number; tax?: number; total: number }>;
-    const subtotal = items.reduce((s, i) => s + i.total, 0);
-    const taxAmt = items.reduce((s, i) => s + (i.tax ?? 0), 0);
-    const discountAmt = parsed.data.discount ?? 0;
-    const total = subtotal - discountAmt + taxAmt;
-    updates.items = parsed.data.items as typeof invoicesTable.$inferInsert["items"];
-    updates.subtotal = subtotal;
-    updates.tax = taxAmt;
-    updates.discount = discountAmt;
-    updates.total = total;
-    updates.balance = Math.max(0, total - (existing.amountPaid ?? 0));
-  }
-  if (parsed.data.notes) updates.notes = parsed.data.notes;
-  if (parsed.data.status) updates.status = parsed.data.status as typeof invoicesTable.$inferInsert["status"];
-  const [inv] = await db.update(invoicesTable).set(updates).where(eq(invoicesTable.id, params.data.id)).returning();
-  if (!inv) {
+    if (parsed.data.notes) updates.notes = parsed.data.notes;
+    if (parsed.data.status) updates.status = parsed.data.status as typeof invoicesTable.$inferInsert["status"];
+    const [invoice] = await tx.update(invoicesTable).set(updates).where(eq(invoicesTable.id, params.data.id)).returning();
+    if (!invoice) return { type: "not_found" as const };
+    return { type: "updated" as const, invoice };
+  });
+
+  if (outcome.type === "not_found") {
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
-  res.json(await formatInvoice(inv));
+  if (outcome.type === "paid") {
+    res.status(409).json({ error: "Paid invoices cannot be edited. Create a new invoice for additional charges." });
+    return;
+  }
+  if (outcome.type === "direct_paid_status") {
+    res.status(400).json({ error: "Use the payment endpoint to mark an invoice as paid." });
+    return;
+  }
+  res.json(await formatInvoice(outcome.invoice));
 });
 
 router.get("/billing/invoices/:id/payments", authenticate, async (req, res): Promise<void> => {
@@ -195,41 +195,59 @@ router.post("/billing/invoices/:id/pay", authenticate, async (req, res): Promise
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [existing] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id));
-  if (!existing) {
+  const paymentOutcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM ${invoicesTable} WHERE ${invoicesTable.id} = ${params.data.id} FOR UPDATE`);
+    const [existing] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id));
+    if (!existing) return { type: "not_found" as const };
+    if (existing.status === "paid") return { type: "already_paid" as const };
+
+    const appliedAmount = Math.min(parsed.data.amount, existing.balance);
+    const newPaid = existing.amountPaid + appliedAmount;
+    const newBalance = existing.total - newPaid;
+    const status = newBalance <= 0 ? "paid" : "partial";
+    const [invoice] = await tx.update(invoicesTable).set({
+      amountPaid: newPaid,
+      balance: Math.max(0, newBalance),
+      status,
+      paymentMode: parsed.data.paymentMode as typeof invoicesTable.$inferInsert["paymentMode"],
+    }).where(eq(invoicesTable.id, params.data.id)).returning();
+    if (!invoice) return { type: "not_found" as const };
+
+    await tx.insert(invoicePaymentsTable).values({
+      invoiceId: params.data.id,
+      amount: appliedAmount,
+      paymentMode: parsed.data.paymentMode as typeof invoicePaymentsTable.$inferInsert["paymentMode"],
+      notes: parsed.data.notes ?? null,
+      createdById: req.user!.id,
+    });
+    return {
+      type: "paid" as const,
+      invoice,
+      patientId: existing.patientId,
+      appliedAmount,
+      balance: Math.max(0, newBalance),
+    };
+  });
+
+  if (paymentOutcome.type === "not_found") {
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
-  const appliedAmount = Math.min(parsed.data.amount, existing.balance);
-  const newPaid = existing.amountPaid + appliedAmount;
-  const newBalance = existing.total - newPaid;
-  const status = newBalance <= 0 ? "paid" : "partial";
+  if (paymentOutcome.type === "already_paid") {
+    res.status(409).json({ error: "Invoice is already fully paid." });
+    return;
+  }
 
-  // Insert a ledger entry for this specific payment
-  await db.insert(invoicePaymentsTable).values({
-    invoiceId: params.data.id,
-    amount: appliedAmount,
-    paymentMode: parsed.data.paymentMode as typeof invoicePaymentsTable.$inferInsert["paymentMode"],
-    notes: parsed.data.notes ?? null,
-    createdById: req.user!.id,
-  });
-
-  const [inv] = await db.update(invoicesTable).set({
-    amountPaid: newPaid,
-    balance: Math.max(0, newBalance),
-    status,
-    paymentMode: parsed.data.paymentMode as typeof invoicesTable.$inferInsert["paymentMode"],
-  }).where(eq(invoicesTable.id, params.data.id)).returning();
-  await logAudit(req, req.user!.id, "RECORD_PAYMENT", "billing", inv.id, `Amount: ${appliedAmount}, Mode: ${parsed.data.paymentMode}`);
-  const formattedInv = await formatInvoice(inv);
+  await logAudit(req, req.user!.id, "RECORD_PAYMENT", "billing", paymentOutcome.invoice.id, `Amount: ${paymentOutcome.appliedAmount}, Mode: ${parsed.data.paymentMode}`);
+  const formattedInv = await formatInvoice(paymentOutcome.invoice);
   // Fetch phone separately (not included in formatInvoice)
-  const [patientRow] = await db.select({ phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, existing.patientId));
+  const [patientRow] = await db.select({ phone: patientsTable.phone }).from(patientsTable).where(eq(patientsTable.id, paymentOutcome.patientId));
   notifyPaymentReceived({
     phone: patientRow?.phone ?? null,
     patientName: formattedInv.patientName,
     invoiceNumber: formattedInv.invoiceNumber,
-    amount: appliedAmount,
-    balance: Math.max(0, newBalance),
+    amount: paymentOutcome.appliedAmount,
+    balance: paymentOutcome.balance,
     paymentMode: parsed.data.paymentMode,
   }).catch((err) => console.error("[WhatsApp] payment notify error:", err));
   res.json(formattedInv);
@@ -243,6 +261,7 @@ router.get("/billing/charge-types", authenticate, async (req, res): Promise<void
     category: t.category,
     unitPrice: t.unitPrice,
     taxPercent: t.taxPercent,
+    autoBillingKey: t.autoBillingKey ?? null,
     isActive: t.isActive,
   })));
 });
@@ -254,7 +273,7 @@ router.post("/billing/charge-types", authenticate, requireRole("admin"), async (
     return;
   }
   const [ct] = await db.insert(chargeTypesTable).values(parsed.data as typeof chargeTypesTable.$inferInsert).returning();
-  res.status(201).json({ id: ct.id, name: ct.name, category: ct.category, unitPrice: ct.unitPrice, taxPercent: ct.taxPercent, isActive: ct.isActive });
+  res.status(201).json({ id: ct.id, name: ct.name, category: ct.category, unitPrice: ct.unitPrice, taxPercent: ct.taxPercent, autoBillingKey: ct.autoBillingKey ?? null, isActive: ct.isActive });
 });
 
 router.patch("/billing/charge-types/:id", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
@@ -269,7 +288,7 @@ router.patch("/billing/charge-types/:id", authenticate, requireRole("admin"), as
     .returning();
   if (!ct) { res.status(404).json({ error: "Not found" }); return; }
   await logAudit(req, (req as { user?: { id: string } }).user?.id ?? "", "update", "charge_type", ct.id);
-  res.json({ id: ct.id, name: ct.name, category: ct.category, unitPrice: ct.unitPrice, taxPercent: ct.taxPercent, isActive: ct.isActive });
+  res.json({ id: ct.id, name: ct.name, category: ct.category, unitPrice: ct.unitPrice, taxPercent: ct.taxPercent, autoBillingKey: ct.autoBillingKey ?? null, isActive: ct.isActive });
 });
 
 router.delete("/billing/charge-types/:id", authenticate, requireRole("admin"), async (req, res): Promise<void> => {

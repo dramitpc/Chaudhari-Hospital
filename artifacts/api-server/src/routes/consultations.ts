@@ -13,6 +13,7 @@ import {
 import { authenticate } from "../middlewares/authenticate";
 import { logAudit } from "../lib/auth";
 import { localDateStr } from "../lib/date";
+import { addAutomaticCharge } from "../lib/automatic-billing";
 
 const router = Router();
 
@@ -78,11 +79,33 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
     return;
   }
   const tokenRow = parsed.data.tokenId
-    ? (await db.select({ queueDate: queueTokensTable.queueDate }).from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
+    ? (await db.select({
+      queueDate: queueTokensTable.queueDate,
+      visitType: queueTokensTable.visitType,
+    }).from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
     : null;
   const visitDate = tokenRow?.queueDate ?? localDateStr();
   const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
+
+  if (tokenRow?.visitType === "new") {
+    try {
+      const billing = await addAutomaticCharge({
+        kind: "consultation",
+        consultationId: c.id,
+        patientId: c.patientId,
+        doctorId: c.doctorId,
+        createdById: req.user!.id,
+        sourceId: c.id,
+      });
+      if (billing.status === "missing_charge") {
+        req.log.warn({ consultationId: c.id }, billing.message);
+      }
+    } catch (error) {
+      req.log.error({ err: error, consultationId: c.id }, "Unable to add automatic consultation charge");
+    }
+  }
+
   res.status(201).json(await formatConsultation(c));
 });
 
