@@ -12,6 +12,4 @@ export interface ChargeTypeInput {
   category: ChargeTypeInputCategory;
   unitPrice: number;
   taxPercent?: number;
-  /** @nullable */
-  autoBillingKey?: string | null;
 }

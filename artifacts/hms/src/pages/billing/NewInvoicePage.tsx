@@ -51,7 +51,7 @@ export default function NewInvoicePage() {
       if (idx !== i) return item;
       const updated = { ...item, [field]: value };
       if (field === "quantity" || field === "unitPrice" || field === "discount" || field === "tax") {
-        updated.total = (Number(updated.quantity) * Number(updated.unitPrice)) - Number(updated.discount);
+        updated.total = (Number(updated.quantity) * Number(updated.unitPrice)) - Number(updated.discount) + Number(updated.tax);
       }
       return updated;
     }));

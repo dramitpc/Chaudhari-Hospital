@@ -21,7 +21,6 @@ export const chargeTypesTable = pgTable("charge_types", {
   category: chargeTypeCategoryEnum("category").notNull(),
   unitPrice: real("unit_price").notNull(),
   taxPercent: real("tax_percent").notNull().default(0),
-  autoBillingKey: text("auto_billing_key").unique(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -55,13 +54,6 @@ export const invoicePaymentsTable = pgTable("invoice_payments", {
   notes: text("notes"),
   paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
   createdById: text("created_by_id").references(() => usersTable.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const automaticInvoiceChargesTable = pgTable("automatic_invoice_charges", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  sourceKey: text("source_key").notNull().unique(),
-  invoiceId: text("invoice_id").notNull().references(() => invoicesTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

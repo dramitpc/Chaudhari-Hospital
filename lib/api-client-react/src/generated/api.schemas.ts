@@ -1037,8 +1037,6 @@ export interface ChargeType {
   category: ChargeTypeCategory;
   unitPrice: number;
   taxPercent?: number;
-  /** @nullable */
-  autoBillingKey?: string | null;
   isActive?: boolean;
 }
 
@@ -1057,8 +1055,6 @@ export interface ChargeTypeInput {
   category: ChargeTypeInputCategory;
   unitPrice: number;
   taxPercent?: number;
-  /** @nullable */
-  autoBillingKey?: string | null;
 }
 
 export type CertificateInputType = typeof CertificateInputType[keyof typeof CertificateInputType];

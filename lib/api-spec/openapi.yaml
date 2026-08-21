@@ -3008,8 +3008,6 @@ components:
           type: number
         taxPercent:
           type: number
-        autoBillingKey:
-          type: ["string", "null"]
         isActive:
           type: boolean
 
@@ -3026,8 +3024,6 @@ components:
           type: number
         taxPercent:
           type: number
-        autoBillingKey:
-          type: ["string", "null"]
 
     # ── CERTIFICATE SCHEMAS ──────────────────────────────────────────────────
     Certificate:
