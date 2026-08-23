@@ -6,8 +6,8 @@ import {
   useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
-  useTranslatePreviewPrescription, useGetQueue, useCreateInvestigation, useListInvestigations, useUpdateInvestigation, useDeleteInvestigation,
-  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getGetPrescriptionQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getGetQueueQueryKey, getListInvestigationsQueryKey,
+  useTranslatePreviewPrescription, useCreateInvestigation, useListInvestigations, useUpdateInvestigation, useDeleteInvestigation,
+  getGetConsultationQueryKey, getListPrescriptionsQueryKey, getGetPrescriptionQueryKey, getListDrugsQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey, getGetPatientHistoryQueryKey, getListInvoicesQueryKey, getListChargeTypesQueryKey, getListInvestigationsQueryKey,
   type Investigation
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -400,12 +400,7 @@ export default function ConsultationDetailPage() {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) }
   });
 
-  const { data: queueData } = useGetQueue({}, { query: { queryKey: getGetQueueQueryKey({}) } });
-  const ACTIVE_STATUSES = ["waiting", "called", "in_consultation", "consultation_done"];
-  const isPatientInQueue = !!patientId && (queueData?.tokens ?? []).some(
-    t => t.patientId === patientId && ACTIVE_STATUSES.includes(t.status)
-  );
-  const backDestination = isPatientInQueue ? "/queue" : "/consultations";
+  const backDestination = new URLSearchParams(search).get("from") === "queue" ? "/queue" : "/consultations";
   const { data: clinicSettings } = useGetClinicSettings({ query: { queryKey: getGetClinicSettingsQueryKey() } });
   const { data: patientHistory } = useGetPatientHistory(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientHistoryQueryKey(patientId) }

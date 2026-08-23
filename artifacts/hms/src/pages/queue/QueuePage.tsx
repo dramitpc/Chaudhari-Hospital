@@ -251,7 +251,7 @@ export default function QueuePage() {
           createConsultationMutation.mutate(
             { data: { patientId, doctorId, tokenId } },
             {
-              onSuccess: (consultation) => { navigate(`/consultations/${consultation.id}`); },
+              onSuccess: (consultation) => { navigate(`/consultations/${consultation.id}?from=queue`); },
               onError: () => toast({ title: "Error", description: "Failed to create consultation", variant: "destructive" }),
             }
           );
@@ -543,7 +543,7 @@ export default function QueuePage() {
                     </Button>
                   )}
                   {token.status === "in_consultation" && token.consultationId && (
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/consultations/${token.consultationId}`)}>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/consultations/${token.consultationId}?from=queue`)}>
                       Open Consultation
                     </Button>
                   )}
