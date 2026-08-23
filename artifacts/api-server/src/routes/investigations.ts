@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, desc, and, sql, SQL } from "drizzle-orm";
-import { db, investigationsTable, invoicesTable, chargeTypesTable } from "@workspace/db";
+import { eq, desc, and, notInArray, sql, SQL } from "drizzle-orm";
+import { db, investigationsTable, invoicesTable, chargeTypesTable, patientsTable } from "@workspace/db";
 import {
   ListInvestigationsQueryParams,
   CreateInvestigationBody,
@@ -63,25 +63,30 @@ router.post(
 
     // If linked to a consultation, append investigation charge to its invoice
     if (row.consultationId) {
+      // Find the active invoice for this consultation (any non-terminal status)
       const [invoice] = await db.select().from(invoicesTable)
         .where(and(
           eq(invoicesTable.consultationId, row.consultationId),
-          eq(invoicesTable.status, "pending")
+          notInArray(invoicesTable.status, ["paid", "cancelled", "refunded"])
         ));
+
+      // Look up investigation charge type by name match
+      const chargeTypes = await db.select().from(chargeTypesTable)
+        .where(and(eq(chargeTypesTable.category, "investigation"), eq(chargeTypesTable.isActive, true)));
+      const matched = chargeTypes.find(
+        ct => ct.name.toLowerCase() === row.type.toLowerCase()
+      );
+      const newItem = {
+        chargeTypeId: matched?.id ?? null,
+        description: row.type + (row.bodyPart ? ` (${row.bodyPart})` : ""),
+        quantity: 1,
+        unitPrice: matched?.unitPrice ?? 0,
+        tax: 0,
+        total: matched?.unitPrice ?? 0,
+      };
+
       if (invoice) {
-        const chargeTypes = await db.select().from(chargeTypesTable)
-          .where(and(eq(chargeTypesTable.category, "investigation"), eq(chargeTypesTable.isActive, true)));
-        const matched = chargeTypes.find(
-          ct => ct.name.toLowerCase() === row.type.toLowerCase()
-        );
-        const newItem = {
-          chargeTypeId: matched?.id ?? null,
-          description: row.type + (row.bodyPart ? ` (${row.bodyPart})` : ""),
-          quantity: 1,
-          unitPrice: matched?.unitPrice ?? 0,
-          tax: 0,
-          total: matched?.unitPrice ?? 0,
-        };
+        // Append to existing invoice
         const existingItems = (invoice.items as typeof newItem[]) ?? [];
         const updatedItems = [...existingItems, newItem];
         const subtotal = updatedItems.reduce((s, i) => s + i.total, 0);
@@ -93,6 +98,31 @@ router.post(
           total: newTotal,
           balance: newBalance,
         }).where(eq(invoicesTable.id, invoice.id));
+      } else {
+        // No invoice yet for this consultation — create one with just this investigation item
+        const [patient] = await db.select({ patientId: patientsTable.id, doctorId: patientsTable.id })
+          .from(patientsTable).where(eq(patientsTable.id, row.patientId));
+        if (patient) {
+          const now = new Date();
+          const y = now.getFullYear().toString().slice(-2);
+          const mo = String(now.getMonth() + 1).padStart(2, "0");
+          const d = String(now.getDate()).padStart(2, "0");
+          const rand = Math.floor(Math.random() * 9000) + 1000;
+          await db.insert(invoicesTable).values({
+            invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
+            patientId: row.patientId,
+            consultationId: row.consultationId,
+            items: [newItem],
+            subtotal: newItem.total,
+            discount: 0,
+            tax: 0,
+            total: newItem.total,
+            amountPaid: 0,
+            balance: newItem.total,
+            status: "pending",
+            createdById: req.user!.id,
+          });
+        }
       }
     }
 
