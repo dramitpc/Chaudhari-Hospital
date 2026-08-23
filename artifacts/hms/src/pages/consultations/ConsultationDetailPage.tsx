@@ -997,13 +997,40 @@ export default function ConsultationDetailPage() {
 
   const handleRecordPayment = () => {
     if (!recordPayingId || !payAmount) return;
+    // Snapshot mutable state before the async mutation closes over stale values
+    const snapAmount = +payAmount;
+    const snapMode = payMode;
+    const snapRef = payRef;
+
     recordPaymentMutation.mutate(
-      { id: recordPayingId, data: { amount: +payAmount, paymentMode: payMode, transactionReference: payRef || undefined } },
+      { id: recordPayingId, data: { amount: snapAmount, paymentMode: snapMode, transactionReference: snapRef || undefined } },
       {
         onSuccess: () => {
           toast({ title: "Payment recorded" });
           queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
           setRecordPayingId(null);
+
+          // ── WhatsApp receipt ──────────────────────────────────────────────
+          const clinicName = (clinicSettings as unknown as Record<string, string> | undefined)?.clinicName ?? "Our Clinic";
+          const patientName = patient?.fullName ?? "Patient";
+          const phone = patient?.phone ?? "";
+          const modeLabels: Record<string, string> = { cash: "Cash", card: "Card", upi: "UPI", insurance: "Insurance" };
+          const modeLabel = modeLabels[snapMode] ?? snapMode;
+          const dateStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+          let msg = `🏥 *${clinicName}*\n\nDear ${patientName},\n\nYour payment has been received.\n\n`;
+          msg += `💰 *Amount:* ₹${snapAmount.toFixed(2)}\n`;
+          msg += `💳 *Mode:* ${modeLabel}\n`;
+          if (snapRef) msg += `📋 *Reference:* ${snapRef}\n`;
+          msg += `🗓️ *Date:* ${dateStr}\n`;
+          msg += `\nThank you for visiting us!`;
+
+          const digits = phone.replace(/\D/g, "");
+          const formatted = digits.length === 10 ? `91${digits}`
+            : digits.startsWith("0") && digits.length === 11 ? `91${digits.slice(1)}`
+            : digits;
+          const waUrl = `https://wa.me/${formatted}?text=${encodeURIComponent(msg)}`;
+          window.open(waUrl, "_blank", "noopener,noreferrer");
         },
         onError: () => toast({ title: "Failed to record payment", variant: "destructive" }),
       }
