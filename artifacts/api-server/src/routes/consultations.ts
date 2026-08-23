@@ -78,15 +78,18 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
     return;
   }
   const tokenRow = parsed.data.tokenId
-    ? (await db.select({ queueDate: queueTokensTable.queueDate }).from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
+    ? (await db.select({ queueDate: queueTokensTable.queueDate, visitType: queueTokensTable.visitType }).from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
     : null;
   const visitDate = tokenRow?.queueDate ?? localDateStr();
   const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
 
-  // Auto-generate invoice with consultation fee when visit starts
-  const consultationCharge = await db.select().from(chargeTypesTable)
-    .where(and(eq(chargeTypesTable.category, "consultation"), eq(chargeTypesTable.isActive, true)));
+  // Auto-generate invoice with consultation fee — new visits only, not follow-ups
+  const isNewVisit = !tokenRow || tokenRow.visitType === "new";
+  const consultationCharge = isNewVisit
+    ? await db.select().from(chargeTypesTable)
+        .where(and(eq(chargeTypesTable.category, "consultation"), eq(chargeTypesTable.isActive, true)))
+    : [];
   const charge = consultationCharge[0];
   if (charge) {
     const item = { chargeTypeId: charge.id, description: charge.name, quantity: 1, unitPrice: charge.unitPrice, tax: 0, total: charge.unitPrice };
