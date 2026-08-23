@@ -86,9 +86,22 @@ router.post(
       };
 
       if (invoice) {
-        // Append to existing invoice
+        // Merge with existing item of same type, or append new line
         const existingItems = (invoice.items as typeof newItem[]) ?? [];
-        const updatedItems = [...existingItems, newItem];
+        const matchKey = matched?.id ?? null;
+        const existingIdx = existingItems.findIndex(i =>
+          matchKey !== null ? i.chargeTypeId === matchKey : i.description === newItem.description
+        );
+        let updatedItems: typeof existingItems;
+        if (existingIdx >= 0) {
+          updatedItems = existingItems.map((item, idx) => {
+            if (idx !== existingIdx) return item;
+            const qty = (item.quantity ?? 1) + 1;
+            return { ...item, quantity: qty, total: qty * item.unitPrice };
+          });
+        } else {
+          updatedItems = [...existingItems, newItem];
+        }
         const subtotal = updatedItems.reduce((s, i) => s + i.total, 0);
         const newTotal = subtotal - (invoice.discount ?? 0) + (invoice.tax ?? 0);
         const newBalance = Math.max(0, newTotal - (invoice.amountPaid ?? 0));
