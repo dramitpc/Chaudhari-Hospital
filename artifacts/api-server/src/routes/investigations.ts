@@ -112,29 +112,62 @@ router.post(
           balance: newBalance,
         }).where(eq(invoicesTable.id, invoice.id));
       } else {
-        // No invoice yet for this consultation — create one with just this investigation item
-        const [patient] = await db.select({ patientId: patientsTable.id, doctorId: patientsTable.id })
-          .from(patientsTable).where(eq(patientsTable.id, row.patientId));
-        if (patient) {
-          const now = new Date();
-          const y = now.getFullYear().toString().slice(-2);
-          const mo = String(now.getMonth() + 1).padStart(2, "0");
-          const d = String(now.getDate()).padStart(2, "0");
-          const rand = Math.floor(Math.random() * 9000) + 1000;
-          await db.insert(invoicesTable).values({
-            invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
-            patientId: row.patientId,
-            consultationId: row.consultationId,
-            items: [newItem],
-            subtotal: newItem.total,
-            discount: 0,
-            tax: 0,
-            total: newItem.total,
-            amountPaid: 0,
-            balance: newItem.total,
-            status: "pending",
-            createdById: req.user!.id,
-          });
+        // No invoice yet — check once more (another concurrent request may have just created one)
+        const [raceInvoice] = await db.select().from(invoicesTable)
+          .where(and(
+            eq(invoicesTable.consultationId, row.consultationId),
+            notInArray(invoicesTable.status, ["paid", "cancelled", "refunded"])
+          ));
+        if (raceInvoice) {
+          // Another request beat us — append to that invoice instead
+          const existingItems = (raceInvoice.items as typeof newItem[]) ?? [];
+          const matchKey = matched?.id ?? null;
+          const existingIdx = existingItems.findIndex(i =>
+            matchKey !== null ? i.chargeTypeId === matchKey : i.description === newItem.description
+          );
+          let updatedItems: typeof existingItems;
+          if (existingIdx >= 0) {
+            updatedItems = existingItems.map((item, idx) => {
+              if (idx !== existingIdx) return item;
+              const qty = (item.quantity ?? 1) + 1;
+              return { ...item, quantity: qty, total: qty * item.unitPrice };
+            });
+          } else {
+            updatedItems = [...existingItems, newItem];
+          }
+          const subtotal = updatedItems.reduce((s, i) => s + i.total, 0);
+          const newTotal = subtotal - (raceInvoice.discount ?? 0) + (raceInvoice.tax ?? 0);
+          await db.update(invoicesTable).set({
+            items: updatedItems,
+            subtotal,
+            total: newTotal,
+            balance: Math.max(0, newTotal - (raceInvoice.amountPaid ?? 0)),
+          }).where(eq(invoicesTable.id, raceInvoice.id));
+        } else {
+          // Truly no invoice — create one for this consultation
+          const [patientExists] = await db.select({ id: patientsTable.id })
+            .from(patientsTable).where(eq(patientsTable.id, row.patientId));
+          if (patientExists) {
+            const now = new Date();
+            const y = now.getFullYear().toString().slice(-2);
+            const mo = String(now.getMonth() + 1).padStart(2, "0");
+            const d = String(now.getDate()).padStart(2, "0");
+            const rand = Math.floor(Math.random() * 9000) + 1000;
+            await db.insert(invoicesTable).values({
+              invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
+              patientId: row.patientId,
+              consultationId: row.consultationId,
+              items: [newItem],
+              subtotal: newItem.total,
+              discount: 0,
+              tax: 0,
+              total: newItem.total,
+              amountPaid: 0,
+              balance: newItem.total,
+              status: "pending",
+              createdById: req.user!.id,
+            });
+          }
         }
       }
     }

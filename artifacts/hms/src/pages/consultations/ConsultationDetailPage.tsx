@@ -2049,27 +2049,28 @@ export default function ConsultationDetailPage() {
               }}
               onApplyMultiple={(entries) => {
                 entries.forEach(e => trackInvestigationRecent(e));
-                if (patientId && user?.id) {
-                  entries.forEach(e => createInvestigationMutation.mutate(
-                    { data: {
-                      patientId,
-                      patientName: patient?.fullName ?? undefined,
-                      consultationId: id,
-                      requestedById: user.id,
-                      requestedByName: user.fullName ?? undefined,
-                      type: e.type.trim(),
-                      bodyPart: e.bodyPart.trim() || undefined,
-                      notes: e.notes.trim() || undefined,
-                    }},
-                    { onSuccess: () => {
-                        queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
-                        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
-                      } }
-                  ));
-                }
                 toast({ title: `${entries.length} investigation${entries.length > 1 ? "s" : ""} ordered` });
                 setShowInvestigationModal(false);
                 setInvType(""); setInvBodyPart(""); setInvNotes("");
+                if (patientId && user?.id) {
+                  // Sequential — ensures one invoice is created before the next investigation tries to find it
+                  (async () => {
+                    for (const e of entries) {
+                      await createInvestigationMutation.mutateAsync({ data: {
+                        patientId,
+                        patientName: patient?.fullName ?? undefined,
+                        consultationId: id,
+                        requestedById: user.id,
+                        requestedByName: user.fullName ?? undefined,
+                        type: e.type.trim(),
+                        bodyPart: e.bodyPart.trim() || undefined,
+                        notes: e.notes.trim() || undefined,
+                      }}).catch(() => {});
+                    }
+                    queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
+                    queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+                  })();
+                }
               }}
             />
             <div className="space-y-1.5">
