@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
-import { db, consultationsTable, patientsTable, usersTable, queueTokensTable } from "@workspace/db";
+import { eq, desc, and } from "drizzle-orm";
+import { db, consultationsTable, patientsTable, usersTable, queueTokensTable, invoicesTable, investigationsTable, chargeTypesTable } from "@workspace/db";
 import {
   ListConsultationsQueryParams,
   CreateConsultationBody,
@@ -144,6 +144,93 @@ router.post("/consultations/:id/complete", authenticate, async (req, res): Promi
       .set({ status: "consultation_done", consultationEndedAt: new Date() })
       .where(eq(queueTokensTable.id, c.tokenId));
   }
+
+  // Auto-generate invoice if none exists for this consultation
+  const existingInvoices = await db.select({ id: invoicesTable.id })
+    .from(invoicesTable)
+    .where(eq(invoicesTable.consultationId, c.id));
+
+  if (existingInvoices.length === 0) {
+    // Fetch all active charge types
+    const allChargeTypes = await db.select().from(chargeTypesTable)
+      .where(eq(chargeTypesTable.isActive, true));
+
+    const consultationCharge = allChargeTypes.find(ct => ct.category === "consultation");
+    const investigationCharges = allChargeTypes.filter(ct => ct.category === "investigation");
+
+    // Fetch investigations ordered for this consultation
+    const investigations = await db.select().from(investigationsTable)
+      .where(and(
+        eq(investigationsTable.consultationId, c.id),
+        eq(investigationsTable.status, "pending")
+      ));
+
+    const items: Array<{ chargeTypeId: string | null; description: string; quantity: number; unitPrice: number; tax: number; total: number }> = [];
+
+    if (consultationCharge) {
+      items.push({
+        chargeTypeId: consultationCharge.id,
+        description: consultationCharge.name,
+        quantity: 1,
+        unitPrice: consultationCharge.unitPrice,
+        tax: 0,
+        total: consultationCharge.unitPrice,
+      });
+    }
+
+    for (const inv of investigations) {
+      // Match investigation type to a charge type by name (case-insensitive)
+      const matched = investigationCharges.find(
+        ct => ct.name.toLowerCase() === inv.type.toLowerCase()
+      );
+      if (matched) {
+        items.push({
+          chargeTypeId: matched.id,
+          description: matched.name + (inv.bodyPart ? ` (${inv.bodyPart})` : ""),
+          quantity: 1,
+          unitPrice: matched.unitPrice,
+          tax: 0,
+          total: matched.unitPrice,
+        });
+      } else {
+        items.push({
+          chargeTypeId: null,
+          description: inv.type + (inv.bodyPart ? ` (${inv.bodyPart})` : ""),
+          quantity: 1,
+          unitPrice: 0,
+          tax: 0,
+          total: 0,
+        });
+      }
+    }
+
+    if (items.length > 0) {
+      const subtotal = items.reduce((s, i) => s + i.total, 0);
+      const now = new Date();
+      const y = now.getFullYear().toString().slice(-2);
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      const rand = Math.floor(Math.random() * 9000) + 1000;
+      const invoiceNumber = `INV-${y}${m}${d}-${rand}`;
+
+      await db.insert(invoicesTable).values({
+        invoiceNumber,
+        patientId: c.patientId,
+        consultationId: c.id,
+        doctorId: c.doctorId,
+        items,
+        subtotal,
+        discount: 0,
+        tax: 0,
+        total: subtotal,
+        amountPaid: 0,
+        balance: subtotal,
+        status: "pending",
+        createdById: req.user!.id,
+      });
+    }
+  }
+
   await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION", "consultations", c.id);
   res.json(await formatConsultation(c));
 });
