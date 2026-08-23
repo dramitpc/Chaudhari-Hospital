@@ -11,6 +11,7 @@ import {
   CompleteConsultationBody,
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
+import { verifyPassword } from "../lib/auth";
 import { logAudit } from "../lib/auth";
 import { localDateStr } from "../lib/date";
 
@@ -160,6 +161,53 @@ router.post("/consultations/:id/complete", authenticate, async (req, res): Promi
     return;
   }
   const parsed = CompleteConsultationBody.safeParse(req.body);
+
+  // Check for unpaid invoices on this consultation
+  const unpaidInvoices = await db.select().from(invoicesTable).where(
+    and(eq(invoicesTable.consultationId, params.data.id),
+      and(
+        // balance > 0 — drizzle doesn't have gt for columns easily, filter in JS
+        eq(invoicesTable.consultationId, params.data.id)
+      )
+    )
+  );
+  const totalUnpaid = unpaidInvoices
+    .filter(inv => !["paid", "cancelled", "refunded"].includes(inv.status) && (inv.balance ?? 0) > 0)
+    .reduce((s, inv) => s + (inv.balance ?? 0), 0);
+
+  if (totalUnpaid > 0) {
+    // Require an override: either a reason code or valid manager credentials
+    const body = parsed.success ? parsed.data : (req.body as Record<string, string>);
+    const overrideReason = body.overrideReason as string | undefined;
+    const managerUsername = body.managerUsername as string | undefined;
+    const managerPassword = body.managerPassword as string | undefined;
+
+    if (!overrideReason && (!managerUsername || !managerPassword)) {
+      res.status(402).json({
+        error: "UNPAID_BALANCE",
+        message: `This consultation has an outstanding balance of ₹${totalUnpaid.toFixed(2)}. Provide an override reason or manager credentials to complete.`,
+        balance: totalUnpaid,
+      });
+      return;
+    }
+
+    // If manager credentials provided, verify them
+    if (managerUsername && managerPassword) {
+      const [manager] = await db.select().from(usersTable)
+        .where(eq(usersTable.username, managerUsername));
+      const validManager = manager && ["admin", "staff"].includes(manager.role) && verifyPassword(managerPassword, manager.passwordHash);
+      if (!validManager) {
+        res.status(403).json({ error: "INVALID_MANAGER", message: "Invalid manager credentials or insufficient role." });
+        return;
+      }
+      await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION_OVERRIDE", "consultations", params.data.id,
+        `Manager override by ${manager.fullName} (${manager.username}). Unpaid balance: ₹${totalUnpaid.toFixed(2)}`);
+    } else {
+      await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION_OVERRIDE", "consultations", params.data.id,
+        `Reason override: ${overrideReason}. Unpaid balance: ₹${totalUnpaid.toFixed(2)}`);
+    }
+  }
+
   const updates: Partial<typeof consultationsTable.$inferInsert> = { status: "completed" };
   if (parsed.success) {
     if (parsed.data.diagnosis) updates.diagnosis = parsed.data.diagnosis;

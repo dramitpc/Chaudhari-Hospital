@@ -995,7 +995,10 @@ export const CompleteConsultationParams = zod.object({
 export const CompleteConsultationBody = zod.object({
   "diagnosis": zod.string().optional(),
   "advice": zod.string().optional(),
-  "followUpDate": zod.string().optional()
+  "followUpDate": zod.string().optional(),
+  "overrideReason": zod.string().optional(),
+  "managerUsername": zod.string().optional(),
+  "managerPassword": zod.string().optional()
 })
 
 export const CompleteConsultationResponse = zod.object({
