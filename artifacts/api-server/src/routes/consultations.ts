@@ -83,6 +83,35 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
   const visitDate = tokenRow?.queueDate ?? localDateStr();
   const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
+
+  // Auto-generate invoice with consultation fee when visit starts
+  const consultationCharge = await db.select().from(chargeTypesTable)
+    .where(and(eq(chargeTypesTable.category, "consultation"), eq(chargeTypesTable.isActive, true)));
+  const charge = consultationCharge[0];
+  if (charge) {
+    const item = { chargeTypeId: charge.id, description: charge.name, quantity: 1, unitPrice: charge.unitPrice, tax: 0, total: charge.unitPrice };
+    const now = new Date();
+    const y = now.getFullYear().toString().slice(-2);
+    const mo = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    const rand = Math.floor(Math.random() * 9000) + 1000;
+    await db.insert(invoicesTable).values({
+      invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
+      patientId: c.patientId,
+      consultationId: c.id,
+      doctorId: c.doctorId,
+      items: [item],
+      subtotal: charge.unitPrice,
+      discount: 0,
+      tax: 0,
+      total: charge.unitPrice,
+      amountPaid: 0,
+      balance: charge.unitPrice,
+      status: "pending",
+      createdById: req.user!.id,
+    });
+  }
+
   res.status(201).json(await formatConsultation(c));
 });
 
@@ -143,92 +172,6 @@ router.post("/consultations/:id/complete", authenticate, async (req, res): Promi
     await db.update(queueTokensTable)
       .set({ status: "consultation_done", consultationEndedAt: new Date() })
       .where(eq(queueTokensTable.id, c.tokenId));
-  }
-
-  // Auto-generate invoice if none exists for this consultation
-  const existingInvoices = await db.select({ id: invoicesTable.id })
-    .from(invoicesTable)
-    .where(eq(invoicesTable.consultationId, c.id));
-
-  if (existingInvoices.length === 0) {
-    // Fetch all active charge types
-    const allChargeTypes = await db.select().from(chargeTypesTable)
-      .where(eq(chargeTypesTable.isActive, true));
-
-    const consultationCharge = allChargeTypes.find(ct => ct.category === "consultation");
-    const investigationCharges = allChargeTypes.filter(ct => ct.category === "investigation");
-
-    // Fetch investigations ordered for this consultation
-    const investigations = await db.select().from(investigationsTable)
-      .where(and(
-        eq(investigationsTable.consultationId, c.id),
-        eq(investigationsTable.status, "pending")
-      ));
-
-    const items: Array<{ chargeTypeId: string | null; description: string; quantity: number; unitPrice: number; tax: number; total: number }> = [];
-
-    if (consultationCharge) {
-      items.push({
-        chargeTypeId: consultationCharge.id,
-        description: consultationCharge.name,
-        quantity: 1,
-        unitPrice: consultationCharge.unitPrice,
-        tax: 0,
-        total: consultationCharge.unitPrice,
-      });
-    }
-
-    for (const inv of investigations) {
-      // Match investigation type to a charge type by name (case-insensitive)
-      const matched = investigationCharges.find(
-        ct => ct.name.toLowerCase() === inv.type.toLowerCase()
-      );
-      if (matched) {
-        items.push({
-          chargeTypeId: matched.id,
-          description: matched.name + (inv.bodyPart ? ` (${inv.bodyPart})` : ""),
-          quantity: 1,
-          unitPrice: matched.unitPrice,
-          tax: 0,
-          total: matched.unitPrice,
-        });
-      } else {
-        items.push({
-          chargeTypeId: null,
-          description: inv.type + (inv.bodyPart ? ` (${inv.bodyPart})` : ""),
-          quantity: 1,
-          unitPrice: 0,
-          tax: 0,
-          total: 0,
-        });
-      }
-    }
-
-    if (items.length > 0) {
-      const subtotal = items.reduce((s, i) => s + i.total, 0);
-      const now = new Date();
-      const y = now.getFullYear().toString().slice(-2);
-      const m = String(now.getMonth() + 1).padStart(2, "0");
-      const d = String(now.getDate()).padStart(2, "0");
-      const rand = Math.floor(Math.random() * 9000) + 1000;
-      const invoiceNumber = `INV-${y}${m}${d}-${rand}`;
-
-      await db.insert(invoicesTable).values({
-        invoiceNumber,
-        patientId: c.patientId,
-        consultationId: c.id,
-        doctorId: c.doctorId,
-        items,
-        subtotal,
-        discount: 0,
-        tax: 0,
-        total: subtotal,
-        amountPaid: 0,
-        balance: subtotal,
-        status: "pending",
-        createdById: req.user!.id,
-      });
-    }
   }
 
   await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION", "consultations", c.id);

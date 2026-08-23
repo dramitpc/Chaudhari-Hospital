@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, desc, and, sql, SQL } from "drizzle-orm";
-import { db, investigationsTable } from "@workspace/db";
+import { db, investigationsTable, invoicesTable, chargeTypesTable } from "@workspace/db";
 import {
   ListInvestigationsQueryParams,
   CreateInvestigationBody,
@@ -60,6 +60,41 @@ router.post(
       .insert(investigationsTable)
       .values(body.data)
       .returning();
+
+    // If linked to a consultation, append investigation charge to its invoice
+    if (row.consultationId) {
+      const [invoice] = await db.select().from(invoicesTable)
+        .where(and(
+          eq(invoicesTable.consultationId, row.consultationId),
+          eq(invoicesTable.status, "pending")
+        ));
+      if (invoice) {
+        const chargeTypes = await db.select().from(chargeTypesTable)
+          .where(and(eq(chargeTypesTable.category, "investigation"), eq(chargeTypesTable.isActive, true)));
+        const matched = chargeTypes.find(
+          ct => ct.name.toLowerCase() === row.type.toLowerCase()
+        );
+        const newItem = {
+          chargeTypeId: matched?.id ?? null,
+          description: row.type + (row.bodyPart ? ` (${row.bodyPart})` : ""),
+          quantity: 1,
+          unitPrice: matched?.unitPrice ?? 0,
+          tax: 0,
+          total: matched?.unitPrice ?? 0,
+        };
+        const existingItems = (invoice.items as typeof newItem[]) ?? [];
+        const updatedItems = [...existingItems, newItem];
+        const subtotal = updatedItems.reduce((s, i) => s + i.total, 0);
+        const newTotal = subtotal - (invoice.discount ?? 0) + (invoice.tax ?? 0);
+        const newBalance = Math.max(0, newTotal - (invoice.amountPaid ?? 0));
+        await db.update(invoicesTable).set({
+          items: updatedItems,
+          subtotal,
+          total: newTotal,
+          balance: newBalance,
+        }).where(eq(invoicesTable.id, invoice.id));
+      }
+    }
 
     await logAudit(req, req.user!.id, "create", "investigation", row.id);
     return res.status(201).json(row);
