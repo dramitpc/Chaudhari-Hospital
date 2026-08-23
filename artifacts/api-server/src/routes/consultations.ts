@@ -84,33 +84,34 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
   const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
   await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
 
-  // Auto-generate invoice with consultation fee when visit starts
+  // Auto-generate invoice when visit starts; always create so investigation charges can be appended
   const consultationCharge = await db.select().from(chargeTypesTable)
     .where(and(eq(chargeTypesTable.category, "consultation"), eq(chargeTypesTable.isActive, true)));
   const charge = consultationCharge[0];
-  if (charge) {
-    const item = { chargeTypeId: charge.id, description: charge.name, quantity: 1, unitPrice: charge.unitPrice, tax: 0, total: charge.unitPrice };
-    const now = new Date();
-    const y = now.getFullYear().toString().slice(-2);
-    const mo = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    const rand = Math.floor(Math.random() * 9000) + 1000;
-    await db.insert(invoicesTable).values({
-      invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
-      patientId: c.patientId,
-      consultationId: c.id,
-      doctorId: c.doctorId,
-      items: [item],
-      subtotal: charge.unitPrice,
-      discount: 0,
-      tax: 0,
-      total: charge.unitPrice,
-      amountPaid: 0,
-      balance: charge.unitPrice,
-      status: "pending",
-      createdById: req.user!.id,
-    });
-  }
+  const items = charge
+    ? [{ chargeTypeId: charge.id, description: charge.name, quantity: 1, unitPrice: charge.unitPrice, tax: 0, total: charge.unitPrice }]
+    : [];
+  const subtotal = charge ? charge.unitPrice : 0;
+  const now = new Date();
+  const y = now.getFullYear().toString().slice(-2);
+  const mo = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const rand = Math.floor(Math.random() * 9000) + 1000;
+  await db.insert(invoicesTable).values({
+    invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
+    patientId: c.patientId,
+    consultationId: c.id,
+    doctorId: c.doctorId,
+    items,
+    subtotal,
+    discount: 0,
+    tax: 0,
+    total: subtotal,
+    amountPaid: 0,
+    balance: subtotal,
+    status: "pending",
+    createdById: req.user!.id,
+  });
 
   res.status(201).json(await formatConsultation(c));
 });
