@@ -880,14 +880,6 @@ export default function ConsultationDetailPage() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
 
-  // Override dialog state
-  const [showOverrideDialog, setShowOverrideDialog] = useState(false);
-  const [overrideUnpaidBalance, setOverrideUnpaidBalance] = useState(0);
-  const [overrideTab, setOverrideTab] = useState<"reason" | "manager">("reason");
-  const [overrideReason, setOverrideReason] = useState("");
-  const [overrideMgrUsername, setOverrideMgrUsername] = useState("");
-  const [overrideMgrPassword, setOverrideMgrPassword] = useState("");
-  const [overrideError, setOverrideError] = useState("");
   const [invItems, setInvItems] = useState<InvItem[]>([blankInvItem()]);
   const [invDiscount, setInvDiscount] = useState(0);
   const [invoiceNotes, setInvoiceNotes] = useState("");
@@ -1067,49 +1059,15 @@ export default function ConsultationDetailPage() {
     Object.entries(dirtyPatient).forEach(([field, value]) => handleMedHistBlur(field, value));
   };
 
-  const doComplete = (extraData: Record<string, string> = {}) => {
-    completeMutation.mutate({ id, data: extraData as Parameters<typeof completeMutation.mutate>[0]["data"] }, {
+  const handleComplete = () => {
+    completeMutation.mutate({ id, data: {} }, {
       onSuccess: () => {
         toast({ title: "Consultation completed" });
         queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
-        setShowOverrideDialog(false);
         navigate(backDestination);
       },
-      onError: (err: unknown) => {
-        // ApiError exposes the parsed response body as .data (not .response.data)
-        const body = (err as { data?: { error?: string; message?: string; balance?: number } })?.data;
-        const code = body?.error;
-        if (code === "UNPAID_BALANCE") {
-          const balance = body?.balance ?? 0;
-          setOverrideUnpaidBalance(balance);
-          setOverrideReason(""); setOverrideMgrUsername(""); setOverrideMgrPassword(""); setOverrideError("");
-          setShowOverrideDialog(true);
-        } else if (code === "INVALID_MANAGER") {
-          setOverrideError("Invalid manager credentials or insufficient role.");
-        } else {
-          toast({ title: body?.message || body?.error || "Error completing consultation", variant: "destructive" });
-        }
-      },
+      onError: () => toast({ title: "Error completing consultation", variant: "destructive" }),
     });
-  };
-
-  const handleComplete = () => doComplete();
-
-  const handleOverrideSubmit = () => {
-    setOverrideError("");
-    if (overrideTab === "reason") {
-      if (overrideReason.trim().length < 5) {
-        setOverrideError("Please enter a reason of at least 5 characters.");
-        return;
-      }
-      doComplete({ overrideReason: overrideReason.trim() });
-    } else {
-      if (!overrideMgrUsername.trim() || !overrideMgrPassword) {
-        setOverrideError("Enter manager username and password.");
-        return;
-      }
-      doComplete({ managerUsername: overrideMgrUsername.trim(), managerPassword: overrideMgrPassword });
-    }
   };
 
   const buildPrescriptionPayload = () => ({
@@ -3359,89 +3317,6 @@ export default function ConsultationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Complete-with-Unpaid-Balance Override Dialog ──────────────────── */}
-      <Dialog open={showOverrideDialog} onOpenChange={open => { if (!open) setShowOverrideDialog(false); }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <CheckCircle className="h-4 w-4" />
-              Unpaid Balance — Override Required
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="rounded-md border border-orange-200 bg-orange-50 dark:border-orange-800/60 dark:bg-orange-950/30 px-4 py-3 text-sm text-orange-700 dark:text-orange-300">
-            This consultation has an outstanding balance of{" "}
-            <span className="font-bold">₹{overrideUnpaidBalance.toFixed(2)}</span>.
-            To complete anyway, provide an override below.
-          </div>
-
-          {/* Tab switcher */}
-          <div className="flex rounded-md border border-border overflow-hidden text-sm">
-            <button
-              className={`flex-1 py-2 font-medium transition-colors ${overrideTab === "reason" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-              onClick={() => { setOverrideTab("reason"); setOverrideError(""); }}
-            >Reason Code</button>
-            <button
-              className={`flex-1 py-2 font-medium transition-colors border-l border-border ${overrideTab === "manager" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-              onClick={() => { setOverrideTab("manager"); setOverrideError(""); }}
-            >Manager Approval</button>
-          </div>
-
-          {overrideTab === "reason" ? (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Override reason <span className="text-destructive">*</span></Label>
-              <Textarea
-                rows={3}
-                value={overrideReason}
-                onChange={e => { setOverrideReason(e.target.value); setOverrideError(""); }}
-                placeholder="e.g. Patient is an admitted inpatient — billing via ward account"
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">This reason will be recorded in the audit log.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Manager username <span className="text-destructive">*</span></Label>
-                <Input
-                  value={overrideMgrUsername}
-                  onChange={e => { setOverrideMgrUsername(e.target.value); setOverrideError(""); }}
-                  placeholder="username"
-                  autoFocus
-                  autoComplete="username"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Manager password <span className="text-destructive">*</span></Label>
-                <Input
-                  type="password"
-                  value={overrideMgrPassword}
-                  onChange={e => { setOverrideMgrPassword(e.target.value); setOverrideError(""); }}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Must be an admin or staff account. Approval is recorded in the audit log.</p>
-            </div>
-          )}
-
-          {overrideError && (
-            <p className="text-xs text-destructive font-medium">{overrideError}</p>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOverrideDialog(false)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={handleOverrideSubmit}
-              disabled={completeMutation.isPending}
-            >
-              {completeMutation.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
-              Complete Anyway
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
