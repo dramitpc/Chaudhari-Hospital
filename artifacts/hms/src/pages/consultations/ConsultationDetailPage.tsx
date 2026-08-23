@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Plus, Printer, FileText, Mail, Send, Star, Clock, X, BookMarked, ScanLine, ImageIcon, Paperclip, DollarSign, Receipt, Languages, Loader2, Pencil, Trash2, Save } from "lucide-react";
 import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { useSavedItems } from "@/lib/useSavedItems";
@@ -470,6 +470,14 @@ export default function ConsultationDetailPage() {
   const [adviceValue, setAdviceValue] = useState("");
   const [referenceToValue, setReferenceToValue] = useState("");
   const [diagAdvInit, setDiagAdvInit] = useState(false);
+  const [icd10Value, setIcd10Value] = useState("");
+  const [followUpDateValue, setFollowUpDateValue] = useState("");
+  const [icd10Init, setIcd10Init] = useState(false);
+
+  // Dirty tracking — field name → current unsaved value
+  const [dirtyConsultation, setDirtyConsultation] = useState<Record<string, string>>({});
+  const [dirtyPatient, setDirtyPatient] = useState<Record<string, string>>({});
+  const hasDirty = Object.keys(dirtyConsultation).length > 0 || Object.keys(dirtyPatient).length > 0;
 
   useEffect(() => {
     if (consultation && !diagAdvInit) {
@@ -479,6 +487,14 @@ export default function ConsultationDetailPage() {
       setDiagAdvInit(true);
     }
   }, [consultation, diagAdvInit]);
+
+  useEffect(() => {
+    if (consultation && !icd10Init) {
+      setIcd10Value(consultation.icd10Code ?? "");
+      setFollowUpDateValue(consultation.followUpDate ?? "");
+      setIcd10Init(true);
+    }
+  }, [consultation, icd10Init]);
 
   // ── Medical History controlled state ──────────────────────────────────────
   type MedHistField = "allergies" | "medicalHistory" | "surgicalHistory" | "familyHistory" | "currentMedications";
@@ -596,6 +612,15 @@ export default function ConsultationDetailPage() {
 
   useEffect(() => { investigationValueRef.current = investigationValue; }, [investigationValue]);
 
+  // Warn before tab close when there are unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasDirty) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasDirty]);
+
   // ── Sync investigation queue results into the editable orders field ─────────
   const QUEUE_MARKER = "\n\u200B\u200B";
   const prevQueueTextRef = useRef<string | null>(null);
@@ -700,8 +725,10 @@ export default function ConsultationDetailPage() {
     }
   }, [consultation, soapInitialized]);
 
-  const handleSoapChange = (field: SoapField, value: string) =>
+  const handleSoapChange = (field: SoapField, value: string) => {
     setSoapValues(prev => ({ ...prev, [field]: value }));
+    setDirtyConsultation(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleSoapBlur = (field: SoapField, value: string) => {
     handleBlur(field, value);
@@ -1009,16 +1036,31 @@ export default function ConsultationDetailPage() {
 
   const handleBlur = (field: string, value: string) => {
     if (!id) return;
+    setDirtyConsultation(prev => { const next = { ...prev }; delete next[field]; return next; });
     updateMutation.mutate({ id, data: { [field]: value } }, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) }),
+      onError: () => {
+        setDirtyConsultation(prev => ({ ...prev, [field]: value }));
+        toast({ title: "Failed to save changes", variant: "destructive" });
+      },
     });
   };
 
   const handleMedHistBlur = (field: string, value: string) => {
     if (!patientId) return;
+    setDirtyPatient(prev => { const next = { ...prev }; delete next[field]; return next; });
     updatePatientMutation.mutate({ id: patientId, data: { [field]: value } }, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(patientId) }),
+      onError: () => {
+        setDirtyPatient(prev => ({ ...prev, [field]: value }));
+        toast({ title: "Failed to save patient record", variant: "destructive" });
+      },
     });
+  };
+
+  const saveAllDirty = () => {
+    Object.entries(dirtyConsultation).forEach(([field, value]) => handleBlur(field, value));
+    Object.entries(dirtyPatient).forEach(([field, value]) => handleMedHistBlur(field, value));
   };
 
   const handleComplete = () => {
@@ -1176,6 +1218,25 @@ export default function ConsultationDetailPage() {
         )}
       </div>
 
+      {hasDirty && consultation.status !== "completed" && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/30 px-3 py-1.5">
+          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+          <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex-1">
+            Unsaved changes — close tab now and they will be lost
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 px-2.5 text-xs border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950"
+            onClick={saveAllDirty}
+            disabled={updateMutation.isPending || updatePatientMutation.isPending}
+          >
+            <Save className="mr-1 h-3 w-3" />
+            Save now
+          </Button>
+        </div>
+      )}
+
       {marqueeText && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-3 py-1.5 overflow-hidden">
           <span className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
@@ -1269,7 +1330,7 @@ export default function ConsultationDetailPage() {
                 <Input
                   className="col-span-full"
                   value={clinicalValues["referringDoctorName"]}
-                  onChange={e => setClinicalValues(prev => ({ ...prev, referringDoctorName: e.target.value }))}
+                  onChange={e => { setClinicalValues(prev => ({ ...prev, referringDoctorName: e.target.value })); setDirtyConsultation(prev => ({ ...prev, referringDoctorName: e.target.value })); }}
                   onBlur={e => { handleBlur("referringDoctorName", e.target.value); trackFieldRecent("clinicos_clin_referringDoctorName", e.target.value); }}
                   placeholder="Name of referring doctor (if any)"
                 />
@@ -1334,7 +1395,7 @@ export default function ConsultationDetailPage() {
                       <Textarea
                         className="col-span-full"
                         value={medHistValues[field]}
-                        onChange={e => setMedHistValues(prev => ({ ...prev, [field]: e.target.value }))}
+                        onChange={e => { setMedHistValues(prev => ({ ...prev, [field]: e.target.value })); setDirtyPatient(prev => ({ ...prev, [field]: e.target.value })); }}
                         onBlur={e => { handleMedHistBlur(field, e.target.value); trackFieldRecent(`clinicos_medh_${field}`, e.target.value); }}
                         rows={3}
                         placeholder={placeholder}
@@ -1366,7 +1427,7 @@ export default function ConsultationDetailPage() {
                     <Input
                       className="col-span-full"
                       value={clinicalValues[field]}
-                      onChange={e => setClinicalValues(prev => ({ ...prev, [field]: e.target.value }))}
+                      onChange={e => { setClinicalValues(prev => ({ ...prev, [field]: e.target.value })); setDirtyConsultation(prev => ({ ...prev, [field]: e.target.value })); }}
                       onBlur={e => { handleBlur(field, e.target.value); trackFieldRecent(`clinicos_clin_${field}`, e.target.value); }}
                       placeholder={placeholder}
                     />
@@ -1374,7 +1435,7 @@ export default function ConsultationDetailPage() {
                     <Textarea
                       className="col-span-full"
                       value={clinicalValues[field]}
-                      onChange={e => setClinicalValues(prev => ({ ...prev, [field]: e.target.value }))}
+                      onChange={e => { setClinicalValues(prev => ({ ...prev, [field]: e.target.value })); setDirtyConsultation(prev => ({ ...prev, [field]: e.target.value })); }}
                       onBlur={e => { handleBlur(field, e.target.value); trackFieldRecent(`clinicos_clin_${field}`, e.target.value); }}
                       rows={rows}
                       placeholder={placeholder}
@@ -1406,7 +1467,7 @@ export default function ConsultationDetailPage() {
                 <Textarea
                   className="col-span-full"
                   value={investigationValue}
-                  onChange={e => setInvestigationValue(e.target.value)}
+                  onChange={e => { setInvestigationValue(e.target.value); setDirtyConsultation(prev => ({ ...prev, investigationOrders: e.target.value })); }}
                   onBlur={e => { handleBlur("investigationOrders", e.target.value); trackFieldRecent("clinicos_invest", e.target.value); }}
                   rows={6}
                   placeholder="Blood tests, imaging, referrals..."
@@ -1552,7 +1613,7 @@ export default function ConsultationDetailPage() {
                   <Input
                     className="col-span-full"
                     value={diagnosisValue}
-                    onChange={e => setDiagnosisValue(e.target.value)}
+                    onChange={e => { setDiagnosisValue(e.target.value); setDirtyConsultation(prev => ({ ...prev, diagnosis: e.target.value })); }}
                     onBlur={e => { handleBlur("diagnosis", e.target.value); trackFieldRecent("clinicos_diag", e.target.value); }}
                     placeholder="Primary diagnosis"
                     data-testid="input-diagnosis"
@@ -1561,7 +1622,8 @@ export default function ConsultationDetailPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">ICD-10 Code</Label>
                   <Input
-                    defaultValue={consultation.icd10Code ?? ""}
+                    value={icd10Value}
+                    onChange={e => { setIcd10Value(e.target.value); setDirtyConsultation(prev => ({ ...prev, icd10Code: e.target.value })); }}
                     onBlur={e => handleBlur("icd10Code", e.target.value)}
                     placeholder="J06.9"
                   />
@@ -1570,7 +1632,8 @@ export default function ConsultationDetailPage() {
                   <Label className="text-xs">Follow-up Date</Label>
                   <Input
                     type="date"
-                    defaultValue={consultation.followUpDate ?? ""}
+                    value={followUpDateValue}
+                    onChange={e => { setFollowUpDateValue(e.target.value); setDirtyConsultation(prev => ({ ...prev, followUpDate: e.target.value })); }}
                     onBlur={e => handleBlur("followUpDate", e.target.value)}
                   />
                 </div>
@@ -1584,7 +1647,7 @@ export default function ConsultationDetailPage() {
                   <Textarea
                     className="col-span-full"
                     value={adviceValue}
-                    onChange={e => setAdviceValue(e.target.value)}
+                    onChange={e => { setAdviceValue(e.target.value); setDirtyConsultation(prev => ({ ...prev, advice: e.target.value })); }}
                     onBlur={e => { handleBlur("advice", e.target.value); trackFieldRecent("clinicos_advice", e.target.value); }}
                     rows={4}
                     placeholder="Advice and instructions..."
@@ -1600,7 +1663,7 @@ export default function ConsultationDetailPage() {
                   <Input
                     className="col-span-full"
                     value={referenceToValue}
-                    onChange={e => setReferenceToValue(e.target.value)}
+                    onChange={e => { setReferenceToValue(e.target.value); setDirtyConsultation(prev => ({ ...prev, referenceTo: e.target.value })); }}
                     onBlur={e => { handleBlur("referenceTo", e.target.value); trackFieldRecent("clinicos_reference_to", e.target.value); }}
                     placeholder="Dr. Name / Hospital / Speciality"
                   />
