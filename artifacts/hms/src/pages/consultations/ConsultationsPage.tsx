@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import {
-  useListConsultations, useListUsers,
+  useListConsultations, useListUsers, useCompleteConsultation,
   getListConsultationsQueryKey, getListUsersQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
@@ -18,6 +21,10 @@ const statusColors: Record<string, string> = {
 export default function ConsultationsPage() {
   const today = new Date().toLocaleDateString("en-CA");
   const [date, setDate] = useState(today);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const completeMutation = useCompleteConsultation();
 
   const { data, isLoading } = useListConsultations(
     { date, limit: 500 },
@@ -27,6 +34,31 @@ export default function ConsultationsPage() {
 
   const consultations = data?.data ?? [];
   const doctors = users?.data ?? [];
+
+  const handleComplete = (id: string) => {
+    setCompletingId(id);
+    completeMutation.mutate({ id, data: {} }, {
+      onSuccess: () => {
+        toast({ title: "Consultation completed" });
+        queryClient.invalidateQueries({ queryKey: getListConsultationsQueryKey({ date, limit: 500 }) });
+        setCompletingId(null);
+      },
+      onError: (err: unknown) => {
+        const code = (err as { response?: { data?: { error?: string; balance?: number } } })?.response?.data?.error;
+        if (code === "UNPAID_BALANCE") {
+          const balance = (err as { response?: { data?: { balance?: number } } })?.response?.data?.balance ?? 0;
+          toast({
+            title: `Unpaid balance ₹${balance.toFixed(2)}`,
+            description: "Open the consultation to provide an override.",
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Failed to complete consultation", variant: "destructive" });
+        }
+        setCompletingId(null);
+      },
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -75,9 +107,25 @@ export default function ConsultationsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <Link href={`/consultations/${c.id}`}>
-                    <Button size="sm" variant="outline">Open</Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/consultations/${c.id}`}>
+                      <Button size="sm" variant="outline">Open</Button>
+                    </Link>
+                    {c.status === "in_progress" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/30"
+                        onClick={() => handleComplete(c.id)}
+                        disabled={completingId === c.id}
+                      >
+                        {completingId === c.id
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <><CheckCircle className="h-3.5 w-3.5 mr-1" />Complete</>
+                        }
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
