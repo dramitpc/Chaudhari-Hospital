@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, and, or, sql, SQL } from "drizzle-orm";
+import { eq, desc, and, sql, SQL } from "drizzle-orm";
 import { db, investigationsTable, invoicesTable, chargeTypesTable } from "@workspace/db";
 import {
   ListInvestigationsQueryParams,
@@ -66,7 +66,7 @@ router.post(
       const [invoice] = await db.select().from(invoicesTable)
         .where(and(
           eq(invoicesTable.consultationId, row.consultationId),
-          or(eq(invoicesTable.status, "pending"), eq(invoicesTable.status, "partial"))
+          eq(invoicesTable.status, "pending")
         ));
       if (invoice) {
         const chargeTypes = await db.select().from(chargeTypesTable)
