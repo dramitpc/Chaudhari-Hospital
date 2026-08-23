@@ -17,7 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PlusCircle, ChevronLeft, ChevronRight, CalendarDays, X, RefreshCw, Receipt, DollarSign, Pencil } from "lucide-react";
+import { PlusCircle, ChevronLeft, ChevronRight, CalendarDays, X, RefreshCw, Receipt, DollarSign, Pencil, CheckCircle, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 function composeAgeString(y: string, m: string, d: string): string {
   const parts: string[] = [];
@@ -192,8 +193,14 @@ export default function QueuePage() {
     inv => (inv.balance ?? 0) > 0 && inv.status !== "cancelled" && inv.status !== "refunded"
   );
 
-  // Complete Visit confirmation
+  // Complete Visit confirmation + override
   const [completeVisitTarget, setCompleteVisitTarget] = useState<{ tokenId: string; patientId: string } | null>(null);
+  const [cvOverrideTab, setCvOverrideTab] = useState<"reason" | "manager">("reason");
+  const [cvOverrideReason, setCvOverrideReason] = useState("");
+  const [cvMgrUsername, setCvMgrUsername] = useState("");
+  const [cvMgrPassword, setCvMgrPassword] = useState("");
+  const [cvOverrideError, setCvOverrideError] = useState("");
+  const [cvVerifying, setCvVerifying] = useState(false);
   const { data: completeVisitInvoicesData, isLoading: completeVisitInvoicesLoading } = useListInvoices(
     { patientId: completeVisitTarget?.patientId ?? "", limit: 20 },
     { query: { enabled: !!completeVisitTarget, queryKey: getListInvoicesQueryKey({ patientId: completeVisitTarget?.patientId ?? "", limit: 20 }) } }
@@ -719,65 +726,138 @@ export default function QueuePage() {
       </Dialog>
 
       {/* ── Complete Visit Confirmation Dialog ─────────────────────────────── */}
-      <Dialog open={!!completeVisitTarget} onOpenChange={(open) => { if (!open) setCompleteVisitTarget(null); }}>
-        <DialogContent className="max-w-sm">
+      <Dialog open={!!completeVisitTarget} onOpenChange={(open) => {
+        if (!open) {
+          setCompleteVisitTarget(null);
+          setCvOverrideTab("reason"); setCvOverrideReason(""); setCvMgrUsername(""); setCvMgrPassword(""); setCvOverrideError("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-purple-600" />
               Complete Visit
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            {completeVisitInvoicesLoading ? (
-              <div className="space-y-2 py-2">
-                <div className="h-6 bg-muted animate-pulse rounded" />
-                <div className="h-6 bg-muted animate-pulse rounded w-3/4" />
-              </div>
-            ) : completeVisitPendingInvoices.length > 0 ? (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-3 py-3 space-y-2">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                  ⚠ Invoice Payment Pending
-                </p>
+
+          {completeVisitInvoicesLoading ? (
+            <div className="space-y-2 py-2">
+              <div className="h-6 bg-muted animate-pulse rounded" />
+              <div className="h-6 bg-muted animate-pulse rounded w-3/4" />
+            </div>
+          ) : completeVisitPendingInvoices.length > 0 ? (
+            <div className="space-y-4">
+              {/* Balance summary */}
+              <div className="rounded-md border border-orange-200 bg-orange-50 dark:border-orange-800/60 dark:bg-orange-950/30 px-3 py-3 space-y-1.5">
+                <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">⚠ Unpaid invoices</p>
                 <ul className="space-y-1">
                   {completeVisitPendingInvoices.map(inv => (
-                    <li key={inv.id} className="text-xs text-amber-700 dark:text-amber-400 flex justify-between">
+                    <li key={inv.id} className="text-xs text-orange-700 dark:text-orange-400 flex justify-between">
                       <span>{inv.invoiceNumber}</span>
                       <span className="font-medium">₹{(inv.balance ?? 0).toFixed(2)} due</span>
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-amber-700 dark:text-amber-400">Please clear the invoice before ending the visit.</p>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No pending invoices. Ready to complete the visit.</p>
-            )}
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setCompleteVisitTarget(null)}>Cancel</Button>
-            {completeVisitPendingInvoices.length > 0 && !completeVisitInvoicesLoading && (
+
+              {/* Pay Now shortcut */}
               <Button
                 variant="outline"
-                className="text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400"
+                size="sm"
+                className="w-full text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-800"
                 onClick={() => {
                   if (completeVisitTarget) openQueuePayment(completeVisitTarget.patientId);
                   setCompleteVisitTarget(null);
                 }}
               >
-                <DollarSign className="h-3.5 w-3.5 mr-1" /> Pay Now
+                <DollarSign className="h-3.5 w-3.5 mr-1" /> Collect Payment Instead
               </Button>
-            )}
-            <Button
-              disabled={updateStatusMutation.isPending || completeVisitInvoicesLoading}
-              className={completeVisitPendingInvoices.length > 0 ? "bg-amber-600 hover:bg-amber-700" : ""}
-              onClick={() => {
-                if (completeVisitTarget) {
-                  handleUpdateStatus(completeVisitTarget.tokenId, "completed");
-                  setCompleteVisitTarget(null);
-                }
-              }}
-            >
-              {completeVisitPendingInvoices.length > 0 ? "Complete Anyway" : "Complete Visit"}
-            </Button>
-          </DialogFooter>
+
+              <p className="text-xs text-muted-foreground text-center">— or override with authorisation —</p>
+
+              {/* Override tab switcher */}
+              <div className="flex rounded-md border border-border overflow-hidden text-sm">
+                <button
+                  className={`flex-1 py-2 font-medium transition-colors ${cvOverrideTab === "reason" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  onClick={() => { setCvOverrideTab("reason"); setCvOverrideError(""); }}
+                >Reason Code</button>
+                <button
+                  className={`flex-1 py-2 font-medium transition-colors border-l border-border ${cvOverrideTab === "manager" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  onClick={() => { setCvOverrideTab("manager"); setCvOverrideError(""); }}
+                >Manager Approval</button>
+              </div>
+
+              {cvOverrideTab === "reason" ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Override reason <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    rows={2}
+                    value={cvOverrideReason}
+                    onChange={e => { setCvOverrideReason(e.target.value); setCvOverrideError(""); }}
+                    placeholder="e.g. Patient will pay via ward account"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Manager username <span className="text-destructive">*</span></Label>
+                    <Input value={cvMgrUsername} onChange={e => { setCvMgrUsername(e.target.value); setCvOverrideError(""); }} placeholder="username" autoComplete="username" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Manager password <span className="text-destructive">*</span></Label>
+                    <Input type="password" value={cvMgrPassword} onChange={e => { setCvMgrPassword(e.target.value); setCvOverrideError(""); }} placeholder="••••••••" autoComplete="current-password" />
+                  </div>
+                </div>
+              )}
+
+              {cvOverrideError && <p className="text-xs text-destructive font-medium">{cvOverrideError}</p>}
+
+              <DialogFooter className="gap-2 pt-0">
+                <Button variant="outline" onClick={() => setCompleteVisitTarget(null)}>Cancel</Button>
+                <Button
+                  variant="destructive"
+                  disabled={cvVerifying || updateStatusMutation.isPending}
+                  onClick={async () => {
+                    setCvOverrideError("");
+                    if (cvOverrideTab === "reason") {
+                      if (cvOverrideReason.trim().length < 5) { setCvOverrideError("Enter a reason of at least 5 characters."); return; }
+                      if (completeVisitTarget) { handleUpdateStatus(completeVisitTarget.tokenId, "completed"); setCompleteVisitTarget(null); }
+                    } else {
+                      if (!cvMgrUsername.trim() || !cvMgrPassword) { setCvOverrideError("Enter manager username and password."); return; }
+                      setCvVerifying(true);
+                      try {
+                        const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+                        const res = await fetch(`${apiBase}/api/auth/verify-manager`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("accessToken") ?? ""}` },
+                          body: JSON.stringify({ username: cvMgrUsername.trim(), password: cvMgrPassword }),
+                        });
+                        if (!res.ok) { setCvOverrideError("Invalid manager credentials or insufficient role."); setCvVerifying(false); return; }
+                        if (completeVisitTarget) { handleUpdateStatus(completeVisitTarget.tokenId, "completed"); setCompleteVisitTarget(null); }
+                      } catch { setCvOverrideError("Verification failed — check connection."); }
+                      setCvVerifying(false);
+                    }
+                  }}
+                >
+                  {cvVerifying ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+                  Complete Anyway
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">No pending invoices. Ready to complete the visit.</p>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setCompleteVisitTarget(null)}>Cancel</Button>
+                <Button
+                  disabled={updateStatusMutation.isPending}
+                  onClick={() => {
+                    if (completeVisitTarget) { handleUpdateStatus(completeVisitTarget.tokenId, "completed"); setCompleteVisitTarget(null); }
+                  }}
+                >Complete Visit</Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -114,6 +114,21 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
   });
 });
 
+router.post("/auth/verify-manager", authenticate, async (req, res): Promise<void> => {
+  const { username, password } = req.body as { username?: string; password?: string };
+  if (!username || !password) {
+    res.status(400).json({ error: "Username and password required" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+  if (!user || !user.isActive || !["admin", "staff"].includes(user.role) || !verifyPassword(password, user.passwordHash)) {
+    res.status(403).json({ error: "INVALID_MANAGER", message: "Invalid credentials or insufficient role." });
+    return;
+  }
+  await logAudit(req, req.user!.id, "MANAGER_OVERRIDE", "auth", user.id, `Override approved by ${user.fullName} (${user.username})`);
+  res.json({ ok: true, managerName: user.fullName });
+});
+
 router.post("/auth/change-password", authenticate, async (req, res): Promise<void> => {
   const parsed = ChangePasswordBody.safeParse(req.body);
   if (!parsed.success) {

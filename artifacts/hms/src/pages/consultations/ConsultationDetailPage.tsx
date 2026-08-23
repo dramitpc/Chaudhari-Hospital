@@ -1078,6 +1078,7 @@ export default function ConsultationDetailPage() {
         toast({ title: "Consultation completed" });
         queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
         setShowOverrideDialog(false);
+        navigate(backDestination);
       },
       onError: (err: unknown) => {
         // ApiError exposes the parsed response body as .data (not .response.data)
