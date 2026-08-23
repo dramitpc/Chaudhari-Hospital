@@ -1080,19 +1080,18 @@ export default function ConsultationDetailPage() {
         setShowOverrideDialog(false);
       },
       onError: (err: unknown) => {
-        const msg = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message
-          || (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.error
-          || "Error completing consultation";
-        const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        // ApiError exposes the parsed response body as .data (not .response.data)
+        const body = (err as { data?: { error?: string; message?: string; balance?: number } })?.data;
+        const code = body?.error;
         if (code === "UNPAID_BALANCE") {
-          const balance = (err as { response?: { data?: { balance?: number } } })?.response?.data?.balance ?? 0;
+          const balance = body?.balance ?? 0;
           setOverrideUnpaidBalance(balance);
           setOverrideReason(""); setOverrideMgrUsername(""); setOverrideMgrPassword(""); setOverrideError("");
           setShowOverrideDialog(true);
         } else if (code === "INVALID_MANAGER") {
           setOverrideError("Invalid manager credentials or insufficient role.");
         } else {
-          toast({ title: msg, variant: "destructive" });
+          toast({ title: body?.message || body?.error || "Error completing consultation", variant: "destructive" });
         }
       },
     });
