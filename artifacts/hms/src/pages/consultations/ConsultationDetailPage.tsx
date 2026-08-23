@@ -730,7 +730,10 @@ export default function ConsultationDetailPage() {
           bodyPart: invBodyPart.trim() || undefined,
           notes: invNotes.trim() || undefined,
         }},
-        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
+        { onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
+            queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+          } }
       );
     }
     toast({ title: "Investigation ordered" });
@@ -2058,7 +2061,10 @@ export default function ConsultationDetailPage() {
                       bodyPart: e.bodyPart.trim() || undefined,
                       notes: e.notes.trim() || undefined,
                     }},
-                    { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) }) }
+                    { onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
+                        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+                      } }
                   ));
                 }
                 toast({ title: `${entries.length} investigation${entries.length > 1 ? "s" : ""} ordered` });
