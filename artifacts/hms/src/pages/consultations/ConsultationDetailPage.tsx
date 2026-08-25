@@ -409,6 +409,8 @@ export default function ConsultationDetailPage() {
     { patientId: patientId || undefined, limit: 100 },
     { query: { enabled: !!patientId, queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) } }
   );
+  const refetchActiveInvoices = () =>
+    queryClient.refetchQueries({ queryKey: getListInvoicesQueryKey(), type: "active" });
 
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
@@ -754,7 +756,7 @@ export default function ConsultationDetailPage() {
         }},
         { onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
-            queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+            void refetchActiveInvoices();
           } }
       );
     }
@@ -2155,7 +2157,7 @@ export default function ConsultationDetailPage() {
                       }}).catch(() => {});
                     }
                     queryClient.invalidateQueries({ queryKey: getListInvestigationsQueryKey({ consultationId: id ?? "" }) });
-                    queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey({ patientId: patientId || undefined, limit: 100 }) });
+                    await refetchActiveInvoices();
                   })();
                 }
               }}
