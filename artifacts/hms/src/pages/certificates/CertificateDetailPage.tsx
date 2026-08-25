@@ -25,7 +25,7 @@ import html2canvas from "html2canvas";
 
 const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"] as const;
 const certTypeLabels: Record<string, string> = {
-  sick_leave: "Sick Leave Certificate", fitness: "Fitness Certificate",
+  sick_leave: "Medical Certificate", fitness: "Fitness Certificate",
   medical: "Medical Certificate", procedure: "Procedure Certificate",
   vaccination: "Vaccination Certificate", referral_thank_you: "Thanking Letter",
 };
@@ -53,7 +53,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
 }
 
 const certTitles: Record<string, string> = {
-  sick_leave: "Sick Leave Certificate",
+  sick_leave: "Medical Certificate",
   fitness: "Fitness Certificate",
   medical: "Medical Certificate",
   procedure: "Procedure Certificate",

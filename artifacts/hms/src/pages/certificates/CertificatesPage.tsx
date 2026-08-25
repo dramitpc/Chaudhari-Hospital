@@ -37,7 +37,7 @@ function fmtPickerDate(iso: string) {
 const CERT_TYPES = ["sick_leave", "fitness", "medical", "procedure", "vaccination", "referral_thank_you"];
 
 const certTitles: Record<string, string> = {
-  sick_leave: "Sick Leave Certificate",
+  sick_leave: "Medical Certificate",
   fitness: "Fitness Certificate",
   medical: "Medical Certificate",
   procedure: "Procedure Certificate",
