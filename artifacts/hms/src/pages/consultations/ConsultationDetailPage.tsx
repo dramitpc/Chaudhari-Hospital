@@ -1093,7 +1093,7 @@ export default function ConsultationDetailPage() {
       onSuccess: () => {
         toast({ title: "Consultation completed" });
         queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
-        navigate(backDestination);
+        navigate("/queue");
       },
       onError: () => toast({ title: "Error completing consultation", variant: "destructive" }),
     });
