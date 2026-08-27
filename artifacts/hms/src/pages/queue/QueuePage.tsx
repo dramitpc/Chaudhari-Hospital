@@ -511,7 +511,7 @@ export default function QueuePage() {
                       )}
                       {token.patientPhone ?? "No phone"}
                       <span className="mx-1.5 opacity-40">·</span>
-                      <span title="Token generated at">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span title="Token generated at">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
                     </p>
                     {token.status === "waiting" && (
                       <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
@@ -598,7 +598,7 @@ export default function QueuePage() {
                       <span className="text-sm text-muted-foreground truncate">{token.patientName}</span>
                       {token.patientAge && <span className="text-xs text-muted-foreground shrink-0">{token.patientAge}{token.patientGender ? ` / ${token.patientGender}` : ""}</span>}
                       <VisitTypeBadge visitType={token.visitType} />
-                      <span className="text-xs text-muted-foreground shrink-0">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
                       {invoicedPatientIds.has(token.patientId) && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700">
                           <Receipt className="h-2.5 w-2.5" /> ₹

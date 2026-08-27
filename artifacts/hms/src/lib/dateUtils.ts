@@ -24,7 +24,7 @@ export function fmtDate(d: DateInput): string {
   return date.toLocaleDateString("en-GB"); // → DD/MM/YYYY
 }
 
-/** Display a date-time as DD/MM/YYYY, HH:mm */
+/** Display a date-time as DD/MM/YYYY, hh:mm AM/PM */
 export function fmtDateTime(d: DateInput): string {
   const date = toDate(d);
   if (!date) return "—";
@@ -34,5 +34,6 @@ export function fmtDateTime(d: DateInput): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }); // → DD/MM/YYYY, HH:mm
+    hour12: true,
+  }); // → DD/MM/YYYY, hh:mm AM/PM
 }

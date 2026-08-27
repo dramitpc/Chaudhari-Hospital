@@ -108,7 +108,7 @@ export default function PrescriptionsPage() {
                 <td className="px-4 py-3 font-medium">{p.patientName}</td>
                 <td className="px-4 py-3 text-muted-foreground">{p.doctorName}</td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">
-                  {p.createdAt ? new Date(p.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                  {p.createdAt ? new Date(p.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
                 </td>
                 <td className="px-4 py-3 max-w-[180px] truncate text-muted-foreground">{p.diagnosis ?? "—"}</td>
                 <td className="px-4 py-3">{p.items.length} drug{p.items.length !== 1 ? "s" : ""}</td>
