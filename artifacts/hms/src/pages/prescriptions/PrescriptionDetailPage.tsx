@@ -167,24 +167,44 @@ export default function PrescriptionDetailPage() {
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
 
-  // Fit-to-A4: shrink via zoom if content overflows one page
+  // Fit-to-A4: use the paper's printable width before measuring so mobile
+  // browsers do not wrap the prescription at the phone viewport width.
+  const fitPrintContent = () => {
+    const el = printRef.current;
+    if (!el) return;
+
+    const A4_PRINTABLE_HEIGHT_PX = 1047; // 277mm (A4 minus 10mm margins) at 96dpi
+    el.style.width = "190mm";
+    el.style.maxWidth = "190mm";
+    el.style.boxSizing = "border-box";
+    el.style.zoom = "";
+
+    const height = el.scrollHeight;
+    if (height > A4_PRINTABLE_HEIGHT_PX) {
+      el.style.zoom = String(A4_PRINTABLE_HEIGHT_PX / height);
+    }
+  };
+
+  const resetPrintContent = () => {
+    const el = printRef.current;
+    if (!el) return;
+    el.style.width = "";
+    el.style.maxWidth = "";
+    el.style.boxSizing = "";
+    el.style.zoom = "";
+  };
+
+  const printPrescription = () => {
+    fitPrintContent();
+    window.print();
+  };
+
   useEffect(() => {
-    const A4_PX = 1047; // 297mm − 2×10mm margins at 96 dpi
-    const before = () => {
-      const el = printRef.current;
-      if (!el) return;
-      el.style.zoom = "";
-      const h = el.scrollHeight;
-      if (h > A4_PX) el.style.zoom = String(A4_PX / h);
-    };
-    const after = () => {
-      if (printRef.current) printRef.current.style.zoom = "";
-    };
-    window.addEventListener("beforeprint", before);
-    window.addEventListener("afterprint", after);
+    window.addEventListener("beforeprint", fitPrintContent);
+    window.addEventListener("afterprint", resetPrintContent);
     return () => {
-      window.removeEventListener("beforeprint", before);
-      window.removeEventListener("afterprint", after);
+      window.removeEventListener("beforeprint", fitPrintContent);
+      window.removeEventListener("afterprint", resetPrintContent);
     };
   }, []);
 
@@ -198,13 +218,13 @@ export default function PrescriptionDetailPage() {
           {
             onSuccess: () => {
               queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
-              setTimeout(() => window.print(), 400);
+              setTimeout(printPrescription, 400);
             },
-            onError: () => setTimeout(() => window.print(), 400),
+            onError: () => setTimeout(printPrescription, 400),
           }
         );
       } else {
-        setTimeout(() => window.print(), 300);
+        setTimeout(printPrescription, 300);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -393,7 +413,7 @@ export default function PrescriptionDetailPage() {
             </PopoverContent>
           </Popover>
 
-          <Button onClick={() => window.print()} data-testid="btn-print-prescription">
+          <Button onClick={printPrescription} data-testid="btn-print-prescription">
             <Printer className="mr-2 h-4 w-4" />Print
           </Button>
         </div>
@@ -411,7 +431,7 @@ export default function PrescriptionDetailPage() {
       )}
 
       {/* Prescription body */}
-      <div ref={printRef} className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-4 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
+      <div ref={printRef} className={`prescription-print mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-4 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
         {/* Indic font preload */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
@@ -674,6 +694,20 @@ export default function PrescriptionDetailPage() {
           .print\\:hidden { display: none !important; }
           nav, aside, header { display: none !important; }
           body { margin: 0 !important; }
+          .prescription-print {
+            width: 190mm !important;
+            max-width: 190mm !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            box-sizing: border-box !important;
+            overflow: visible !important;
+          }
+          .prescription-print table,
+          .prescription-print tr,
+          .prescription-print img {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
           /* Tighten spacing so short content stays compact */
           .rx-section { margin-bottom: 0.5rem !important; }
           .rx-section-title { margin-bottom: 0.25rem !important; font-size: 0.7rem !important; }
