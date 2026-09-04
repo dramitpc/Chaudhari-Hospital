@@ -424,41 +424,154 @@ function drawPayments(doc: PdfDocument, y: number, payments: InvoicePayment[]): 
 
 export function createReceiptPdf(input: ReceiptPdfInput): PdfDocument {
   const { invoice, patient, payments = [], settings } = input;
-  const isReceipt = (invoice.amountPaid ?? 0) > 0;
-  const title = isReceipt ? "PAYMENT RECEIPT" : "INVOICE";
   const doc = createDocument();
   doc.setProperties({
-    title: `${title} - ${invoice.invoiceNumber}`,
-    subject: isReceipt ? "Payment receipt" : "Invoice",
+    title: `Invoice - ${invoice.invoiceNumber}`,
+    subject: "Invoice and payment receipt",
+  });
+  const right = PAGE_WIDTH - MARGIN;
+  const clinicName = settings?.clinicName ?? "ClinicOS";
+  const amount = (value: number | null | undefined) => `INR ${(value ?? 0).toFixed(2)}`;
+  const statusColor: [number, number, number] =
+    invoice.status === "paid" ? [22, 101, 52]
+      : invoice.status === "partial" ? [30, 64, 175]
+        : invoice.status === "pending" ? [146, 64, 14]
+          : [153, 27, 27];
+  const statusFill: [number, number, number] =
+    invoice.status === "paid" ? [220, 252, 231]
+      : invoice.status === "partial" ? [219, 234, 254]
+        : invoice.status === "pending" ? [254, 243, 199]
+          : [254, 226, 226];
+
+  setTextStyle(doc, { size: 17, style: "bold", color: BRAND });
+  doc.text(clinicName, MARGIN, 17);
+  let contactY = 22;
+  if (settings?.address) {
+    contactY = writeText(doc, settings.address, MARGIN, contactY, 108, { size: 7.5, color: MUTED, lineHeight: 3.2 });
+  }
+  const contact = [settings?.phone, settings?.email].filter(Boolean).join("  |  ");
+  if (contact) writeText(doc, contact, MARGIN, contactY, 108, { size: 7.5, color: MUTED });
+
+  setTextStyle(doc, { size: 20, style: "bold", color: BRAND });
+  doc.text("INVOICE", right, 17, { align: "right" });
+  setTextStyle(doc, { size: 9, style: "bold", color: [68, 68, 68] });
+  doc.text(invoice.invoiceNumber, right, 22, { align: "right" });
+  setTextStyle(doc, { size: 7.5, color: MUTED });
+  doc.text(`Date: ${fmtDate(invoice.createdAt)}`, right, 26, { align: "right" });
+  doc.setFillColor(...statusFill);
+  doc.roundedRect(right - 25, 28, 25, 7, 1, 1, "F");
+  setTextStyle(doc, { size: 7, style: "bold", color: statusColor });
+  doc.text(invoice.status.toUpperCase(), right - 12.5, 32.6, { align: "center" });
+  doc.setDrawColor(...BRAND);
+  doc.setLineWidth(0.7);
+  doc.line(MARGIN, 38, right, 38);
+
+  const cardY = 43;
+  const cardGap = 5;
+  const cardWidth = (CONTENT_WIDTH - cardGap) / 2;
+  const drawCard = (x: number, label: string, primary: string, details: string[]) => {
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(x, cardY, cardWidth, 24, 1, 1, "FD");
+    setTextStyle(doc, { size: 6.5, style: "bold", color: BRAND });
+    doc.text(label.toUpperCase(), x + 4, cardY + 5);
+    setTextStyle(doc, { size: 9, style: "bold" });
+    doc.text(primary || "-", x + 4, cardY + 10);
+    setTextStyle(doc, { size: 7, color: MUTED });
+    details.filter(Boolean).slice(0, 2).forEach((detail, index) => doc.text(detail, x + 4, cardY + 15 + index * 3.5));
+  };
+  drawCard(MARGIN, "Bill To", invoice.patientName ?? patient?.fullName ?? "-", [
+    patient?.dateOfBirth ? `DOB: ${fmtDate(patient.dateOfBirth)}` : "",
+    patient?.phone ? `Phone: ${patient.phone}` : "",
+  ]);
+  drawCard(MARGIN + cardWidth + cardGap, "Consulting Doctor", invoice.doctorName ?? "-", []);
+
+  const tableY = 72;
+  const widths = [10, 94, 20, 29, 29];
+  const headers = ["#", "Description", "Qty", "Rate", "Amount"];
+  doc.setFillColor(...BRAND);
+  doc.rect(MARGIN, tableY, CONTENT_WIDTH, 8, "F");
+  let x = MARGIN;
+  headers.forEach((header, index) => {
+    setTextStyle(doc, { size: 7, style: "bold", color: [255, 255, 255] });
+    doc.text(header, index >= 2 ? x + widths[index] - 2 : x + 2, tableY + 5.2, {
+      align: index >= 2 ? "right" : "left",
+    });
+    x += widths[index];
   });
 
-  let y = drawHeader(doc, settings, title, invoice.invoiceNumber);
-  y = drawInfoBox(doc, y, [
-    [
-      { label: "Patient", value: invoice.patientName ?? patient?.fullName },
-      { label: "Patient ID", value: patient?.patientId },
-      { label: "Date", value: fmtDate(invoice.createdAt) },
-    ],
-    [
-      { label: "Doctor", value: invoice.doctorName ?? "-" },
-      { label: "Status", value: invoice.status.toUpperCase() },
-      { label: "Payment Mode", value: invoice.paymentMode?.toUpperCase() ?? "-" },
-    ],
-  ]);
-  y = drawInvoiceTable(doc, y, invoice);
-  y = drawTotals(doc, y, invoice);
-  y = drawPayments(doc, y, payments);
-  y = drawSection(doc, y, "Notes", invoice.notes);
+  let rowY = tableY + 8;
+  invoice.items.forEach((item, index) => {
+    const description = wrappedLines(doc, item.description, widths[1] - 4);
+    const rowHeight = Math.max(7, description.length * 3.2 + 3);
+    if (index % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(MARGIN, rowY, CONTENT_WIDTH, rowHeight, "F");
+    }
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(MARGIN, rowY, CONTENT_WIDTH, rowHeight);
+    const values: Array<string | string[]> = [
+      String(index + 1), description, String(item.quantity), amount(item.unitPrice), amount(item.total),
+    ];
+    x = MARGIN;
+    values.forEach((value, cellIndex) => {
+      setTextStyle(doc, { size: 7, style: cellIndex === 1 ? "bold" : "normal" });
+      doc.text(value, cellIndex >= 2 ? x + widths[cellIndex] - 2 : x + 2, rowY + 4.2, {
+        align: cellIndex >= 2 ? "right" : "left",
+        maxWidth: widths[cellIndex] - 4,
+        lineHeightFactor: 1.2,
+      });
+      x += widths[cellIndex];
+    });
+    rowY += rowHeight;
+  });
 
-  y = ensureSpace(doc, y, 16);
-  setTextStyle(doc, { size: 9, style: "bold", color: BRAND });
-  doc.text("Thank you for visiting us.", MARGIN, y + 5);
-  if (settings?.taxId) {
-    setTextStyle(doc, { size: 7.5, color: MUTED });
-    doc.text(`Tax ID: ${settings.taxId}`, PAGE_WIDTH - MARGIN, y + 5, { align: "right" });
+  const summaryY = Math.max(rowY + 6, 100);
+  setTextStyle(doc, { size: 6.5, style: "bold", color: BRAND });
+  doc.text("PAYMENT DETAILS", MARGIN, summaryY);
+  if (payments.length > 0) {
+    payments.slice(0, 4).forEach((payment, index) => {
+      const y = summaryY + 5 + index * 4;
+      setTextStyle(doc, { size: 7 });
+      doc.text(`${fmtDate(payment.paidAt)}  ${payment.paymentMode.toUpperCase()}`, MARGIN, y);
+      doc.text(amount(payment.amount), MARGIN + 72, y, { align: "right" });
+    });
+  } else {
+    setTextStyle(doc, { size: 7, color: MUTED });
+    doc.text(invoice.paymentMode?.toUpperCase() ?? "No payment recorded", MARGIN, summaryY + 5);
+  }
+  if ((invoice.balance ?? 0) > 0) {
+    setTextStyle(doc, { size: 7, style: "bold", color: [146, 64, 14] });
+    doc.text(`Balance: ${amount(invoice.balance)}`, MARGIN, summaryY + 25);
   }
 
-  drawFooter(doc, settings);
+  const totalX = right - 72;
+  const totals: Array<[string, string, "normal" | "green" | "strong"]> = [];
+  totals.push(["Subtotal", amount(invoice.subtotal), "normal"]);
+  if (invoice.discount) totals.push(["Discount", `- ${amount(invoice.discount)}`, "green"]);
+  if (invoice.tax) totals.push(["Tax", amount(invoice.tax), "normal"]);
+  totals.push(
+    ["TOTAL", amount(invoice.total), "strong"],
+    ["Paid", amount(invoice.amountPaid), "green"],
+    ["Balance Due", amount(invoice.balance), (invoice.balance ?? 0) > 0 ? "strong" : "green"],
+  );
+  totals.forEach(([label, value, emphasis], index) => {
+    const y = summaryY - 2 + index * 5;
+    doc.setDrawColor(emphasis === "strong" ? 30 : 226, emphasis === "strong" ? 58 : 232, emphasis === "strong" ? 95 : 240);
+    doc.line(totalX, y + 2, right, y + 2);
+    const color: [number, number, number] =
+      emphasis === "green" ? [22, 163, 74] : emphasis === "strong" ? BRAND : [85, 85, 85];
+    setTextStyle(doc, { size: emphasis === "strong" ? 8.5 : 7, style: emphasis === "strong" ? "bold" : "normal", color });
+    doc.text(label, totalX, y);
+    doc.text(value, right, y, { align: "right" });
+  });
+
+  const footerY = Math.max(139, summaryY + totals.length * 5 + 5);
+  doc.setDrawColor(226, 232, 240);
+  doc.line(MARGIN, footerY, right, footerY);
+  setTextStyle(doc, { size: 7, color: [136, 136, 136] });
+  doc.text(`Thank you for choosing ${clinicName}. We wish you good health.`, MARGIN, footerY + 5);
+  doc.text(invoice.invoiceNumber, right, footerY + 5, { align: "right" });
   return doc;
 }
 
