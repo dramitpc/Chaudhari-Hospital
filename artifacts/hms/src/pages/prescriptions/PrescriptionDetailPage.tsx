@@ -172,10 +172,35 @@ export default function PrescriptionDetailPage() {
   const [selectedLang, setSelectedLang] = useState(() => (urlLang && urlLang !== "en") ? urlLang : "en");
   const translateMutation = useTranslatePrescription();
   const didAutoPrint = useRef(false);
+  const printContentRef = useRef<HTMLDivElement>(null);
+  const [printScale, setPrintScale] = useState(1);
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(fmt));
   }, [fmt]);
+
+  useEffect(() => {
+    const calculatePrintScale = () => {
+      const content = printContentRef.current;
+      if (!content) return;
+
+      // A4 is 297mm high. With 10mm print margins, 277mm remains.
+      // Keep a small safety allowance for browser print rounding.
+      const targetHeightPx = (272 / 25.4) * 96;
+      const measuredHeight = content.scrollHeight;
+      setPrintScale(measuredHeight > targetHeightPx
+        ? Math.max(0.45, targetHeightPx / measuredHeight)
+        : 1);
+    };
+
+    const frame = requestAnimationFrame(calculatePrintScale);
+    void document.fonts?.ready.then(calculatePrintScale);
+    window.addEventListener("beforeprint", calculatePrintScale);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("beforeprint", calculatePrintScale);
+    };
+  }, [fmt, prescription, patient, consultation, settings]);
 
   // Auto-populate language from patient preference or existing translation
   // (URL lang param takes priority — skip when coming from print flow)
@@ -436,8 +461,12 @@ export default function PrescriptionDetailPage() {
 
       {/* Prescription body */}
       <div
-        className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}
-        style={{ fontFamily: MULTILINGUAL_FONT_STACK }}
+        ref={printContentRef}
+        className={`prescription-print-content mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}
+        style={{
+          fontFamily: MULTILINGUAL_FONT_STACK,
+          "--prescription-print-scale": printScale,
+        } as React.CSSProperties}
       >
         {/* Letterhead */}
         <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
@@ -687,6 +716,46 @@ export default function PrescriptionDetailPage() {
         </div>
 
       </div>
+
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+
+          html, body {
+            width: auto !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .prescription-print-content {
+            zoom: var(--prescription-print-scale);
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 5mm !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+          }
+
+          .prescription-print-content > div {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .prescription-print-content .mb-6 { margin-bottom: 0.75rem !important; }
+          .prescription-print-content .mb-4 { margin-bottom: 0.5rem !important; }
+          .prescription-print-content .mt-12 { margin-top: 1.25rem !important; }
+          .prescription-print-content .h-14 { height: 2.5rem !important; }
+        }
+      `}</style>
 
       <ShareDialog
         open={showShare}
