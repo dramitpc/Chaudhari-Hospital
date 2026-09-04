@@ -20,7 +20,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   createPrescriptionPdf,
   downloadPdf,
-  openPdf,
   pdfToFile,
   prescriptionPdfFileName,
 } from "@/lib/multilingualPdfDocuments";
@@ -176,10 +175,7 @@ export default function PrescriptionDetailPage() {
     ? createPrescriptionPdf({ prescription: value, patient, consultation, settings, format: fmt, translation: value.translations as TranslatedData | null })
     : null;
 
-  const printPrescription = async (value = prescription) => {
-    const pdf = makePrescriptionPdf(value);
-    if (pdf && value) openPdf(await pdf, prescriptionPdfFileName(value));
-  };
+  const printPrescription = () => window.print();
 
   const downloadPrescriptionPdf = async () => {
     const pdf = makePrescriptionPdf();
@@ -202,7 +198,7 @@ export default function PrescriptionDetailPage() {
           {
             onSuccess: (translatedPrescription) => {
               queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
-              setTimeout(() => void printPrescription(translatedPrescription), 400);
+              setTimeout(() => void printPrescription(), 400);
             },
             onError: () => setTimeout(() => void printPrescription(), 400),
           }

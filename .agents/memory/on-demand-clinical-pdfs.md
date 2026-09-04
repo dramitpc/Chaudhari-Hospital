@@ -13,4 +13,4 @@ Prescriptions must always generate as a single A4 page. Adjust typography, margi
 
 **How to apply:** Reuse data-driven document builders for print, download, and native file sharing. Pass the active preview format and language into the builder, use script-specific bundled fonts, keep database records as the source of truth, and treat generated PDF files as temporary client-side artifacts.
 
-Browser PDF viewers loaded from Blob URLs can become cross-origin inside the Replit preview, so the app must not call `print()` through a hidden PDF iframe. Open the PDF in the supported browser viewer for printing and provide a separate direct-download action for saving.
+Browser PDF viewers loaded from Blob URLs can become cross-origin inside the Replit preview, so the app must not call `print()` through a hidden PDF iframe. Use the page's print layout with `window.print()` for popup-free printing and provide a separate direct-download action for saving the generated PDF.
