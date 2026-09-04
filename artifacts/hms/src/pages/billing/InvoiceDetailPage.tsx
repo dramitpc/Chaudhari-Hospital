@@ -348,21 +348,159 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
+      <div className="invoice-sept3-print">
+        <div className="invoice-sept3-header">
+          <div>
+            <div className="invoice-sept3-clinic">{settings?.clinicName ?? "ClinicOS"}</div>
+            {settings?.address && <div className="invoice-sept3-muted">{settings.address}</div>}
+            <div className="invoice-sept3-contact">
+              {settings?.phone && <span>Tel: {settings.phone}</span>}
+              {settings?.email && <span>{settings.email}</span>}
+            </div>
+          </div>
+          <div className="invoice-sept3-title-block">
+            <div className="invoice-sept3-title">INVOICE</div>
+            <div className="invoice-sept3-number">{invoice.invoiceNumber}</div>
+            <div className="invoice-sept3-muted">Date: {fmtDate(invoice.createdAt)}</div>
+            <span className={`invoice-sept3-status invoice-sept3-status-${invoice.status}`}>
+              {invoice.status.toUpperCase()}
+            </span>
+          </div>
+        </div>
+
+        <div className="invoice-sept3-cards">
+          <div className="invoice-sept3-card">
+            <div className="invoice-sept3-label">Bill To</div>
+            <div className="invoice-sept3-card-name">{invoice.patientName}</div>
+            {patient?.dateOfBirth && <div className="invoice-sept3-muted">DOB: {fmtDate(patient.dateOfBirth)}</div>}
+            {patient?.phone && <div className="invoice-sept3-muted">Tel: {patient.phone}</div>}
+          </div>
+          {invoice.doctorName && (
+            <div className="invoice-sept3-card">
+              <div className="invoice-sept3-label">Consulting Doctor</div>
+              <div className="invoice-sept3-card-name">{invoice.doctorName}</div>
+            </div>
+          )}
+        </div>
+
+        <table className="invoice-sept3-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Description</th>
+              <th className="invoice-sept3-right">Qty</th>
+              <th className="invoice-sept3-right">Rate</th>
+              <th className="invoice-sept3-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={index}>
+                <td>{index + 1}</td>
+                <td>{item.description}</td>
+                <td className="invoice-sept3-right">{item.quantity}</td>
+                <td className="invoice-sept3-right">₹{item.unitPrice.toFixed(2)}</td>
+                <td className="invoice-sept3-right">₹{item.total.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="invoice-sept3-summary">
+          <div className="invoice-sept3-payments">
+            <div className="invoice-sept3-label">Payment Details</div>
+            {payments && payments.length > 0 ? (
+              <>
+                {payments.map((payment, index) => (
+                  <div key={payment.id} className="invoice-sept3-payment-row">
+                    <span>#{index + 1} · {fmtDate(payment.paidAt)} · {payment.paymentMode}</span>
+                    <strong>₹{payment.amount.toFixed(2)}</strong>
+                  </div>
+                ))}
+                <div className="invoice-sept3-payment-total">
+                  <span>Total Paid</span>
+                  <strong>₹{(invoice.amountPaid ?? 0).toFixed(2)}</strong>
+                </div>
+              </>
+            ) : (
+              <div className="invoice-sept3-muted">{invoice.paymentMode || "No payment recorded"}</div>
+            )}
+            {(invoice.balance ?? 0) > 0 && (
+              <div className="invoice-sept3-balance">Balance: ₹{(invoice.balance ?? 0).toFixed(2)}</div>
+            )}
+          </div>
+
+          <div className="invoice-sept3-totals">
+            <div><span>Subtotal</span><span>₹{invoice.subtotal.toFixed(2)}</span></div>
+            {(invoice.discount ?? 0) > 0 && <div className="invoice-sept3-green"><span>Discount</span><span>-₹{(invoice.discount ?? 0).toFixed(2)}</span></div>}
+            {(invoice.tax ?? 0) > 0 && <div><span>Tax</span><span>₹{(invoice.tax ?? 0).toFixed(2)}</span></div>}
+            <div className="invoice-sept3-grand-total"><span>TOTAL</span><span>₹{invoice.total.toFixed(2)}</span></div>
+            <div className="invoice-sept3-green"><span>Paid</span><span>₹{(invoice.amountPaid ?? 0).toFixed(2)}</span></div>
+            <div className={(invoice.balance ?? 0) > 0 ? "invoice-sept3-balance" : "invoice-sept3-green"}>
+              <span>Balance Due</span><span>₹{(invoice.balance ?? 0).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="invoice-sept3-footer">
+          <span>Thank you for choosing <strong>{settings?.clinicName ?? "ClinicOS"}</strong>. We wish you good health.</span>
+          <span>{invoice.invoiceNumber}</span>
+        </div>
+      </div>
+
       <style>{`
+        .invoice-sept3-print { display: none; }
         @media print {
           @page { size: A4; margin: 12mm; }
-          .invoice-screen-actions { display: none !important; }
-          .invoice-print-content {
+          .invoice-print-content { display: none !important; }
+          .invoice-sept3-print {
             display: block !important;
+            width: 100%;
+            height: 136mm;
+            overflow: hidden;
+            color: #111827;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
           }
-          .invoice-print-main {
-            width: 100% !important;
+          .invoice-sept3-header {
+            border-bottom: 2.5px solid #1e3a5f;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
           }
-          .invoice-print-main > div {
-            border: 0 !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-          }
+          .invoice-sept3-clinic { font-size: 22px; font-weight: 800; color: #1e3a5f; line-height: 1.1; }
+          .invoice-sept3-muted { color: #666; margin-top: 2px; }
+          .invoice-sept3-contact { color: #555; display: flex; gap: 14px; margin-top: 2px; }
+          .invoice-sept3-title-block { text-align: right; }
+          .invoice-sept3-title { font-size: 26px; font-weight: 700; color: #1e3a5f; letter-spacing: 2px; }
+          .invoice-sept3-number { font: 600 12px monospace; color: #444; margin-top: 2px; }
+          .invoice-sept3-status { display: inline-block; margin-top: 5px; padding: 3px 9px; border-radius: 4px; font-weight: 700; font-size: 9px; letter-spacing: .5px; }
+          .invoice-sept3-status-paid { background: #dcfce7; color: #166534; }
+          .invoice-sept3-status-partial { background: #dbeafe; color: #1e40af; }
+          .invoice-sept3-status-pending, .invoice-sept3-status-draft { background: #fef3c7; color: #92400e; }
+          .invoice-sept3-status-cancelled { background: #fee2e2; color: #991b1b; }
+          .invoice-sept3-cards { display: flex; gap: 12px; margin-bottom: 10px; }
+          .invoice-sept3-card { flex: 1; min-height: 42px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 7px 10px; }
+          .invoice-sept3-label { color: #1e3a5f; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 3px; }
+          .invoice-sept3-card-name { font-size: 12px; font-weight: 600; }
+          .invoice-sept3-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+          .invoice-sept3-table th { background: #1e3a5f; color: white; padding: 5px 7px; text-align: left; font-size: 9px; }
+          .invoice-sept3-table td { border-bottom: 1px solid #e2e8f0; padding: 5px 7px; }
+          .invoice-sept3-table tbody tr:nth-child(even) { background: #f8fafc; }
+          .invoice-sept3-right { text-align: right !important; }
+          .invoice-sept3-summary { display: flex; justify-content: space-between; gap: 18px; margin-bottom: 8px; }
+          .invoice-sept3-payments { flex: 1; }
+          .invoice-sept3-payment-row, .invoice-sept3-payment-total, .invoice-sept3-totals > div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+          .invoice-sept3-payment-total { border-top: 1px solid #cbd5e1; margin-top: 3px; color: #166534; font-weight: 700; }
+          .invoice-sept3-totals { width: 220px; }
+          .invoice-sept3-totals > div { border-bottom: 1px solid #e2e8f0; }
+          .invoice-sept3-grand-total { border-bottom: 2px solid #1e3a5f !important; color: #1e3a5f; font-size: 13px; font-weight: 700; }
+          .invoice-sept3-green { color: #16a34a; font-weight: 600; }
+          .invoice-sept3-balance { color: #92400e; font-weight: 600; }
+          .invoice-sept3-footer { border-top: 1px solid #e2e8f0; padding-top: 7px; color: #888; display: flex; justify-content: space-between; }
+          .invoice-sept3-footer strong { color: #1e3a5f; }
         }
       `}</style>
 
