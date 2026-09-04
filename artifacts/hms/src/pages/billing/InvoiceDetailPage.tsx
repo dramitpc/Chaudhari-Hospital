@@ -23,7 +23,7 @@ import {
   openPdf,
   pdfToFile,
   receiptPdfFileName,
-} from "@/lib/multilingualPdfDocuments";
+} from "@/lib/pdfDocuments";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -110,7 +110,7 @@ export default function InvoiceDetailPage() {
   if (!invoice) return <div className="text-center py-8 text-muted-foreground">Invoice not found</div>;
 
   const items = (invoice.items ?? []) as InvoiceItem[];
-  const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings, language: patient?.preferredLanguage });
+  const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings });
   const handlePrintPdf = async () => openPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
   const handleDownloadPdf = async () => downloadPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
   const handleCreatePdfFile = async () => pdfToFile(await makeReceiptPdf(), receiptPdfFileName(invoice));
