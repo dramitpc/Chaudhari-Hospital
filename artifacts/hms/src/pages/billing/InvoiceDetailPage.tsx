@@ -14,13 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Printer, Share2, XCircle } from "lucide-react";
+import { ArrowLeft, Download, Printer, Share2, XCircle } from "lucide-react";
 import ShareDialog from "@/components/ShareDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   createReceiptPdf,
   downloadPdf,
-  openPdf,
   pdfToFile,
   receiptPdfFileName,
 } from "@/lib/pdfDocuments";
@@ -111,7 +110,7 @@ export default function InvoiceDetailPage() {
 
   const items = (invoice.items ?? []) as InvoiceItem[];
   const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings });
-  const handlePrintPdf = async () => openPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
+  const handlePrintPdf = () => window.print();
   const handleDownloadPdf = async () => downloadPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
   const handleCreatePdfFile = async () => pdfToFile(await makeReceiptPdf(), receiptPdfFileName(invoice));
 
@@ -176,11 +175,14 @@ export default function InvoiceDetailPage() {
           <Button variant="outline" onClick={handlePrintPdf}>
             <Printer className="mr-2 h-4 w-4" /> Print PDF
           </Button>
+          <Button variant="outline" onClick={handleDownloadPdf}>
+            <Download className="mr-2 h-4 w-4" /> Save PDF
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="invoice-print-content grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="invoice-print-main lg:col-span-2 space-y-4">
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
@@ -251,7 +253,7 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="invoice-screen-actions space-y-4">
           {invoice.status !== "paid" && invoice.status !== "cancelled" && (
             <div className="rounded-lg border border-border bg-card p-5 space-y-4">
               <h3 className="font-semibold">Record Payment</h3>
@@ -345,6 +347,24 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 12mm; }
+          .invoice-screen-actions { display: none !important; }
+          .invoice-print-content {
+            display: block !important;
+          }
+          .invoice-print-main {
+            width: 100% !important;
+          }
+          .invoice-print-main > div {
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
 
       <ShareDialog
         open={showShare}
