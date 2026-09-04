@@ -478,6 +478,28 @@ export function openPdf(blob: Blob, fileName = "document.pdf"): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+export function printPdf(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const frame = document.createElement("iframe");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "0";
+  frame.style.height = "0";
+  frame.style.border = "0";
+  frame.setAttribute("aria-hidden", "true");
+  frame.onload = () => {
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
+    window.setTimeout(() => {
+      frame.remove();
+      URL.revokeObjectURL(url);
+    }, 60_000);
+  };
+  frame.src = url;
+  document.body.appendChild(frame);
+}
+
 export function pdfToFile(blob: Blob, fileName: string): File {
   return new File([blob], fileName, { type: "application/pdf" });
 }

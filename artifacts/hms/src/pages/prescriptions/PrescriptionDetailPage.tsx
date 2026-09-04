@@ -13,15 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, Settings2, Share2, Languages, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Printer, Settings2, Share2, Languages, Loader2 } from "lucide-react";
 import ShareDialog from "@/components/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createPrescriptionPdf,
   downloadPdf,
-  openPdf,
   pdfToFile,
+  printPdf,
   prescriptionPdfFileName,
 } from "@/lib/multilingualPdfDocuments";
 
@@ -178,7 +178,7 @@ export default function PrescriptionDetailPage() {
 
   const printPrescription = async (value = prescription) => {
     const pdf = makePrescriptionPdf(value);
-    if (pdf && value) openPdf(await pdf, prescriptionPdfFileName(value));
+    if (pdf && value) printPdf(await pdf);
   };
 
   const downloadPrescriptionPdf = async () => {
@@ -399,6 +399,9 @@ export default function PrescriptionDetailPage() {
 
           <Button onClick={() => void printPrescription()} data-testid="btn-print-prescription">
             <Printer className="mr-2 h-4 w-4" />Print PDF
+          </Button>
+          <Button variant="outline" onClick={() => void downloadPrescriptionPdf()} data-testid="btn-save-prescription-pdf">
+            <Download className="mr-2 h-4 w-4" />Save PDF
           </Button>
         </div>
       </div>
