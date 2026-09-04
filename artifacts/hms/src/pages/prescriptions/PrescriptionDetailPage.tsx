@@ -20,8 +20,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   createPrescriptionPdf,
   downloadPdf,
+  openPdf,
   pdfToFile,
-  printPdf,
   prescriptionPdfFileName,
 } from "@/lib/multilingualPdfDocuments";
 
@@ -178,7 +178,7 @@ export default function PrescriptionDetailPage() {
 
   const printPrescription = async (value = prescription) => {
     const pdf = makePrescriptionPdf(value);
-    if (pdf && value) printPdf(await pdf);
+    if (pdf && value) openPdf(await pdf, prescriptionPdfFileName(value));
   };
 
   const downloadPrescriptionPdf = async () => {
