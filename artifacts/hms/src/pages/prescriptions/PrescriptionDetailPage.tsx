@@ -17,6 +17,14 @@ import { ArrowLeft, Download, Printer, Settings2, Share2, Languages, Loader2 } f
 import ShareDialog from "@/components/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import "@fontsource/noto-sans/400.css";
+import "@fontsource/noto-sans-devanagari/400.css";
+import "@fontsource/noto-sans-gujarati/400.css";
+import "@fontsource/noto-sans-tamil/400.css";
+import "@fontsource/noto-sans-telugu/400.css";
+import "@fontsource/noto-sans-kannada/400.css";
+import "@fontsource/noto-sans-bengali/400.css";
+import "@fontsource/noto-sans-gurmukhi/400.css";
 import {
   createPrescriptionPdf,
   downloadPdf,
@@ -105,6 +113,18 @@ const LANGUAGES = [
   { code: "bn", label: "বাংলা (Bengali)" },
 ];
 
+const MULTILINGUAL_FONT_STACK = [
+  "'Noto Sans'",
+  "'Noto Sans Devanagari'",
+  "'Noto Sans Gujarati'",
+  "'Noto Sans Tamil'",
+  "'Noto Sans Telugu'",
+  "'Noto Sans Kannada'",
+  "'Noto Sans Bengali'",
+  "'Noto Sans Gurmukhi'",
+  "sans-serif",
+].join(", ");
+
 // Dual-row display for bilingual mode
 function BilingualField({ label, en: enVal, translated }: { label: string; en?: string | null; translated?: string | null }) {
   if (!enVal && !translated) return null;
@@ -113,7 +133,7 @@ function BilingualField({ label, en: enVal, translated }: { label: string; en?: 
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
       {enVal && <p className="text-sm">{enVal}</p>}
       {translated && translated !== enVal && (
-        <p className="text-sm mt-0.5 text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{translated}</p>
+        <p className="text-sm mt-0.5 text-blue-700 dark:text-blue-400" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{translated}</p>
       )}
     </div>
   );
@@ -216,6 +236,7 @@ export default function PrescriptionDetailPage() {
       { id, data: { language: selectedLang, displayMode: fmt.displayMode } },
       {
         onSuccess: () => {
+          setFmt(prev => ({ ...prev, displayMode: "bilingual" }));
           queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
           toast({ title: "Translation complete", description: `Prescription translated to ${LANGUAGES.find(l => l.code === selectedLang)?.label}` });
         },
@@ -414,11 +435,10 @@ export default function PrescriptionDetailPage() {
       )}
 
       {/* Prescription body */}
-      <div className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
-        {/* Indic font preload */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
-
+      <div
+        className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}
+        style={{ fontFamily: MULTILINGUAL_FONT_STACK }}
+      >
         {/* Letterhead */}
         <div className="border-b-2 border-primary pb-4 mb-6 flex items-start justify-between gap-4">
           <div className={`flex-1 ${textAlign}`}>
@@ -541,24 +561,24 @@ export default function PrescriptionDetailPage() {
                       </td>
                       <td className="px-3 py-2">
                         {showEnglish && <span>{item.dosage}</span>}
-                        {isBilingual && tr?.dosage && tr.dosage !== item.dosage && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.dosage}</span>}
-                        {!showEnglish && showTranslated && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.dosage ?? item.dosage}</span>}
+                        {isBilingual && tr?.dosage && tr.dosage !== item.dosage && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr.dosage}</span>}
+                        {!showEnglish && showTranslated && <span style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr?.dosage ?? item.dosage}</span>}
                       </td>
                       <td className="px-3 py-2">
                         {showEnglish && <span>{item.frequency}</span>}
-                        {isBilingual && tr?.frequency && tr.frequency !== item.frequency && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.frequency}</span>}
-                        {!showEnglish && showTranslated && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.frequency ?? item.frequency}</span>}
+                        {isBilingual && tr?.frequency && tr.frequency !== item.frequency && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr.frequency}</span>}
+                        {!showEnglish && showTranslated && <span style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr?.frequency ?? item.frequency}</span>}
                       </td>
                       <td className="px-3 py-2">
                         {showEnglish && <span>{item.duration}</span>}
-                        {isBilingual && tr?.duration && tr.duration !== item.duration && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.duration}</span>}
-                        {!showEnglish && showTranslated && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.duration ?? item.duration}</span>}
+                        {isBilingual && tr?.duration && tr.duration !== item.duration && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr.duration}</span>}
+                        {!showEnglish && showTranslated && <span style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr?.duration ?? item.duration}</span>}
                       </td>
                       {fmt.showInstructions && (
                         <td className="px-3 py-2 text-muted-foreground">
                           {showEnglish && <span>{item.instructions ?? "—"}</span>}
-                          {isBilingual && tr?.instructions && tr.instructions !== item.instructions && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.instructions}</span>}
-                          {!showEnglish && showTranslated && <span style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr?.instructions ?? item.instructions ?? "—"}</span>}
+                          {isBilingual && tr?.instructions && tr.instructions !== item.instructions && <span className="block text-blue-700 dark:text-blue-400" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr.instructions}</span>}
+                          {!showEnglish && showTranslated && <span style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr?.instructions ?? item.instructions ?? "—"}</span>}
                         </td>
                       )}
                     </tr>
@@ -581,18 +601,18 @@ export default function PrescriptionDetailPage() {
                       )}
                       {showEnglish && <span className="text-muted-foreground"> — {item.dosage}, {item.frequency}, {item.duration}</span>}
                       {showTrLine && (
-                        <p className="text-blue-700 dark:text-blue-400 mt-0.5" style={{ fontFamily: "'Noto Sans', sans-serif" }}>
+                        <p className="text-blue-700 dark:text-blue-400 mt-0.5" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>
                           {tr.dosage}, {tr.frequency}, {tr.duration}
                         </p>
                       )}
                       {!showEnglish && showTranslated && tr && (
-                        <span className="text-muted-foreground" style={{ fontFamily: "'Noto Sans', sans-serif" }}> — {tr.dosage}, {tr.frequency}, {tr.duration}</span>
+                        <span className="text-muted-foreground" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}> — {tr.dosage}, {tr.frequency}, {tr.duration}</span>
                       )}
                       {fmt.showInstructions && item.instructions && showEnglish && (
                         <p className="text-xs text-muted-foreground mt-0.5 italic">{item.instructions}</p>
                       )}
                       {fmt.showInstructions && showTrLine && tr.instructions && tr.instructions !== item.instructions && (
-                        <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5 italic" style={{ fontFamily: "'Noto Sans', sans-serif" }}>{tr.instructions}</p>
+                        <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5 italic" style={{ fontFamily: MULTILINGUAL_FONT_STACK }}>{tr.instructions}</p>
                       )}
                     </div>
                   </li>
@@ -626,7 +646,7 @@ export default function PrescriptionDetailPage() {
           ) : (
             <div className="mb-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Advice</p>
-              <p className="text-sm" style={showTranslated ? { fontFamily: "'Noto Sans', sans-serif" } : {}}>
+              <p className="text-sm" style={showTranslated ? { fontFamily: MULTILINGUAL_FONT_STACK } : {}}>
                 {showTranslated ? (translatedData?.advice ?? prescription.advice) : prescription.advice}
               </p>
             </div>
