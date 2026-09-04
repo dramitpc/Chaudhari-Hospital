@@ -23,7 +23,7 @@ import {
   openPdf,
   pdfToFile,
   receiptPdfFileName,
-} from "@/lib/pdfDocuments";
+} from "@/lib/multilingualPdfDocuments";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -110,10 +110,10 @@ export default function InvoiceDetailPage() {
   if (!invoice) return <div className="text-center py-8 text-muted-foreground">Invoice not found</div>;
 
   const items = (invoice.items ?? []) as InvoiceItem[];
-  const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings });
-  const handlePrintPdf = () => openPdf(makeReceiptPdf(), receiptPdfFileName(invoice));
-  const handleDownloadPdf = async () => downloadPdf(makeReceiptPdf(), receiptPdfFileName(invoice));
-  const handleCreatePdfFile = async () => pdfToFile(makeReceiptPdf(), receiptPdfFileName(invoice));
+  const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings, language: patient?.preferredLanguage });
+  const handlePrintPdf = async () => openPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
+  const handleDownloadPdf = async () => downloadPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
+  const handleCreatePdfFile = async () => pdfToFile(await makeReceiptPdf(), receiptPdfFileName(invoice));
 
   const invoiceShareMessage = (() => {
     const clinic = settings?.clinicName ?? "ClinicOS";

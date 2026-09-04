@@ -75,7 +75,17 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@fontsource/noto-sans": "^5.2.8",
+    "@fontsource/noto-sans-bengali": "^5.2.8",
+    "@fontsource/noto-sans-devanagari": "^5.2.8",
+    "@fontsource/noto-sans-gujarati": "^5.2.8",
+    "@fontsource/noto-sans-gurmukhi": "^5.2.8",
+    "@fontsource/noto-sans-kannada": "^5.2.8",
+    "@fontsource/noto-sans-tamil": "^5.2.8",
+    "@fontsource/noto-sans-telugu": "^5.2.8",
+    "@types/pdfmake": "^0.2.12",
     "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "pdfmake": "^0.2.20"
   }
 }

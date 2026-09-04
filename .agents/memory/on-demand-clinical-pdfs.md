@@ -5,6 +5,8 @@ description: Confirmed policy for generating prescription, receipt, and future c
 
 Generate prescription and billing PDFs on demand from structured application data. Do not create PDFs from screenshots or permanently store routine generated copies. Archive a PDF only when a legally immutable document copy is explicitly required.
 
+Generated documents must preserve the corresponding screen preview's hierarchy and format controls. Multilingual prescriptions and receipts must use bundled local Unicode fonts, retain translated/bilingual display modes, and remain usable without an internet font service.
+
 **Why:** The user confirmed this approach to avoid browser and Android print-layout differences while minimizing storage and keeping PDF text searchable and selectable.
 
-**How to apply:** Reuse data-driven document builders for print, download, and native file sharing. Keep the database records as the source of truth and treat generated PDF files as temporary client-side artifacts.
+**How to apply:** Reuse data-driven document builders for print, download, and native file sharing. Pass the active preview format and language into the builder, use script-specific bundled fonts, keep database records as the source of truth, and treat generated PDF files as temporary client-side artifacts.

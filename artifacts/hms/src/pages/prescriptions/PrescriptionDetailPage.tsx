@@ -23,7 +23,7 @@ import {
   openPdf,
   pdfToFile,
   prescriptionPdfFileName,
-} from "@/lib/pdfDocuments";
+} from "@/lib/multilingualPdfDocuments";
 
 type PrescriptionItem = {
   drugName: string;
@@ -172,24 +172,24 @@ export default function PrescriptionDetailPage() {
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
 
-  const makePrescriptionPdf = () => prescription
-    ? createPrescriptionPdf({ prescription, patient, consultation, settings })
+  const makePrescriptionPdf = (value = prescription) => value
+    ? createPrescriptionPdf({ prescription: value, patient, consultation, settings, format: fmt, translation: value.translations as TranslatedData | null })
     : null;
 
-  const printPrescription = () => {
-    const pdf = makePrescriptionPdf();
-    if (pdf && prescription) openPdf(pdf, prescriptionPdfFileName(prescription));
+  const printPrescription = async (value = prescription) => {
+    const pdf = makePrescriptionPdf(value);
+    if (pdf && value) openPdf(await pdf, prescriptionPdfFileName(value));
   };
 
   const downloadPrescriptionPdf = async () => {
     const pdf = makePrescriptionPdf();
-    if (pdf && prescription) downloadPdf(pdf, prescriptionPdfFileName(prescription));
+    if (pdf && prescription) downloadPdf(await pdf, prescriptionPdfFileName(prescription));
   };
 
   const createPrescriptionPdfFile = async () => {
     const pdf = makePrescriptionPdf();
     if (!pdf || !prescription) throw new Error("Prescription is not ready");
-    return pdfToFile(pdf, prescriptionPdfFileName(prescription));
+    return pdfToFile(await pdf, prescriptionPdfFileName(prescription));
   };
 
   // Auto-print: translate first when a lang was passed, then print
@@ -200,15 +200,15 @@ export default function PrescriptionDetailPage() {
         translateMutation.mutate(
           { id, data: { language: urlLang, displayMode: (urlMode || "bilingual") as RxFormat["displayMode"] } },
           {
-            onSuccess: () => {
+            onSuccess: (translatedPrescription) => {
               queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
-              setTimeout(printPrescription, 400);
+              setTimeout(() => void printPrescription(translatedPrescription), 400);
             },
-            onError: () => setTimeout(printPrescription, 400),
+            onError: () => setTimeout(() => void printPrescription(), 400),
           }
         );
       } else {
-        setTimeout(printPrescription, 300);
+        setTimeout(() => void printPrescription(), 300);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,7 +397,7 @@ export default function PrescriptionDetailPage() {
             </PopoverContent>
           </Popover>
 
-          <Button onClick={printPrescription} data-testid="btn-print-prescription">
+          <Button onClick={() => void printPrescription()} data-testid="btn-print-prescription">
             <Printer className="mr-2 h-4 w-4" />Print PDF
           </Button>
         </div>
