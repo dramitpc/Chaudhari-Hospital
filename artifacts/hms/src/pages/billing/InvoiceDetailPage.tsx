@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { fmtDate } from "@/lib/dateUtils";
 import {
@@ -17,6 +17,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Printer, Share2, XCircle } from "lucide-react";
 import ShareDialog from "@/components/ShareDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  createReceiptPdf,
+  downloadPdf,
+  openPdf,
+  pdfToFile,
+  receiptPdfFileName,
+} from "@/lib/pdfDocuments";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -69,26 +76,6 @@ export default function InvoiceDetailPage() {
   const [payMode, setPayMode] = useState("cash");
   const [showShare, setShowShare] = useState(false);
 
-  // Print scaling — target: upper half of A4 with 12mm margins = 136mm
-  // Element is off-screen (not display:none) so scrollHeight is measurable
-  const printContentRef = useRef<HTMLDivElement>(null);
-  const [printScale, setPrintScale] = useState(1);
-  const TARGET_MM = 136;
-
-  useEffect(() => {
-    if (!printContentRef.current || !invoice) return;
-    // 1mm = 3.7795px at 96 dpi
-    const targetPx = TARGET_MM * 3.7795;
-    const el = printContentRef.current;
-    // Force a single layout read
-    const naturalH = el.scrollHeight;
-    if (naturalH > 0 && naturalH > targetPx) {
-      setPrintScale(targetPx / naturalH);
-    } else {
-      setPrintScale(1);
-    }
-  }, [invoice, patient, settings]);
-
   const handleCancel = () => {
     if (!confirm("Cancel this invoice? This cannot be undone.")) return;
     cancelMutation.mutate({ id, data: { status: "cancelled" } }, {
@@ -123,6 +110,10 @@ export default function InvoiceDetailPage() {
   if (!invoice) return <div className="text-center py-8 text-muted-foreground">Invoice not found</div>;
 
   const items = (invoice.items ?? []) as InvoiceItem[];
+  const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings });
+  const handlePrintPdf = () => openPdf(makeReceiptPdf(), receiptPdfFileName(invoice));
+  const handleDownloadPdf = async () => downloadPdf(makeReceiptPdf(), receiptPdfFileName(invoice));
+  const handleCreatePdfFile = async () => pdfToFile(makeReceiptPdf(), receiptPdfFileName(invoice));
 
   const invoiceShareMessage = (() => {
     const clinic = settings?.clinicName ?? "ClinicOS";
@@ -182,8 +173,8 @@ export default function InvoiceDetailPage() {
           <Button variant="outline" size="sm" onClick={() => setShowShare(true)}>
             <Share2 className="mr-1.5 h-4 w-4" /> Share
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="mr-2 h-4 w-4" /> Print
+          <Button variant="outline" onClick={handlePrintPdf}>
+            <Printer className="mr-2 h-4 w-4" /> Print PDF
           </Button>
         </div>
       </div>
@@ -355,189 +346,6 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      {/* ── Print-only A5 landscape invoice ── */}
-      {/* Outer wrapper: off-screen on screen (so scrollHeight is measurable), visible on print */}
-      <div className="invoice-print-outer">
-        {/* Inner content: scale transform applied here */}
-        <div
-          ref={printContentRef}
-          style={{
-            transform: `scale(${printScale})`,
-            transformOrigin: "top left",
-            width: printScale < 1 ? `${100 / printScale}%` : "100%",
-          }}
-        >
-        {/* Clinic header */}
-        <div style={{ borderBottom: "2.5px solid #1e3a5f", paddingBottom: "10px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: 800, color: "#1e3a5f", letterSpacing: "-0.3px", lineHeight: 1.1 }}>
-              {settings?.clinicName ?? "ClinicOS"}
-            </div>
-            {settings?.address && (
-              <div style={{ fontSize: "11px", color: "#555", marginTop: "3px" }}>{settings.address}</div>
-            )}
-            <div style={{ fontSize: "11px", color: "#555", marginTop: "2px", display: "flex", gap: "14px" }}>
-              {settings?.phone && <span>✆ {settings.phone}</span>}
-              {settings?.email && <span>✉ {settings.email}</span>}
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "26px", fontWeight: 700, color: "#1e3a5f", letterSpacing: "2px", textTransform: "uppercase" }}>Invoice</div>
-            <div style={{ fontSize: "13px", fontWeight: 600, color: "#444", fontFamily: "monospace", marginTop: "3px" }}>{invoice.invoiceNumber}</div>
-            <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>Date: {fmtDate(invoice.createdAt)}</div>
-            <div style={{ marginTop: "6px" }}>
-              <span style={{
-                fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "0.5px",
-                background: invoice.status === "paid" ? "#dcfce7" : invoice.status === "partial" ? "#dbeafe" : invoice.status === "pending" ? "#fef3c7" : "#fee2e2",
-                color: invoice.status === "paid" ? "#166534" : invoice.status === "partial" ? "#1e40af" : invoice.status === "pending" ? "#92400e" : "#991b1b",
-              }}>{invoice.status.toUpperCase()}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bill-to + doctor row */}
-        <div style={{ display: "flex", gap: "14px", marginBottom: "12px", fontSize: "11px" }}>
-          <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px 12px" }}>
-            <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>Bill To</div>
-            <div style={{ fontWeight: 600, fontSize: "13px" }}>{invoice.patientName}</div>
-            {patient?.dateOfBirth && <div style={{ color: "#666", marginTop: "2px" }}>DOB: {fmtDate(patient.dateOfBirth)}</div>}
-            {patient?.phone && <div style={{ color: "#666", marginTop: "2px" }}>✆ {patient.phone}</div>}
-          </div>
-          {invoice.doctorName && (
-            <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px 12px" }}>
-              <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>Consulting Doctor</div>
-              <div style={{ fontWeight: 600, fontSize: "13px" }}>{invoice.doctorName}</div>
-            </div>
-          )}
-        </div>
-
-        {/* Items table */}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px", marginBottom: "10px" }}>
-          <thead>
-            <tr style={{ background: "#1e3a5f", color: "#fff" }}>
-              <th style={{ padding: "7px 9px", textAlign: "left", fontWeight: 600 }}>#</th>
-              <th style={{ padding: "7px 9px", textAlign: "left", fontWeight: 600 }}>Description</th>
-              <th style={{ padding: "7px 9px", textAlign: "right", fontWeight: 600 }}>Qty</th>
-              <th style={{ padding: "7px 9px", textAlign: "right", fontWeight: 600 }}>Unit Price</th>
-              {items.some(it => (it.discount ?? 0) > 0) && <th style={{ padding: "7px 9px", textAlign: "right", fontWeight: 600 }}>Disc (₹)</th>}
-              {items.some(it => (it.tax ?? 0) > 0) && <th style={{ padding: "7px 9px", textAlign: "right", fontWeight: 600 }}>Tax (₹)</th>}
-              <th style={{ padding: "7px 9px", textAlign: "right", fontWeight: 600 }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => (
-              <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                <td style={{ padding: "6px 9px", color: "#888" }}>{idx + 1}</td>
-                <td style={{ padding: "6px 9px", fontWeight: 500 }}>{item.description}</td>
-                <td style={{ padding: "6px 9px", textAlign: "right" }}>{item.quantity}</td>
-                <td style={{ padding: "6px 9px", textAlign: "right" }}>₹{item.unitPrice.toFixed(2)}</td>
-                {items.some(it => (it.discount ?? 0) > 0) && <td style={{ padding: "6px 9px", textAlign: "right", color: "#16a34a" }}>{(item.discount ?? 0) > 0 ? `₹${(item.discount ?? 0).toFixed(2)}` : "—"}</td>}
-                {items.some(it => (it.tax ?? 0) > 0) && <td style={{ padding: "6px 9px", textAlign: "right" }}>{(item.tax ?? 0) > 0 ? `₹${(item.tax ?? 0).toFixed(2)}` : "—"}</td>}
-                <td style={{ padding: "6px 9px", textAlign: "right", fontWeight: 600 }}>₹{item.total.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Totals + Payment row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "14px", marginBottom: "12px" }}>
-          {/* Payment box — lower left */}
-          <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "8px 12px", fontSize: "11px", alignSelf: "flex-end" }}>
-            <div style={{ fontWeight: 700, color: "#1e3a5f", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>Payment</div>
-            {payments && payments.length > 0 ? (
-              <div>
-                {payments.map((p, idx) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: idx < payments.length - 1 ? "4px" : "0", paddingBottom: idx < payments.length - 1 ? "4px" : "0", borderBottom: idx < payments.length - 1 ? "1px dashed #e2e8f0" : "none" }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: "11px", textTransform: "capitalize", color: "#1e3a5f" }}>{p.paymentMode}</div>
-                      <div style={{ fontSize: "9px", color: "#888" }}>{fmtDate(p.paidAt)}</div>
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: "12px", color: "#166534" }}>₹{p.amount.toFixed(2)}</div>
-                  </div>
-                ))}
-                {payments.length > 1 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #cbd5e1", marginTop: "4px", paddingTop: "3px" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#1e3a5f" }}>Total Paid</div>
-                    <div style={{ fontWeight: 700, fontSize: "11px", color: "#166534" }}>₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                {invoice.paymentMode && <div style={{ fontWeight: 600, fontSize: "13px", textTransform: "capitalize" }}>{invoice.paymentMode}</div>}
-                <div style={{ color: "#166534", fontWeight: 600, marginTop: "2px" }}>Paid: ₹{(invoice.amountPaid ?? 0).toFixed(2)}</div>
-              </>
-            )}
-            {(invoice.balance ?? 0) > 0 && <div style={{ color: "#92400e", fontWeight: 600, marginTop: "4px", fontSize: "11px" }}>Balance: ₹{(invoice.balance ?? 0).toFixed(2)}</div>}
-          </div>
-
-          {/* Totals — right */}
-          <div style={{ minWidth: "220px", fontSize: "11px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0" }}>
-              <span style={{ color: "#555" }}>Subtotal</span><span>₹{invoice.subtotal.toFixed(2)}</span>
-            </div>
-            {(invoice.discount ?? 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0", color: "#16a34a" }}>
-                <span>Discount</span><span>-₹{(invoice.discount ?? 0).toFixed(2)}</span>
-              </div>
-            )}
-            {(invoice.tax ?? 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0" }}>
-                <span style={{ color: "#555" }}>Tax</span><span>₹{(invoice.tax ?? 0).toFixed(2)}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "2px solid #1e3a5f", fontWeight: 700, fontSize: "14px", color: "#1e3a5f" }}>
-              <span>TOTAL</span><span>₹{invoice.total.toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #e2e8f0", color: "#16a34a", fontWeight: 600 }}>
-              <span>Paid</span><span>₹{(invoice.amountPaid ?? 0).toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontWeight: 600, color: (invoice.balance ?? 0) > 0 ? "#b45309" : "#16a34a" }}>
-              <span>Balance Due</span><span>₹{(invoice.balance ?? 0).toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "8px", fontSize: "10px", color: "#888", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>Thank you for choosing <strong style={{ color: "#1e3a5f" }}>{settings?.clinicName ?? "ClinicOS"}</strong>. We wish you good health.</span>
-          <span style={{ fontFamily: "monospace", color: "#aaa" }}>{invoice.invoiceNumber}</span>
-        </div>
-        </div>{/* end inner scale wrapper */}
-      </div>{/* end invoice-print-outer */}
-
-      <style>{`
-        @media print {
-          .print\\:hidden { display: none !important; }
-          nav, aside, header { display: none !important; }
-          body { margin: 0; }
-          @page { size: A4; margin: 12mm; }
-          /* Print: show outer wrapper, fixed to upper half of A4 */
-          .invoice-print-outer {
-            display: block !important;
-            position: static !important;
-            visibility: visible !important;
-            width: 100%;
-            height: 136mm;
-            overflow: hidden;
-          }
-        }
-        @media screen {
-          /* Off-screen but rendered (not display:none) so scrollHeight is measurable */
-          .invoice-print-outer {
-            position: fixed;
-            left: -10000px;
-            top: 0;
-            width: 186mm;
-            height: auto;
-            visibility: hidden;
-            pointer-events: none;
-            z-index: -1;
-          }
-          .hidden.print\\:block { display: none !important; }
-        }
-      `}</style>
-
       <ShareDialog
         open={showShare}
         onOpenChange={setShowShare}
@@ -546,6 +354,9 @@ export default function InvoiceDetailPage() {
         patientEmail={patient?.email}
         message={invoiceShareMessage}
         emailSubject={`Invoice ${invoice.invoiceNumber} — ${settings?.clinicName ?? "ClinicOS"}`}
+        onDownloadPdf={handleDownloadPdf}
+        onCreatePdfFile={handleCreatePdfFile}
+        pdfFileName={receiptPdfFileName(invoice)}
       />
     </div>
   );

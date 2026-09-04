@@ -17,6 +17,13 @@ import { ArrowLeft, Printer, Settings2, Share2, Languages, Loader2 } from "lucid
 import ShareDialog from "@/components/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  createPrescriptionPdf,
+  downloadPdf,
+  openPdf,
+  pdfToFile,
+  prescriptionPdfFileName,
+} from "@/lib/pdfDocuments";
 
 type PrescriptionItem = {
   drugName: string;
@@ -162,55 +169,32 @@ export default function PrescriptionDetailPage() {
     }
   }, [prescription?.patientLanguage, patient?.preferredLanguage, urlLang]);
 
-  const printRef = useRef<HTMLDivElement>(null);
-
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
 
-  // Fit-to-A4: use the paper's printable width before measuring so mobile
-  // browsers do not wrap the prescription at the phone viewport width.
-  const fitPrintContent = () => {
-    const el = printRef.current;
-    if (!el) return;
-
-    const A4_PRINTABLE_HEIGHT_PX = 1047; // 277mm (A4 minus 10mm margins) at 96dpi
-    el.style.width = "190mm";
-    el.style.maxWidth = "190mm";
-    el.style.boxSizing = "border-box";
-    el.style.zoom = "";
-
-    const height = el.scrollHeight;
-    if (height > A4_PRINTABLE_HEIGHT_PX) {
-      el.style.zoom = String(A4_PRINTABLE_HEIGHT_PX / height);
-    }
-  };
-
-  const resetPrintContent = () => {
-    const el = printRef.current;
-    if (!el) return;
-    el.style.width = "";
-    el.style.maxWidth = "";
-    el.style.boxSizing = "";
-    el.style.zoom = "";
-  };
+  const makePrescriptionPdf = () => prescription
+    ? createPrescriptionPdf({ prescription, patient, consultation, settings })
+    : null;
 
   const printPrescription = () => {
-    fitPrintContent();
-    window.print();
+    const pdf = makePrescriptionPdf();
+    if (pdf && prescription) openPdf(pdf, prescriptionPdfFileName(prescription));
   };
 
-  useEffect(() => {
-    window.addEventListener("beforeprint", fitPrintContent);
-    window.addEventListener("afterprint", resetPrintContent);
-    return () => {
-      window.removeEventListener("beforeprint", fitPrintContent);
-      window.removeEventListener("afterprint", resetPrintContent);
-    };
-  }, []);
+  const downloadPrescriptionPdf = async () => {
+    const pdf = makePrescriptionPdf();
+    if (pdf && prescription) downloadPdf(pdf, prescriptionPdfFileName(prescription));
+  };
+
+  const createPrescriptionPdfFile = async () => {
+    const pdf = makePrescriptionPdf();
+    if (!pdf || !prescription) throw new Error("Prescription is not ready");
+    return pdfToFile(pdf, prescriptionPdfFileName(prescription));
+  };
 
   // Auto-print: translate first when a lang was passed, then print
   useEffect(() => {
-    if (!isLoading && prescription && isPrintFlow && !didAutoPrint.current) {
+    if (!isLoading && prescription && patient && settings && isPrintFlow && !didAutoPrint.current) {
       didAutoPrint.current = true;
       if (urlLang && urlLang !== "en") {
         translateMutation.mutate(
@@ -414,7 +398,7 @@ export default function PrescriptionDetailPage() {
           </Popover>
 
           <Button onClick={printPrescription} data-testid="btn-print-prescription">
-            <Printer className="mr-2 h-4 w-4" />Print
+            <Printer className="mr-2 h-4 w-4" />Print PDF
           </Button>
         </div>
       </div>
@@ -431,7 +415,7 @@ export default function PrescriptionDetailPage() {
       )}
 
       {/* Prescription body */}
-      <div ref={printRef} className={`prescription-print mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 print:border-0 print:shadow-none print:max-w-full print:p-4 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
+      <div className={`mx-auto bg-white dark:bg-card rounded-lg border border-border p-8 ${PAPER_MAX[fmt.paperSize]} ${FONT_SIZE[fmt.fontSize]}`}>
         {/* Indic font preload */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Gurmukhi:wght@400;500&display=swap" />
@@ -685,36 +669,6 @@ export default function PrescriptionDetailPage() {
 
       </div>
 
-      <style>{`
-        @page {
-          size: A4;
-          margin: 1cm;
-        }
-        @media print {
-          .print\\:hidden { display: none !important; }
-          nav, aside, header { display: none !important; }
-          body { margin: 0 !important; }
-          .prescription-print {
-            width: 190mm !important;
-            max-width: 190mm !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            box-sizing: border-box !important;
-            overflow: visible !important;
-          }
-          .prescription-print table,
-          .prescription-print tr,
-          .prescription-print img {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          /* Tighten spacing so short content stays compact */
-          .rx-section { margin-bottom: 0.5rem !important; }
-          .rx-section-title { margin-bottom: 0.25rem !important; font-size: 0.7rem !important; }
-          .rx-item { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
-        }
-      `}</style>
-
       <ShareDialog
         open={showShare}
         onOpenChange={setShowShare}
@@ -723,6 +677,9 @@ export default function PrescriptionDetailPage() {
         patientEmail={patient?.email}
         message={rxShareMessage}
         emailSubject={`Prescription — ${settings?.clinicName ?? "ClinicOS"}`}
+        onDownloadPdf={downloadPrescriptionPdf}
+        onCreatePdfFile={createPrescriptionPdfFile}
+        pdfFileName={prescriptionPdfFileName(prescription)}
       />
     </div>
   );

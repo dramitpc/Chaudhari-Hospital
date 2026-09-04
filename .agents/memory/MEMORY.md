@@ -1,1 +1,2 @@
 - [Query invalidation outside React hooks](query-client-outside-hooks.md) — plain functions (onBlur handlers, non-component helpers) must use raw generated API calls + an exported `queryClient`, not custom hooks.
+- [On-demand clinical PDFs](on-demand-clinical-pdfs.md) — generate clinical and billing PDFs from structured data, never screenshots; do not persist them unless immutable archives are required.

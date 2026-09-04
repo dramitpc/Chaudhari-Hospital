@@ -15,6 +15,7 @@ type Props = {
   message: string;
   emailSubject: string;
   onDownloadPdf?: () => Promise<void>;
+  onCreatePdfFile?: () => Promise<File>;
   pdfFileName?: string;
 };
 
@@ -28,7 +29,7 @@ function formatWhatsAppPhone(raw: string): string {
 
 export default function ShareDialog({
   open, onOpenChange, patientName, patientPhone, patientEmail,
-  message, emailSubject, onDownloadPdf, pdfFileName,
+  message, emailSubject, onDownloadPdf, onCreatePdfFile, pdfFileName,
 }: Props) {
   const [phone, setPhone] = useState(patientPhone ?? "");
   const [email, setEmail] = useState(patientEmail ?? "");
@@ -66,6 +67,31 @@ export default function ShareDialog({
     try { await onDownloadPdf(); } finally { setPdfLoading(false); }
   };
 
+  const handleSharePdf = async () => {
+    if (!onCreatePdfFile) return;
+    setPdfLoading(true);
+    try {
+      const file = await onCreatePdfFile();
+      const shareData: ShareData = {
+        title: emailSubject,
+        text: message,
+        files: [file],
+      };
+      if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+        await navigator.share(shareData);
+        onOpenChange(false);
+      } else if (onDownloadPdf) {
+        await onDownloadPdf();
+      }
+    } catch (error) {
+      if ((error as DOMException)?.name !== "AbortError" && onDownloadPdf) {
+        await onDownloadPdf();
+      }
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -95,6 +121,16 @@ export default function ShareDialog({
                 >
                   {pdfLoading ? "Generating PDF…" : "Download PDF"}
                 </Button>
+                {onCreatePdfFile && (
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    onClick={handleSharePdf}
+                    disabled={pdfLoading}
+                  >
+                    {pdfLoading ? "Preparing PDF…" : "Share PDF to WhatsApp or another app"}
+                  </Button>
+                )}
               </div>
               <Separator />
             </>
