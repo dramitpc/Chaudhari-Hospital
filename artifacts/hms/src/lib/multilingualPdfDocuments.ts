@@ -318,7 +318,7 @@ function buildPrescriptionDefinition(input: PrescriptionPdfInput, fit: number): 
   const bilingual = format.displayMode === "bilingual" && hasTranslation;
   const content: Content[] = [
     letterhead(settings, prescription.doctorName, prescription.doctorSpecialization, format.headerAlign, fit),
-    ...(prescription.doctorConsultingHours ? [{ text: [{ text: "Consulting Hours: ", bold: true }, prescription.doctorConsultingHours], alignment: "center", color: MUTED, margin: [0, -8 * fit, 0, 8 * fit] } as Content] : []),
+    ...(prescription.doctorConsultingHours ? [{ text: [{ text: "Consulting Hours: ", bold: true }, prescription.doctorConsultingHours], alignment: "center", color: MUTED, margin: [0, 0, 0, 8 * fit] } as Content] : []),
     {
       table: {
         widths: ["*", 72, 35, 30, ...(consultation?.visitType ? ["*"] : [])],
