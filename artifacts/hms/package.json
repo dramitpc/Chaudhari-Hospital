@@ -86,6 +86,7 @@
     "@types/pdfmake": "^0.2.12",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "pdf-lib": "^1.17.1",
     "pdfmake": "^0.2.20"
   }
 }

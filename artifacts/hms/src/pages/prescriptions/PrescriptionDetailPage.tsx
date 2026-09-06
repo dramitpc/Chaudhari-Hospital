@@ -221,6 +221,26 @@ export default function PrescriptionDetailPage() {
     : null;
 
   const printPrescription = async () => {
+    if (/Android/i.test(navigator.userAgent) && prescription) {
+      const pdf = makePrescriptionPdf();
+      if (!pdf) return;
+
+      const file = pdfToFile(await pdf, prescriptionPdfFileName(prescription));
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Prescription — ${prescription.patientName}`,
+        });
+      } else {
+        downloadPdf(file, file.name);
+        toast({
+          title: "Single-page PDF saved",
+          description: "Open the downloaded file in Epson iPrint to print it.",
+        });
+      }
+      return;
+    }
+
     await document.fonts?.ready;
 
     const content = printContentRef.current;

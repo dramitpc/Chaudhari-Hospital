@@ -1,5 +1,6 @@
 import pdfMake from "pdfmake/build/pdfmake";
 import type { Content, TDocumentDefinitions, TFontDictionary } from "pdfmake/interfaces";
+import { PDFDocument } from "pdf-lib";
 import type {
   ClinicSettings,
   Consultation,
@@ -385,6 +386,44 @@ async function pdfPageCount(pdf: Blob): Promise<number> {
   return Math.max(pageObjects, ...pageTreeCounts, 1);
 }
 
+async function imposeOnSingleA4(pdf: Blob): Promise<Blob> {
+  const source = await PDFDocument.load(await pdf.arrayBuffer());
+  const sourcePages = source.getPages();
+  if (sourcePages.length <= 1) return pdf;
+
+  const output = await PDFDocument.create();
+  const a4Width = 595.28;
+  const a4Height = 841.89;
+  const margin = 18;
+  const gap = 4;
+  const availableWidth = a4Width - margin * 2;
+  const availableHeight = a4Height - margin * 2 - gap * (sourcePages.length - 1);
+  const embeddedPages = await output.embedPages(sourcePages);
+  const totalHeight = sourcePages.reduce((sum, page) => sum + page.getHeight(), 0);
+  const widestPage = Math.max(...sourcePages.map(page => page.getWidth()));
+  const scale = Math.min(availableWidth / widestPage, availableHeight / totalHeight);
+  const target = output.addPage([a4Width, a4Height]);
+
+  let y = a4Height - margin;
+  embeddedPages.forEach((page, index) => {
+    const sourcePage = sourcePages[index];
+    const width = sourcePage.getWidth() * scale;
+    const height = sourcePage.getHeight() * scale;
+    y -= height;
+    target.drawPage(page, {
+      x: (a4Width - width) / 2,
+      y,
+      width,
+      height,
+    });
+    y -= gap;
+  });
+
+  const bytes = await output.save();
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return new Blob([buffer], { type: "application/pdf" });
+}
+
 export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promise<Blob> {
   // Start conservatively because desktop and Android PDF renderers shape Indic
   // scripts differently and narrow printer margins can increase row wrapping.
@@ -400,7 +439,9 @@ export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promis
     pdf = await render(buildPrescriptionDefinition(input, fit));
   }
 
-  return pdf;
+  // Structural final guarantee: regardless of renderer pagination, the
+  // downloadable/shareable file contains exactly one physical A4 page.
+  return imposeOnSingleA4(pdf);
 }
 
 function money(value: number | null | undefined, prefix = ""): Content {
