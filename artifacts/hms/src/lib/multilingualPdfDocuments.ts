@@ -378,20 +378,25 @@ function buildPrescriptionDefinition(input: PrescriptionPdfInput, fit: number): 
 
 async function pdfPageCount(pdf: Blob): Promise<number> {
   const source = new TextDecoder("iso-8859-1").decode(await pdf.arrayBuffer());
-  const pages = source.match(/\/Type\s*\/Page(?!s)\b/g);
-  return pages?.length ?? 1;
+  const pageObjects = source.match(/\/Type\s*\/Page(?!s)\b/g)?.length ?? 0;
+  const pageTreeCounts = [...source.matchAll(/\/Count\s+(\d+)/g)]
+    .map(match => Number(match[1]))
+    .filter(Number.isFinite);
+  return Math.max(pageObjects, ...pageTreeCounts, 1);
 }
 
 export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promise<Blob> {
-  let fit = prescriptionFit(input);
+  // Start conservatively because desktop and Android PDF renderers shape Indic
+  // scripts differently and narrow printer margins can increase row wrapping.
+  let fit = Math.min(0.72, prescriptionFit(input));
   let pdf = await render(buildPrescriptionDefinition(input, fit));
 
   // The content estimate gets close, but actual Indic glyph shaping, long drug
   // names, and printer-safe table wrapping can consume more vertical space.
   // Verify the rendered file itself and keep scaling the whole document until
   // pdfmake produces exactly one physical A4 page.
-  for (let attempt = 0; attempt < 7 && await pdfPageCount(pdf) > 1; attempt += 1) {
-    fit *= 0.82;
+  for (let attempt = 0; attempt < 12 && await pdfPageCount(pdf) > 1; attempt += 1) {
+    fit *= 0.8;
     pdf = await render(buildPrescriptionDefinition(input, fit));
   }
 

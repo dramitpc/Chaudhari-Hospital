@@ -220,7 +220,28 @@ export default function PrescriptionDetailPage() {
     ? createPrescriptionPdf({ prescription: value, patient, consultation, settings, format: fmt, translation: value.translations as TranslatedData | null })
     : null;
 
-  const printPrescription = () => window.print();
+  const printPrescription = async () => {
+    await document.fonts?.ready;
+
+    const content = printContentRef.current;
+    if (content) {
+      const targetHeightPx = (270 / 25.4) * 96;
+      const measuredHeight = content.scrollHeight;
+      const scale = measuredHeight > targetHeightPx
+        ? Math.max(0.35, targetHeightPx / measuredHeight)
+        : 1;
+
+      // Apply the value directly because React state updates triggered by
+      // beforeprint can arrive after Android has already captured the layout.
+      content.style.setProperty("--prescription-print-scale", String(scale));
+      setPrintScale(scale);
+    }
+
+    await new Promise<void>(resolve =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    window.print();
+  };
 
   const downloadPrescriptionPdf = async () => {
     const pdf = makePrescriptionPdf();
@@ -733,8 +754,12 @@ export default function PrescriptionDetailPage() {
 
           .prescription-print-content {
             zoom: var(--prescription-print-scale);
+            position: absolute !important;
+            inset: 0 auto auto 0 !important;
             width: 100% !important;
             max-width: none !important;
+            max-height: 277mm !important;
+            overflow: hidden !important;
             margin: 0 !important;
             padding: 5mm !important;
             border: 0 !important;
