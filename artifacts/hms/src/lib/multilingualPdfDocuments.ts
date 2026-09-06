@@ -308,14 +308,13 @@ function prescriptionFit(input: PrescriptionPdfInput): number {
   return Math.min(1, Math.max(0.38, 720 / estimatedUnits));
 }
 
-export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promise<Blob> {
+function buildPrescriptionDefinition(input: PrescriptionPdfInput, fit: number): TDocumentDefinitions {
   const { prescription, patient, consultation, settings, format, translation } = input;
   const language = translation?.language ?? "en";
   const translatedFont = FONT_BY_LANGUAGE[language] ?? "NotoSans";
   const hasTranslation = Boolean(translation?.language && translation.language !== "en");
   const showTranslated = format.displayMode !== "english" && hasTranslation;
   const bilingual = format.displayMode === "bilingual" && hasTranslation;
-  const fit = prescriptionFit(input);
   const content: Content[] = [
     letterhead(settings, prescription.doctorName, prescription.doctorSpecialization, format.headerAlign, fit),
     ...(prescription.doctorConsultingHours ? [{ text: [{ text: "Consulting Hours: ", bold: true }, prescription.doctorConsultingHours], alignment: "center", color: MUTED, margin: [0, -8 * fit, 0, 8 * fit] } as Content] : []),
@@ -374,7 +373,29 @@ export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promis
   content.push({ stack: signature, margin: [0, 18 * fit, 0, 0] });
 
   const size = format.fontSize === "lg" ? 11 : format.fontSize === "md" ? 10 : 9;
-  return render(commonDefinition(content, `Prescription - ${prescription.patientName}`, size, fit));
+  return commonDefinition(content, `Prescription - ${prescription.patientName}`, size, fit);
+}
+
+async function pdfPageCount(pdf: Blob): Promise<number> {
+  const source = new TextDecoder("iso-8859-1").decode(await pdf.arrayBuffer());
+  const pages = source.match(/\/Type\s*\/Page(?!s)\b/g);
+  return pages?.length ?? 1;
+}
+
+export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promise<Blob> {
+  let fit = prescriptionFit(input);
+  let pdf = await render(buildPrescriptionDefinition(input, fit));
+
+  // The content estimate gets close, but actual Indic glyph shaping, long drug
+  // names, and printer-safe table wrapping can consume more vertical space.
+  // Verify the rendered file itself and keep scaling the whole document until
+  // pdfmake produces exactly one physical A4 page.
+  for (let attempt = 0; attempt < 7 && await pdfPageCount(pdf) > 1; attempt += 1) {
+    fit *= 0.82;
+    pdf = await render(buildPrescriptionDefinition(input, fit));
+  }
+
+  return pdf;
 }
 
 function money(value: number | null | undefined, prefix = ""): Content {

@@ -9,8 +9,10 @@ Generated documents must preserve the corresponding screen preview's hierarchy a
 
 Prescriptions must always generate as a single A4 page. Adjust typography, margins, table padding, section spacing, and signature sizing together according to content volume rather than creating a second page.
 
+Do not trust content-length estimates alone for prescription pagination. Render the PDF, inspect its actual page count, and progressively reduce the whole-document fit until the generated file contains exactly one A4 page.
+
 **Why:** The user confirmed this approach to avoid browser and Android print-layout differences while minimizing storage and keeping PDF text searchable and selectable.
 
-**How to apply:** Reuse data-driven document builders for print, download, and native file sharing. Pass the active preview format and language into the builder, use script-specific bundled fonts, keep database records as the source of truth, and treat generated PDF files as temporary client-side artifacts.
+**How to apply:** Reuse data-driven document builders for print, download, and native file sharing. Pass the active preview format and language into the builder, use script-specific bundled fonts, verify actual output pagination, keep database records as the source of truth, and treat generated PDF files as temporary client-side artifacts.
 
 Browser PDF viewers loaded from Blob URLs can become cross-origin inside the Replit preview, so the app must not call `print()` through a hidden PDF iframe. Use the page's print layout with `window.print()` for popup-free printing and provide a separate direct-download action for saving the generated PDF.
