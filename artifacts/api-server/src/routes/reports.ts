@@ -164,17 +164,32 @@ router.get("/reports/doctor-productivity", authenticate, async (req, res): Promi
   const filterDoctorId = req.query.doctorId as string | undefined;
   const [rangeStart, rangeEnd] = rangeBounds(startDate, endDate);
 
-  let doctorsQuery = db.select().from(usersTable).where(and(eq(usersTable.role, "doctor"), eq(usersTable.isActive, true))).$dynamic();
-  if (filterDoctorId) doctorsQuery = doctorsQuery.where(eq(usersTable.id, filterDoctorId));
-  const doctors = await doctorsQuery;
+  const allDoctors = await db.select().from(usersTable).where(eq(usersTable.role, "doctor"));
+  const reportInvoices = await db.select().from(invoicesTable)
+    .where(and(
+      gte(invoicesTable.createdAt, rangeStart),
+      lt(invoicesTable.createdAt, rangeEnd),
+      notInArray(invoicesTable.status, ["draft", "cancelled"]),
+    ));
+
+  const collectedByDoctor = new Map<string, number>();
+  for (const invoice of reportInvoices) {
+    if (!invoice.doctorId) continue;
+    const collected = Math.min(invoice.amountPaid ?? 0, invoice.total);
+    collectedByDoctor.set(invoice.doctorId, (collectedByDoctor.get(invoice.doctorId) ?? 0) + collected);
+  }
+
+  const doctors = allDoctors.filter(doc =>
+    filterDoctorId
+      ? doc.id === filterDoctorId
+      : doc.isActive || (collectedByDoctor.get(doc.id) ?? 0) > 0,
+  );
 
   const daysDiff = Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000));
 
   const rows = await Promise.all(doctors.map(async (doc) => {
     const consultations = await db.select().from(consultationsTable)
       .where(and(eq(consultationsTable.doctorId, doc.id), sql`visit_date between ${startDate} and ${endDate}`));
-    const invoices = await db.select({ total: sql<number>`coalesce(sum(amount_paid),0)` }).from(invoicesTable)
-      .where(and(eq(invoicesTable.doctorId, doc.id), gte(invoicesTable.createdAt, rangeStart), lt(invoicesTable.createdAt, rangeEnd), notInArray(invoicesTable.status, ["draft", "cancelled"])));
     const prescriptions = await db.select({ count: sql<number>`count(*)` }).from(prescriptionsTable)
       .where(and(eq(prescriptionsTable.doctorId, doc.id), sql`visit_date between ${startDate} and ${endDate}`));
     const certs = await db.select({ count: sql<number>`count(*)` }).from(certificatesTable)
@@ -184,12 +199,33 @@ router.get("/reports/doctor-productivity", authenticate, async (req, res): Promi
       doctorId: doc.id,
       doctorName: doc.fullName,
       totalPatients: consultations.length,
-      totalRevenue: Number(invoices[0]?.total ?? 0),
+      totalRevenue: collectedByDoctor.get(doc.id) ?? 0,
       avgPerDay: Math.round(consultations.length / daysDiff * 10) / 10,
       prescriptions: Number(prescriptions[0]?.count ?? 0),
       certificates: Number(certs[0]?.count ?? 0),
     };
   }));
+
+  if (!filterDoctorId) {
+    const totalCollected = reportInvoices.reduce(
+      (sum, invoice) => sum + Math.min(invoice.amountPaid ?? 0, invoice.total),
+      0,
+    );
+    const attributedCollected = rows.reduce((sum, row) => sum + row.totalRevenue, 0);
+    const unassignedCollected = Math.max(0, totalCollected - attributedCollected);
+
+    if (unassignedCollected > 0) {
+      rows.push({
+        doctorId: "__unassigned__",
+        doctorName: "Unassigned / No Consultant",
+        totalPatients: 0,
+        totalRevenue: unassignedCollected,
+        avgPerDay: 0,
+        prescriptions: 0,
+        certificates: 0,
+      });
+    }
+  }
 
   res.json({ startDate, endDate, doctors: rows });
 });
