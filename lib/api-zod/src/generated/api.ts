@@ -995,10 +995,7 @@ export const CompleteConsultationParams = zod.object({
 export const CompleteConsultationBody = zod.object({
   "diagnosis": zod.string().optional(),
   "advice": zod.string().optional(),
-  "followUpDate": zod.string().optional(),
-  "overrideReason": zod.string().optional(),
-  "managerUsername": zod.string().optional(),
-  "managerPassword": zod.string().optional()
+  "followUpDate": zod.string().optional()
 })
 
 export const CompleteConsultationResponse = zod.object({
@@ -1512,7 +1509,7 @@ export const ListInvoicesResponse = zod.object({
 export const CreateInvoiceBody = zod.object({
   "patientId": zod.string(),
   "consultationId": zod.string().optional(),
-  "doctorId": zod.string().optional(),
+  "doctorId": zod.string().nullish().describe('Required for standalone invoices; null assigns Clinic\/Unassigned. When consultationId is provided, the consultant is derived from the consultation.'),
   "items": zod.array(zod.object({
   "chargeTypeId": zod.string().nullish(),
   "description": zod.string(),
@@ -1597,6 +1594,53 @@ export const UpdateInvoiceBody = zod.object({
 })
 
 export const UpdateInvoiceResponse = zod.object({
+  "id": zod.string(),
+  "invoiceNumber": zod.string(),
+  "patientId": zod.string(),
+  "patientName": zod.string().optional(),
+  "consultationId": zod.string().nullish(),
+  "doctorId": zod.string().nullish(),
+  "doctorName": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "chargeTypeId": zod.string().nullish(),
+  "description": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "discount": zod.number().optional(),
+  "tax": zod.number().optional(),
+  "total": zod.number()
+})),
+  "subtotal": zod.number(),
+  "discount": zod.number().optional(),
+  "tax": zod.number().optional(),
+  "total": zod.number(),
+  "amountPaid": zod.number().optional(),
+  "balance": zod.number().optional(),
+  "paymentMode": zod.union([zod.literal('cash'),zod.literal('card'),zod.literal('upi'),zod.literal('insurance'),zod.literal(null)]).nullish(),
+  "status": zod.enum(['draft', 'pending', 'paid', 'partial', 'cancelled', 'refunded']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional(),
+  "payments": zod.array(zod.object({
+  "id": zod.string(),
+  "invoiceId": zod.string(),
+  "amount": zod.number(),
+  "paymentMode": zod.enum(['cash', 'card', 'upi', 'insurance']),
+  "notes": zod.string().nullish(),
+  "paidAt": zod.string(),
+  "createdAt": zod.string()
+})).optional()
+})
+
+
+/**
+ * @summary Assign a previously unassigned invoice to its consultation's consultant (admin only)
+ */
+export const RestoreInvoiceConsultantParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RestoreInvoiceConsultantResponse = zod.object({
   "id": zod.string(),
   "invoiceNumber": zod.string(),
   "patientId": zod.string(),

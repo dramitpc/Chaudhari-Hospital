@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useCreateInvoice, useListPatients, useListChargeTypes, getListPatientsQueryKey, getListChargeTypesQueryKey, getListInvoicesQueryKey } from "@workspace/api-client-react";
+import { useCreateInvoice, useListPatients, useListChargeTypes, useListDoctors, getListPatientsQueryKey, getListChargeTypesQueryKey, getListInvoicesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,7 @@ export default function NewInvoicePage() {
   const fromQueue = urlParams.get("from") === "queue";
   const backPath = fromQueue ? "/queue" : "/billing";
   const [patientId, setPatientId] = useState(urlPatientId ?? "");
+  const [consultantChoice, setConsultantChoice] = useState("");
   const [patientSearch, setPatientSearch] = useState("");
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState("");
@@ -44,6 +45,7 @@ export default function NewInvoicePage() {
     { query: { queryKey: getListPatientsQueryKey({ search: patientSearch || undefined, limit: 50 }) } }
   );
   const { data: chargeTypes } = useListChargeTypes({ query: { queryKey: getListChargeTypesQueryKey() } });
+  const { data: doctorsData } = useListDoctors();
   const createMutation = useCreateInvoice();
 
   const updateItem = (i: number, field: keyof LineItem, value: string | number | null) => {
@@ -82,9 +84,14 @@ export default function NewInvoicePage() {
       toast({ title: "Select a patient", variant: "destructive" });
       return;
     }
+    if (!consultantChoice) {
+      toast({ title: "Select a consultant or Clinic/Unassigned", variant: "destructive" });
+      return;
+    }
     createMutation.mutate({
       data: {
         patientId,
+        doctorId: consultantChoice === "clinic" ? null : consultantChoice,
         discount,
         notes: notes || undefined,
         items: items.filter(i => i.description) as Parameters<typeof createMutation.mutate>[0]["data"]["items"],
@@ -142,6 +149,22 @@ export default function NewInvoicePage() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-4 sm:p-6 space-y-3">
+        <Label htmlFor="invoice-consultant" className="font-semibold">Consultant / Revenue attribution</Label>
+        <Select value={consultantChoice} onValueChange={setConsultantChoice}>
+          <SelectTrigger id="invoice-consultant" data-testid="select-invoice-consultant">
+            <SelectValue placeholder="Select consultant or Clinic/Unassigned" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="clinic">Clinic / Unassigned</SelectItem>
+            {(doctorsData?.data ?? []).map(doctor => (
+              <SelectItem key={doctor.id} value={doctor.id}>{doctor.fullName}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">Choose Clinic / Unassigned only for charges not attributable to a consultant.</p>
       </div>
 
       {/* Line Items card */}

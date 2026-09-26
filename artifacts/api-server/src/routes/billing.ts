@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, desc, gte, lt, and } from "drizzle-orm";
-import { db, invoicesTable, invoicePaymentsTable, chargeTypesTable, patientsTable, usersTable } from "@workspace/db";
+import { eq, desc, gte, lt, and, isNull } from "drizzle-orm";
+import { db, invoicesTable, invoicePaymentsTable, chargeTypesTable, patientsTable, usersTable, consultationsTable } from "@workspace/db";
 import {
   ListInvoicesQueryParams,
   CreateInvoiceBody,
@@ -88,11 +88,42 @@ router.post("/billing/invoices", authenticate, async (req, res): Promise<void> =
   const taxAmt = items.reduce((s, i) => s + (i.tax ?? 0), 0);
   const total = subtotal - discountAmt + taxAmt;
 
+  let doctorId: string | null;
+  if (parsed.data.consultationId) {
+    const [consultation] = await db.select({
+      patientId: consultationsTable.patientId,
+      doctorId: consultationsTable.doctorId,
+    }).from(consultationsTable).where(eq(consultationsTable.id, parsed.data.consultationId));
+    if (!consultation || consultation.patientId !== parsed.data.patientId) {
+      res.status(400).json({ error: "Consultation not found for this patient" });
+      return;
+    }
+    if (parsed.data.doctorId !== undefined && parsed.data.doctorId !== consultation.doctorId) {
+      res.status(400).json({ error: "Consultant must match the linked consultation" });
+      return;
+    }
+    doctorId = consultation.doctorId;
+  } else {
+    if (parsed.data.doctorId === undefined) {
+      res.status(400).json({ error: "Select a consultant or Clinic/Unassigned" });
+      return;
+    }
+    doctorId = parsed.data.doctorId;
+    if (doctorId) {
+      const [doctor] = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(and(eq(usersTable.id, doctorId), eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)));
+      if (!doctor) {
+        res.status(400).json({ error: "Select an active consultant" });
+        return;
+      }
+    }
+  }
+
   const [inv] = await db.insert(invoicesTable).values({
     invoiceNumber: generateInvoiceNumber(),
     patientId: parsed.data.patientId,
     consultationId: parsed.data.consultationId,
-    doctorId: parsed.data.doctorId,
+    doctorId,
     items: parsed.data.items as typeof invoicesTable.$inferInsert["items"],
     subtotal,
     discount: discountAmt,
@@ -121,6 +152,40 @@ router.get("/billing/invoices/:id", authenticate, async (req, res): Promise<void
     return;
   }
   res.json(await formatInvoice(inv));
+});
+
+router.post("/billing/invoices/:id/restore-consultant", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
+  const params = GetInvoiceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid invoice id" });
+    return;
+  }
+  const [invoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id));
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+  if (invoice.doctorId || !invoice.consultationId) {
+    res.status(409).json({ error: "Invoice is already assigned or has no linked consultation" });
+    return;
+  }
+  const [consultation] = await db.select({
+    patientId: consultationsTable.patientId,
+    doctorId: consultationsTable.doctorId,
+  }).from(consultationsTable).where(eq(consultationsTable.id, invoice.consultationId));
+  if (!consultation || consultation.patientId !== invoice.patientId || !consultation.doctorId) {
+    res.status(409).json({ error: "No matching consultant found on the linked consultation" });
+    return;
+  }
+  const [updated] = await db.update(invoicesTable).set({ doctorId: consultation.doctorId })
+    .where(and(eq(invoicesTable.id, invoice.id), isNull(invoicesTable.doctorId))).returning();
+  if (!updated) {
+    res.status(409).json({ error: "Invoice was assigned by another user" });
+    return;
+  }
+  await logAudit(req, req.user!.id, "RESTORE_INVOICE_CONSULTANT", "billing", invoice.id,
+    `Consultant restored from consultation ${invoice.consultationId}`);
+  res.json(await formatInvoice(updated));
 });
 
 router.patch("/billing/invoices/:id", authenticate, async (req, res): Promise<void> => {

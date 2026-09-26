@@ -1080,6 +1080,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Invoice"
 
+  /billing/invoices/{id}/restore-consultant:
+    post:
+      operationId: restoreInvoiceConsultant
+      tags: [billing]
+      summary: Assign a previously unassigned invoice to its consultation's consultant (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
   /billing/invoices/{id}/payments:
     get:
       operationId: listInvoicePayments
@@ -2940,7 +2959,8 @@ components:
         consultationId:
           type: string
         doctorId:
-          type: string
+          type: ["string", "null"]
+          description: Required for standalone invoices; null assigns Clinic/Unassigned. When consultationId is provided, the consultant is derived from the consultation.
         items:
           type: array
           items:

@@ -3,7 +3,7 @@ import { useRoute, useLocation, useSearch } from "wouter";
 import { fmtDate } from "@/lib/dateUtils";
 import {
   useGetInvoice, useRecordPayment, useUpdateInvoice, useGetPatient, useGetClinicSettings,
-  useListInvoicePayments,
+  useListInvoicePayments, useRestoreInvoiceConsultant,
   getGetInvoiceQueryKey, getListInvoicesQueryKey, getGetPatientQueryKey, getGetClinicSettingsQueryKey,
   getListInvoicePaymentsQueryKey,
 } from "@workspace/api-client-react";
@@ -71,6 +71,7 @@ export default function InvoiceDetailPage() {
 
   const paymentMutation = useRecordPayment();
   const cancelMutation = useUpdateInvoice();
+  const restoreConsultantMutation = useRestoreInvoiceConsultant();
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("cash");
   const [showShare, setShowShare] = useState(false);
@@ -84,6 +85,18 @@ export default function InvoiceDetailPage() {
         queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
       },
       onError: () => toast({ title: "Failed to cancel invoice", variant: "destructive" }),
+    });
+  };
+
+  const handleRestoreConsultant = () => {
+    if (!confirm("Assign this invoice to the consultant on its linked consultation? This updates historical revenue attribution.")) return;
+    restoreConsultantMutation.mutate({ id }, {
+      onSuccess: (updated) => {
+        toast({ title: `Assigned to ${updated.doctorName ?? "consultant"}` });
+        queryClient.invalidateQueries({ queryKey: getGetInvoiceQueryKey(id) });
+        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+      },
+      onError: () => toast({ title: "Could not restore consultant from consultation", variant: "destructive" }),
     });
   };
 
@@ -189,12 +202,10 @@ export default function InvoiceDetailPage() {
                 <p className="text-xs text-muted-foreground">Patient</p>
                 <p className="font-medium">{invoice.patientName}</p>
               </div>
-              {invoice.doctorName && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Doctor</p>
-                  <p className="font-medium">{invoice.doctorName}</p>
-                </div>
-              )}
+              <div>
+                <p className="text-xs text-muted-foreground">Consultant / Revenue attribution</p>
+                <p className="font-medium">{invoice.doctorName ?? "Clinic / Unassigned"}</p>
+              </div>
             </div>
 
             <table className="w-full text-sm">
@@ -254,6 +265,15 @@ export default function InvoiceDetailPage() {
         </div>
 
         <div className="invoice-screen-actions space-y-4">
+          {isAdmin && !invoice.doctorId && invoice.consultationId && (
+            <div className="rounded-lg border border-border bg-card p-5 space-y-2">
+              <h3 className="font-semibold">Restore consultant attribution</h3>
+              <p className="text-xs text-muted-foreground">If this invoice belongs to the linked consultation, assign its consultant. This does not change the payment amount.</p>
+              <Button variant="outline" className="w-full" onClick={handleRestoreConsultant} disabled={restoreConsultantMutation.isPending}>
+                {restoreConsultantMutation.isPending ? "Assigning..." : "Assign from consultation"}
+              </Button>
+            </div>
+          )}
           {invoice.status !== "paid" && invoice.status !== "cancelled" && (
             <div className="rounded-lg border border-border bg-card p-5 space-y-4">
               <h3 className="font-semibold">Record Payment</h3>

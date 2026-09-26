@@ -3874,6 +3874,76 @@ export const useUpdateInvoice = <TError = ErrorType<unknown>,
       return useMutation(getUpdateInvoiceMutationOptions(options));
     }
 
+export const getRestoreInvoiceConsultantUrl = (id: string,) => {
+
+
+
+
+  return `/api/billing/invoices/${id}/restore-consultant`
+}
+
+/**
+ * @summary Assign a previously unassigned invoice to its consultation's consultant (admin only)
+ */
+export const restoreInvoiceConsultant = async (id: string, options?: RequestInit): Promise<Invoice> => {
+
+  return customFetch<Invoice>(getRestoreInvoiceConsultantUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRestoreInvoiceConsultantMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreInvoiceConsultant>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreInvoiceConsultant>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['restoreInvoiceConsultant'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreInvoiceConsultant>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreInvoiceConsultant(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreInvoiceConsultantMutationResult = NonNullable<Awaited<ReturnType<typeof restoreInvoiceConsultant>>>
+
+    export type RestoreInvoiceConsultantMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Assign a previously unassigned invoice to its consultation's consultant (admin only)
+ */
+export const useRestoreInvoiceConsultant = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreInvoiceConsultant>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreInvoiceConsultant>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRestoreInvoiceConsultantMutationOptions(options));
+    }
+
 export const getListInvoicePaymentsUrl = (id: string,) => {
 
 

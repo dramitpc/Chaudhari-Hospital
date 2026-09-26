@@ -984,7 +984,11 @@ export interface Invoice {
 export interface InvoiceInput {
   patientId: string;
   consultationId?: string;
-  doctorId?: string;
+  /**
+     * Required for standalone invoices; null assigns Clinic/Unassigned. When consultationId is provided, the consultant is derived from the consultation.
+     * @nullable
+     */
+  doctorId?: string | null;
   items: InvoiceItem[];
   discount?: number;
   notes?: string;

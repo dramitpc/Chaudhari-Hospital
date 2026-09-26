@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, desc, and, notInArray, sql, SQL } from "drizzle-orm";
-import { db, investigationsTable, invoicesTable, chargeTypesTable, patientsTable } from "@workspace/db";
+import { db, investigationsTable, invoicesTable, chargeTypesTable, patientsTable, consultationsTable } from "@workspace/db";
 import {
   ListInvestigationsQueryParams,
   CreateInvestigationBody,
@@ -54,6 +54,16 @@ router.post(
     const body = CreateInvestigationBody.safeParse(req.body);
     if (!body.success) {
       return res.status(400).json({ error: "Invalid input", details: body.error.flatten() });
+    }
+
+    const consultation = body.data.consultationId
+      ? (await db.select({
+        doctorId: consultationsTable.doctorId,
+        patientId: consultationsTable.patientId,
+      }).from(consultationsTable).where(eq(consultationsTable.id, body.data.consultationId)))[0]
+      : null;
+    if (body.data.consultationId && (!consultation || consultation.patientId !== body.data.patientId)) {
+      return res.status(400).json({ error: "Investigation consultation does not match the patient" });
     }
 
     const [row] = await db
@@ -157,6 +167,7 @@ router.post(
               invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
               patientId: row.patientId,
               consultationId: row.consultationId,
+              doctorId: consultation!.doctorId,
               items: [newItem],
               subtotal: newItem.total,
               discount: 0,

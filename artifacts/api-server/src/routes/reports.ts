@@ -217,7 +217,7 @@ router.get("/reports/doctor-productivity", authenticate, async (req, res): Promi
     if (unassignedCollected > 0) {
       rows.push({
         doctorId: "__unassigned__",
-        doctorName: "Unassigned / No Consultant",
+        doctorName: "Clinic / Unassigned",
         totalPatients: 0,
         totalRevenue: unassignedCollected,
         avgPerDay: 0,
