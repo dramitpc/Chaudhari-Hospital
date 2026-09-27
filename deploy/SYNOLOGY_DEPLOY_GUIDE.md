@@ -82,9 +82,6 @@ Save and close.
 
 This step compiles the TypeScript source and packages everything.  
 It takes **5–15 minutes** on the first run (subsequent builds are faster due to Docker layer cache).
-The frontend builder installs Poppler and runs synthetic multilingual prescription PDF checks
-before compiling the app. If you build the frontend outside Docker, install Poppler
-(`pdftotext`, `pdffonts`, and `pdftoppm`) in that build environment too.
 
 ```bash
 cd /volume1/docker/clinicos

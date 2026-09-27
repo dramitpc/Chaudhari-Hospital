@@ -166,8 +166,7 @@ export default function PrescriptionDetailPage() {
 
   const [fmt, setFmt] = useState<RxFormat>(() => {
     const base = loadFormat();
-    const printMode = urlMode || (urlLang && urlLang !== "en" ? "bilingual" : "");
-    return printMode ? { ...base, displayMode: printMode as RxFormat["displayMode"] } : base;
+    return urlMode ? { ...base, displayMode: urlMode as RxFormat["displayMode"] } : base;
   });
   const [showShare, setShowShare] = useState(false);
   const [selectedLang, setSelectedLang] = useState(() => (urlLang && urlLang !== "en") ? urlLang : "en");
@@ -221,28 +220,16 @@ export default function PrescriptionDetailPage() {
     ? createPrescriptionPdf({ prescription: value, patient, consultation, settings, format: fmt, translation: value.translations as TranslatedData | null })
     : null;
 
-  const printPrescription = async (value = prescription) => {
-    if (!value) return;
-    const translation = value.translations as TranslatedData | null;
-    const requestedLanguage = isPrintFlow && urlLang ? urlLang : selectedLang;
-    if (fmt.displayMode !== "english" && requestedLanguage !== "en" && translation?.language !== requestedLanguage) {
-      toast({
-        title: "Translation not ready",
-        description: "Translate the prescription before printing, or select English mode.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (/Android/i.test(navigator.userAgent)) {
-      const pdf = makePrescriptionPdf(value);
+  const printPrescription = async () => {
+    if (/Android/i.test(navigator.userAgent) && prescription) {
+      const pdf = makePrescriptionPdf();
       if (!pdf) return;
 
-      const file = pdfToFile(await pdf, prescriptionPdfFileName(value));
+      const file = pdfToFile(await pdf, prescriptionPdfFileName(prescription));
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: `Prescription — ${value.patientName}`,
+          title: `Prescription — ${prescription.patientName}`,
         });
       } else {
         downloadPdf(file, file.name);
@@ -277,15 +264,6 @@ export default function PrescriptionDetailPage() {
   };
 
   const downloadPrescriptionPdf = async () => {
-    const translation = prescription?.translations as TranslatedData | null;
-    if (fmt.displayMode !== "english" && selectedLang !== "en" && translation?.language !== selectedLang) {
-      toast({
-        title: "Translation not ready",
-        description: "Translate the prescription before saving, or select English mode.",
-        variant: "destructive",
-      });
-      return;
-    }
     const pdf = makePrescriptionPdf();
     if (pdf && prescription) downloadPdf(await pdf, prescriptionPdfFileName(prescription));
   };
@@ -300,22 +278,15 @@ export default function PrescriptionDetailPage() {
   useEffect(() => {
     if (!isLoading && prescription && patient && settings && isPrintFlow && !didAutoPrint.current) {
       didAutoPrint.current = true;
-      const savedTranslation = prescription.translations as TranslatedData | null;
-      if (urlLang && urlLang !== "en" && savedTranslation?.language === urlLang) {
-        setTimeout(() => void printPrescription(prescription), 300);
-      } else if (urlLang && urlLang !== "en") {
+      if (urlLang && urlLang !== "en") {
         translateMutation.mutate(
           { id, data: { language: urlLang, displayMode: (urlMode || "bilingual") as RxFormat["displayMode"] } },
           {
             onSuccess: (translatedPrescription) => {
-              queryClient.setQueryData(getGetPrescriptionQueryKey(id), translatedPrescription);
-              setTimeout(() => void printPrescription(translatedPrescription), 400);
+              queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
+              setTimeout(() => void printPrescription(), 400);
             },
-            onError: () => toast({
-              title: "Translation failed",
-              description: "The prescription was not printed. Retry translation when the connection is available.",
-              variant: "destructive",
-            }),
+            onError: () => setTimeout(() => void printPrescription(), 400),
           }
         );
       } else {
@@ -330,9 +301,9 @@ export default function PrescriptionDetailPage() {
     translateMutation.mutate(
       { id, data: { language: selectedLang, displayMode: fmt.displayMode } },
       {
-        onSuccess: (translatedPrescription) => {
+        onSuccess: () => {
           setFmt(prev => ({ ...prev, displayMode: "bilingual" }));
-          queryClient.setQueryData(getGetPrescriptionQueryKey(id), translatedPrescription);
+          queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
           toast({ title: "Translation complete", description: `Prescription translated to ${LANGUAGES.find(l => l.code === selectedLang)?.label}` });
         },
         onError: () => toast({ title: "Translation failed", description: "Please try again", variant: "destructive" }),

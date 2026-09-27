@@ -157,61 +157,11 @@ function textLabel(key: keyof typeof EN, lang: string, bilingual = true): Conten
   };
 }
 
-const INDIC_TEXT = /[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF]/u;
-
-function fontForCharacter(character: string, previous: string): string {
-  const codePoint = character.codePointAt(0) ?? 0;
-  if (codePoint >= 0x0900 && codePoint <= 0x097f) return "Devanagari";
-  if (codePoint >= 0x0980 && codePoint <= 0x09ff) return "Bengali";
-  if (codePoint >= 0x0a00 && codePoint <= 0x0a7f) return "Gurmukhi";
-  if (codePoint >= 0x0a80 && codePoint <= 0x0aff) return "Gujarati";
-  if (codePoint >= 0x0b80 && codePoint <= 0x0bff) return "Tamil";
-  if (codePoint >= 0x0c00 && codePoint <= 0x0c7f) return "Telugu";
-  if (codePoint >= 0x0c80 && codePoint <= 0x0cff) return "Kannada";
-  return /[a-zA-Z0-9]/.test(character) ? "NotoSans" : previous;
-}
-
-function scriptRuns(text: string): { text: string; font: string }[] {
-  const runs: { text: string; font: string }[] = [];
-  for (const character of text) {
-    const font = fontForCharacter(character, runs.at(-1)?.font ?? "NotoSans");
-    const last = runs.at(-1);
-    if (last?.font === font) last.text += character;
-    else runs.push({ text: character, font });
-  }
-  return runs;
-}
-
-// pdfmake does not fall back to another font for unsupported characters.
-// Apply fonts to every text field, including patient-entered text that was
-// already written in an Indic script rather than stored as a translation.
-function withScriptFonts(value: unknown): unknown {
-  if (typeof value === "string") {
-    return INDIC_TEXT.test(value) ? { text: scriptRuns(value) } : value;
-  }
-  if (Array.isArray(value)) return value.map(withScriptFonts);
-  if (!value || typeof value !== "object") return value;
-
-  const content = { ...value } as Record<string, unknown>;
-  for (const key of ["text", "content", "stack", "columns", "ol", "ul", "table", "body"]) {
-    if (!(key in content)) continue;
-    const child = content[key];
-    content[key] = key === "text" && typeof child === "string" && INDIC_TEXT.test(child)
-      ? scriptRuns(child)
-      : withScriptFonts(child);
-  }
-  return content;
-}
-
 async function render(definition: TDocumentDefinitions): Promise<Blob> {
   const vfs = await loadFontVfs();
   return new Promise((resolve, reject) => {
     try {
-      const withFonts = {
-        ...definition,
-        content: withScriptFonts(definition.content) as TDocumentDefinitions["content"],
-      };
-      pdfMake.createPdf(withFonts, undefined, fonts, vfs).getBlob(resolve);
+      pdfMake.createPdf(definition, undefined, fonts, vfs).getBlob(resolve);
     } catch (error) {
       reject(error);
     }
