@@ -8,7 +8,8 @@
     "build": "pnpm run test:prescription-pdf && vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:prescription-pdf": "node --test tests/prescription-pdf.test.mjs"
+    "test:prescription-pdf": "node --test tests/prescription-pdf.test.mjs",
+    "test:prescription-browser-print": "node --test tests/prescription-browser-print.test.mjs"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

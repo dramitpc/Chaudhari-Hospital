@@ -1,0 +1,35 @@
+name: Prescription browser print
+
+on:
+  push:
+    paths:
+      - ".github/workflows/prescription-browser-print.yml"
+      - "artifacts/hms/**"
+      - "lib/api-client-react/**"
+      - "pnpm-lock.yaml"
+  pull_request:
+    paths:
+      - ".github/workflows/prescription-browser-print.yml"
+      - "artifacts/hms/**"
+      - "lib/api-client-react/**"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+jobs:
+  indic-print:
+    runs-on: ubuntu-latest
+    container: node:24
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chromium and Poppler
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends chromium poppler-utils
+      - name: Install workspace packages
+        run: |
+          npm install -g pnpm@10.26.1
+          pnpm install --frozen-lockfile
+      - name: Build shared libraries
+        run: pnpm run typecheck:libs
+      - name: Check desktop Indic browser printing
+        run: pnpm --filter @workspace/hms run test:prescription-browser-print

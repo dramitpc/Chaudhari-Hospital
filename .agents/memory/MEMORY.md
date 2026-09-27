@@ -1,3 +1,4 @@
 - [Query invalidation outside React hooks](query-client-outside-hooks.md) — plain functions (onBlur handlers, non-component helpers) must use raw generated API calls + an exported `queryClient`, not custom hooks.
 - [On-demand clinical PDFs](on-demand-clinical-pdfs.md) — generate clinical and billing PDFs from structured data, never screenshots; do not persist them unless immutable archives are required.
 - [Indic PDF shaping](indic-pdf-shaping.md) — pdfmake's bundled fontkit can crash on some Gurmukhi phrases; simple glyph samples cannot prove all text is safe.
+- [Chromium Indic print fonts](chromium-indic-print-fonts.md) — browser PDF subsets may use generic internal names; check extracted text and raster ink instead of expecting CSS family names.
