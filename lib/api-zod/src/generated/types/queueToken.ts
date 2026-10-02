@@ -41,6 +41,21 @@ export interface QueueToken {
   consultationStartedAt?: string | null;
   /** @nullable */
   consultationEndedAt?: string | null;
+  /** @nullable */
+  activeStartedAt?: string | null;
+  /**
+     * Accumulated doctor-attended time, including the running session; null for legacy timing
+     * @nullable
+     */
+  activeConsultationSeconds?: number | null;
+  /**
+     * Closed-session active time, excluding the running session
+     * @nullable
+     */
+  activeAccumulatedSeconds?: number | null;
+  /** @nullable */
+  elapsedConsultationMinutes?: number | null;
+  sessionCount?: number;
   /** How many times this token has been skipped and re-queued */
   skippedCount?: number;
 }

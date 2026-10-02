@@ -15,8 +15,15 @@ export interface QueueResponse {
   /** @nullable */
   averageWaitMinutes?: number | null;
   /**
-     * Rolling average of last 10 completed consultation durations in minutes
+     * Rolling average active doctor time for the last 10 timed consultations finished on the selected date; excludes legacy elapsed-only records
      * @nullable
      */
   avgConsultationDuration?: number | null;
+  /**
+     * Elapsed time including investigation waits, reported separately from active time
+     * @nullable
+     */
+  avgElapsedConsultationDuration?: number | null;
+  returningReady?: number;
+  awaitingInvestigations?: number;
 }

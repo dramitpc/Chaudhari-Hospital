@@ -724,7 +724,7 @@ export const GetQueueResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "appointmentId": zod.string().nullish(),
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled']),
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'paused', 'awaiting_investigations', 'ready_for_review', 'consultation_done', 'completed', 'skipped', 'cancelled']),
   "priority": zod.number().optional(),
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
@@ -735,12 +735,20 @@ export const GetQueueResponse = zod.object({
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish(),
+  "activeStartedAt": zod.string().nullish(),
+  "activeConsultationSeconds": zod.number().nullish().describe('Accumulated doctor-attended time, including the running session; null for legacy timing'),
+  "activeAccumulatedSeconds": zod.number().nullish().describe('Closed-session active time, excluding the running session'),
+  "elapsedConsultationMinutes": zod.number().nullish(),
+  "sessionCount": zod.number().optional(),
   "skippedCount": zod.number().optional().describe('How many times this token has been skipped and re-queued')
 })),
   "totalWaiting": zod.number(),
   "currentlyServing": zod.number().nullable(),
   "averageWaitMinutes": zod.number().nullish(),
-  "avgConsultationDuration": zod.number().nullish().describe('Rolling average of last 10 completed consultation durations in minutes')
+  "avgConsultationDuration": zod.number().nullish().describe('Rolling average active doctor time for the last 10 timed consultations finished on the selected date; excludes legacy elapsed-only records'),
+  "avgElapsedConsultationDuration": zod.number().nullish().describe('Elapsed time including investigation waits, reported separately from active time'),
+  "returningReady": zod.number().optional(),
+  "awaitingInvestigations": zod.number().optional()
 })
 
 
@@ -765,7 +773,7 @@ export const UpdateTokenStatusParams = zod.object({
 })
 
 export const UpdateTokenStatusBody = zod.object({
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled'])
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'paused', 'awaiting_investigations', 'ready_for_review', 'consultation_done', 'completed', 'skipped', 'cancelled'])
 })
 
 export const UpdateTokenStatusResponse = zod.object({
@@ -778,7 +786,7 @@ export const UpdateTokenStatusResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "appointmentId": zod.string().nullish(),
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled']),
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'paused', 'awaiting_investigations', 'ready_for_review', 'consultation_done', 'completed', 'skipped', 'cancelled']),
   "priority": zod.number().optional(),
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
@@ -789,6 +797,11 @@ export const UpdateTokenStatusResponse = zod.object({
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish(),
+  "activeStartedAt": zod.string().nullish(),
+  "activeConsultationSeconds": zod.number().nullish().describe('Accumulated doctor-attended time, including the running session; null for legacy timing'),
+  "activeAccumulatedSeconds": zod.number().nullish().describe('Closed-session active time, excluding the running session'),
+  "elapsedConsultationMinutes": zod.number().nullish(),
+  "sessionCount": zod.number().optional(),
   "skippedCount": zod.number().optional().describe('How many times this token has been skipped and re-queued')
 })
 
@@ -796,8 +809,12 @@ export const UpdateTokenStatusResponse = zod.object({
 /**
  * @summary Call the next patient in queue
  */
+export const callNextPatientBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const CallNextPatientBody = zod.object({
-  "doctorId": zod.string()
+  "doctorId": zod.string(),
+  "date": zod.string().regex(callNextPatientBodyDateRegExp).optional().describe('Queue date currently being viewed; defaults to the clinic local date')
 })
 
 export const CallNextPatientResponse = zod.object({
@@ -810,7 +827,7 @@ export const CallNextPatientResponse = zod.object({
   "doctorId": zod.string(),
   "doctorName": zod.string().optional(),
   "appointmentId": zod.string().nullish(),
-  "status": zod.enum(['waiting', 'called', 'in_consultation', 'consultation_done', 'completed', 'skipped', 'cancelled']),
+  "status": zod.enum(['waiting', 'called', 'in_consultation', 'paused', 'awaiting_investigations', 'ready_for_review', 'consultation_done', 'completed', 'skipped', 'cancelled']),
   "priority": zod.number().optional(),
   "estimatedWaitMinutes": zod.number().nullish(),
   "queueDate": zod.string().optional(),
@@ -821,6 +838,11 @@ export const CallNextPatientResponse = zod.object({
   "visitType": zod.enum(['new', 'followup']).optional(),
   "consultationStartedAt": zod.string().nullish(),
   "consultationEndedAt": zod.string().nullish(),
+  "activeStartedAt": zod.string().nullish(),
+  "activeConsultationSeconds": zod.number().nullish().describe('Accumulated doctor-attended time, including the running session; null for legacy timing'),
+  "activeAccumulatedSeconds": zod.number().nullish().describe('Closed-session active time, excluding the running session'),
+  "elapsedConsultationMinutes": zod.number().nullish(),
+  "sessionCount": zod.number().optional(),
   "skippedCount": zod.number().optional().describe('How many times this token has been skipped and re-queued')
 })
 

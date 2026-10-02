@@ -2277,7 +2277,7 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [waiting, called, in_consultation, consultation_done, completed, skipped, cancelled]
+          enum: [waiting, called, in_consultation, paused, awaiting_investigations, ready_for_review, consultation_done, completed, skipped, cancelled]
         priority:
           type: integer
         estimatedWaitMinutes:
@@ -2299,6 +2299,18 @@ components:
           type: ["string", "null"]
         consultationEndedAt:
           type: ["string", "null"]
+        activeStartedAt:
+          type: ["string", "null"]
+        activeConsultationSeconds:
+          type: ["integer", "null"]
+          description: Accumulated doctor-attended time, including the running session; null for legacy timing
+        activeAccumulatedSeconds:
+          type: ["integer", "null"]
+          description: Closed-session active time, excluding the running session
+        elapsedConsultationMinutes:
+          type: ["integer", "null"]
+        sessionCount:
+          type: integer
         skippedCount:
           type: integer
           description: How many times this token has been skipped and re-queued
@@ -2328,7 +2340,7 @@ components:
       properties:
         status:
           type: string
-          enum: [waiting, called, in_consultation, consultation_done, completed, skipped, cancelled]
+          enum: [waiting, called, in_consultation, paused, awaiting_investigations, ready_for_review, consultation_done, completed, skipped, cancelled]
 
     CallNextInput:
       type: object
@@ -2336,6 +2348,10 @@ components:
       properties:
         doctorId:
           type: string
+        date:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Queue date currently being viewed; defaults to the clinic local date
 
     QueueResponse:
       type: object
@@ -2353,7 +2369,14 @@ components:
           type: ["integer", "null"]
         avgConsultationDuration:
           type: ["integer", "null"]
-          description: Rolling average of last 10 completed consultation durations in minutes
+          description: Rolling average active doctor time for the last 10 timed consultations finished on the selected date; excludes legacy elapsed-only records
+        avgElapsedConsultationDuration:
+          type: ["integer", "null"]
+          description: Elapsed time including investigation waits, reported separately from active time
+        returningReady:
+          type: integer
+        awaitingInvestigations:
+          type: integer
 
     # ── CONSULTATION SCHEMAS ─────────────────────────────────────────────────
     Consultation:

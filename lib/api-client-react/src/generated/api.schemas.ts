@@ -567,6 +567,9 @@ export const QueueTokenStatus = {
   waiting: 'waiting',
   called: 'called',
   in_consultation: 'in_consultation',
+  paused: 'paused',
+  awaiting_investigations: 'awaiting_investigations',
+  ready_for_review: 'ready_for_review',
   consultation_done: 'consultation_done',
   completed: 'completed',
   skipped: 'skipped',
@@ -614,6 +617,21 @@ export interface QueueToken {
   consultationStartedAt?: string | null;
   /** @nullable */
   consultationEndedAt?: string | null;
+  /** @nullable */
+  activeStartedAt?: string | null;
+  /**
+     * Accumulated doctor-attended time, including the running session; null for legacy timing
+     * @nullable
+     */
+  activeConsultationSeconds?: number | null;
+  /**
+     * Closed-session active time, excluding the running session
+     * @nullable
+     */
+  activeAccumulatedSeconds?: number | null;
+  /** @nullable */
+  elapsedConsultationMinutes?: number | null;
+  sessionCount?: number;
   /** How many times this token has been skipped and re-queued */
   skippedCount?: number;
 }
@@ -643,6 +661,9 @@ export const TokenStatusUpdateStatus = {
   waiting: 'waiting',
   called: 'called',
   in_consultation: 'in_consultation',
+  paused: 'paused',
+  awaiting_investigations: 'awaiting_investigations',
+  ready_for_review: 'ready_for_review',
   consultation_done: 'consultation_done',
   completed: 'completed',
   skipped: 'skipped',
@@ -655,6 +676,11 @@ export interface TokenStatusUpdate {
 
 export interface CallNextInput {
   doctorId: string;
+  /**
+     * Queue date currently being viewed; defaults to the clinic local date
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  date?: string;
 }
 
 export interface QueueResponse {
@@ -665,10 +691,17 @@ export interface QueueResponse {
   /** @nullable */
   averageWaitMinutes?: number | null;
   /**
-     * Rolling average of last 10 completed consultation durations in minutes
+     * Rolling average active doctor time for the last 10 timed consultations finished on the selected date; excludes legacy elapsed-only records
      * @nullable
      */
   avgConsultationDuration?: number | null;
+  /**
+     * Elapsed time including investigation waits, reported separately from active time
+     * @nullable
+     */
+  avgElapsedConsultationDuration?: number | null;
+  returningReady?: number;
+  awaitingInvestigations?: number;
 }
 
 export interface ConsultationInput {

@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlusCircle, ChevronLeft, ChevronRight, CalendarDays, X, RefreshCw, Receipt, DollarSign, Pencil, CheckCircle, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import ConsultationTiming, { queueStatusLabels } from "@/components/ConsultationTiming";
 
 function composeAgeString(y: string, m: string, d: string): string {
   const parts: string[] = [];
@@ -44,6 +45,9 @@ const statusColors: Record<string, string> = {
   waiting: "border-amber-400 bg-amber-50 dark:bg-amber-900/20",
   called: "border-blue-400 bg-blue-50 dark:bg-blue-900/20",
   in_consultation: "border-green-400 bg-green-50 dark:bg-green-900/20",
+  paused: "border-slate-400 bg-slate-50 dark:bg-slate-900/20",
+  awaiting_investigations: "border-orange-400 bg-orange-50 dark:bg-orange-900/20",
+  ready_for_review: "border-cyan-400 bg-cyan-50 dark:bg-cyan-900/20",
   consultation_done: "border-purple-400 bg-purple-50 dark:bg-purple-900/20",
   completed: "border-gray-300 bg-gray-50 dark:bg-gray-800/30 opacity-60",
   skipped: "border-gray-300 bg-gray-50 dark:bg-gray-800/30 opacity-60",
@@ -54,6 +58,9 @@ const statusBadgeColors: Record<string, string> = {
   waiting: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   called: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
   in_consultation: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  paused: "bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-300",
+  awaiting_investigations: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
+  ready_for_review: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
   consultation_done: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
   completed: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
   skipped: "bg-gray-100 text-gray-600",
@@ -227,27 +234,33 @@ export default function QueuePage() {
 
   const handleCallNext = () => {
     if (!selectedDoctorId) return;
-    callNextMutation.mutate({ data: { doctorId: selectedDoctorId } }, {
+    callNextMutation.mutate({ data: { doctorId: selectedDoctorId, date: selectedDate } }, {
       onSuccess: (token) => {
         toast({ title: `Calling Token #${token.tokenNumber}`, description: token.patientName });
         queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
       },
-      onError: () => toast({ title: "No patients waiting", variant: "destructive" }),
+      onError: (error) => toast({ title: "Could not call next patient", description: error.message, variant: "destructive" }),
     });
   };
 
   const handleUpdateStatus = (id: string, status: string) => {
-    updateStatusMutation.mutate({ id, data: { status: status as "waiting" | "called" | "in_consultation" | "consultation_done" | "completed" | "skipped" | "cancelled" } }, {
+    updateStatusMutation.mutate({ id, data: { status: status as import("@workspace/api-client-react").TokenStatusUpdate["status"] } }, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() }),
+      onError: (error) => toast({ title: "Could not update patient status", description: error.message, variant: "destructive" }),
     });
   };
 
-  const handleStartConsultation = (tokenId: string, patientId: string, doctorId: string) => {
+  const handleStartConsultation = (tokenId: string, patientId: string, doctorId: string, consultationId?: string | null) => {
     updateStatusMutation.mutate(
       { id: tokenId, data: { status: "in_consultation" } },
       {
-        onSuccess: () => {
+        onSuccess: (token) => {
           queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+          const existingConsultationId = token.consultationId ?? consultationId;
+          if (existingConsultationId) {
+            navigate(`/consultations/${existingConsultationId}?from=queue`);
+            return;
+          }
           createConsultationMutation.mutate(
             { data: { patientId, doctorId, tokenId } },
             {
@@ -326,8 +339,8 @@ export default function QueuePage() {
 
   const allTokens = queueData?.tokens ?? [];
   const tokens = visitTypeFilter ? allTokens.filter(t => t.visitType === visitTypeFilter) : allTokens;
-  const waiting = tokens.filter(t => t.status === "waiting");
-  const inConsultation = allTokens.find(t => t.status === "in_consultation" || t.status === "called" || t.status === "consultation_done");
+  const waiting = tokens.filter(t => t.status === "waiting" || t.status === "ready_for_review");
+  const inConsultation = allTokens.find(t => t.status === "in_consultation") ?? allTokens.find(t => t.status === "called");
 
   const newCount = allTokens.filter(t => t.status === "waiting" && t.visitType === "new").length;
   const followupCount = allTokens.filter(t => t.status === "waiting" && t.visitType === "followup").length;
@@ -414,6 +427,9 @@ export default function QueuePage() {
         <div className="rounded-lg border border-border bg-card p-4 text-center">
           <p className="text-sm text-muted-foreground">Waiting</p>
           <p className="text-3xl font-bold text-amber-600">{queueData?.totalWaiting ?? 0}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {queueData?.returningReady ?? 0} ready for review · {queueData?.awaitingInvestigations ?? 0} awaiting investigations
+          </p>
           {(newCount > 0 || followupCount > 0) && (
             <div className="flex justify-center gap-2 mt-1.5">
               {newCount > 0 && <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-medium">{newCount} New</span>}
@@ -432,18 +448,25 @@ export default function QueuePage() {
           )}
         </div>
         <div className="rounded-lg border border-border bg-card p-4 text-center">
-          <p className="text-sm text-muted-foreground">Avg Consult Time</p>
+          <p className="text-sm text-muted-foreground">Avg Active Consult Time</p>
           <p className="text-3xl font-bold text-blue-600">
             {queueData?.avgConsultationDuration ?? "—"}
             {queueData?.avgConsultationDuration != null && <span className="text-base font-normal ml-1">min</span>}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {queueData?.avgConsultationDuration != null ? "rolling avg · last 10 patients" : "no data yet · using 8 min default"}
+            {queueData?.avgConsultationDuration != null ? "last 10 timed consultations · excludes investigation waits" : "no active timing data yet · estimates use 8 min"}
           </p>
+          {queueData?.avgElapsedConsultationDuration != null && (
+            <p className="text-xs text-muted-foreground mt-1">Avg elapsed: {queueData.avgElapsedConsultationDuration} min · includes waits / legacy records</p>
+          )}
         </div>
       </div>
 
       {/* Visit Type Filter */}
+      <p className="text-xs text-muted-foreground">
+        Estimates respect priority, put review-ready patients first within the same priority, and exclude investigation waits.
+        Until measured, estimates use 8 minutes per visit and 5 minutes per review.
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Filter:</span>
         {([
@@ -497,7 +520,7 @@ export default function QueuePage() {
                       )}
                       <VisitTypeBadge visitType={token.visitType} />
                       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusBadgeColors[token.status] ?? ""}`}>
-                        {token.status.replace("_", " ")}
+                        {queueStatusLabels[token.status] ?? token.status.replaceAll("_", " ")}
                       </span>
                       {(token.skippedCount ?? 0) > 0 && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
@@ -513,7 +536,7 @@ export default function QueuePage() {
                       <span className="mx-1.5 opacity-40">·</span>
                       <span title="Token generated at">🕐 {new Date(token.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
                     </p>
-                    {token.status === "waiting" && (
+                    {(token.status === "waiting" || token.status === "ready_for_review") && (
                       <WaitInfo estimatedWaitMinutes={token.estimatedWaitMinutes} />
                     )}
                   </div>
@@ -533,13 +556,13 @@ export default function QueuePage() {
                       <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(token.id, "skipped")}>Skip</Button>
                     </>
                   )}
-                  {isServable && token.status === "called" && (
+                  {isServable && (token.status === "called" || (!token.consultationId && ["in_consultation", "paused", "awaiting_investigations", "ready_for_review"].includes(token.status))) && (
                     <Button
                       size="sm"
-                      onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId)}
+                      onClick={() => handleStartConsultation(token.id, token.patientId, token.doctorId, token.consultationId)}
                       disabled={createConsultationMutation.isPending || updateStatusMutation.isPending}
                     >
-                      Start
+                      {token.consultationId || token.consultationStartedAt ? "Resume" : "Start"}
                     </Button>
                   )}
                   {token.status === "in_consultation" && token.consultationId && (
@@ -577,6 +600,10 @@ export default function QueuePage() {
                       <Receipt className="h-3.5 w-3.5 mr-1" />Invoice
                     </Button>
                   )}
+                </div>
+                <div className="mt-2">
+                  <ConsultationTiming token={token} canManage={isServable}
+                    onResume={token.consultationId ? () => navigate(`/consultations/${token.consultationId}?from=queue`) : undefined} />
                 </div>
               </div>
             ))

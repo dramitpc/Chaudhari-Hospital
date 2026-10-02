@@ -1,3 +1,4 @@
 - [Query invalidation outside React hooks](query-client-outside-hooks.md) — plain functions (onBlur handlers, non-component helpers) must use raw generated API calls + an exported `queryClient`, not custom hooks.
 - [On-demand clinical PDFs](on-demand-clinical-pdfs.md) — generate clinical and billing PDFs from structured data, never screenshots; do not persist them unless immutable archives are required.
 - [Consultation workflow](consultation-workflow.md) — visits can include investigation waits while other patients are seen; distinguish active doctor time from elapsed visit time.
+- [Clinic date alignment](clinic-date-alignment.md) — queue actions must preserve the viewed date; browser and clinic timezones can differ around midnight.

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import {
   useGetConsultation, useUpdateConsultation, useCompleteConsultation,
+  useGetQueue, getGetQueueQueryKey,
   useListPrescriptions, useCreatePrescription, useUpdatePrescription, useListDrugs,
   useGetPatient, useUpdatePatient, useGetClinicSettings, useGetPatientHistory, useListInvoices,
   useCreateInvoice, useUpdateInvoice, useRecordPayment, useListChargeTypes,
@@ -28,6 +29,7 @@ import { FieldFavPanel } from "@/components/FieldFavPanel";
 import { trackFieldRecent } from "@/lib/favUtils";
 import { useSavedItems } from "@/lib/useSavedItems";
 import { InvestigationFavPanel, trackInvestigationRecent } from "@/components/InvestigationFavPanel";
+import ConsultationTiming from "@/components/ConsultationTiming";
 
 type DrugItem = {
   drugId?: string | null;
@@ -378,6 +380,14 @@ export default function ConsultationDetailPage() {
   const { data: drugsData } = useListDrugs({}, { query: { queryKey: getListDrugsQueryKey({}) } });
 
   const { user } = useAuth();
+  const { data: timingQueue } = useGetQueue(
+    { doctorId: consultation?.doctorId, date: consultation?.visitDate },
+    { query: {
+      enabled: !!consultation?.tokenId, refetchInterval: 15000,
+      queryKey: getGetQueueQueryKey({ doctorId: consultation?.doctorId, date: consultation?.visitDate }),
+    } },
+  );
+  const timingToken = timingQueue?.tokens.find(token => token.id === consultation?.tokenId);
   const updateMutation = useUpdateConsultation();
   const completeMutation = useCompleteConsultation();
   const createPrescriptionMutation = useCreatePrescription();
@@ -1092,6 +1102,7 @@ export default function ConsultationDetailPage() {
     completeMutation.mutate({ id, data: {} }, {
       onSuccess: () => {
         toast({ title: "Consultation completed" });
+        queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
         navigate("/queue");
       },
@@ -1216,33 +1227,45 @@ export default function ConsultationDetailPage() {
         .animate-marquee:hover { animation-play-state: paused; }
       `}</style>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(backDestination)}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-3">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(backDestination)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-xl font-bold flex items-baseline gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-bold flex flex-wrap items-baseline gap-x-2 gap-y-1 break-words">
               {consultation.patientName}
               {patient && (patient.age || patient.gender) && (
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-sm font-normal text-muted-foreground whitespace-nowrap">
                   {[patient.age, patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : ""].filter(Boolean).join(" · ")}
                 </span>
               )}
             </h1>
-            <p className="text-sm text-muted-foreground">{consultation.doctorName} · {consultation.visitDate}</p>
+            <p className="text-sm text-muted-foreground break-words">{consultation.doctorName} · {consultation.visitDate}</p>
           </div>
           <Badge variant={consultation.status === "completed" ? "secondary" : "default"}>
             {consultation.status.replace("_", " ")}
           </Badge>
         </div>
         {consultation.status !== "completed" && (
-          <Button onClick={handleComplete} disabled={completeMutation.isPending} data-testid="btn-complete-consultation">
+          <Button onClick={handleComplete} className="w-full shrink-0 sm:w-auto"
+            disabled={completeMutation.isPending || (!!timingToken && ["paused", "awaiting_investigations", "ready_for_review", "called"].includes(timingToken.status))}
+            data-testid="btn-complete-consultation">
             <CheckCircle className="mr-2 h-4 w-4" />
             Complete
           </Button>
         )}
       </div>
+
+      {timingToken && (
+        <div className="rounded-md border border-border bg-card p-3">
+          <ConsultationTiming token={timingToken}
+            canManage={consultation.status !== "completed" && (user?.role === "admin" || user?.role === "doctor")} />
+          {["paused", "awaiting_investigations", "ready_for_review", "called"].includes(timingToken.status) && consultation.status !== "completed" && (
+            <p className="text-xs text-muted-foreground mt-2">Resume when you see this patient again. Waiting for investigations is not counted as active time.</p>
+          )}
+        </div>
+      )}
 
       {hasDirty && consultation.status !== "completed" && (
         <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/30 px-3 py-1.5">

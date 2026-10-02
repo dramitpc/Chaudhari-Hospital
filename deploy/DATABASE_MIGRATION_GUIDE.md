@@ -273,6 +273,22 @@ sudo docker exec clinicos-postgres psql -U clinicos -d clinicos -c "\dt invoice_
 
 ### Rebuild after applying migrations
 
+#### Active consultation timing
+
+Before running the updated API on an existing NAS database, apply the additive
+migration. It preserves all existing visits and leaves old timing records as
+elapsed-only; it does not recalculate them as active doctor time.
+
+From the project root:
+
+```bash
+sudo docker exec -i clinicos-postgres psql -v ON_ERROR_STOP=1 -U clinicos -d clinicos < deploy/migrations/002-active-consultation-timing.sql
+```
+
+The migration adds timer fields and paused / investigation / ready-for-review
+queue states. It is safe to re-run. Do not run the `clinicos-init` seed service
+as part of this update. Then rebuild both API and frontend as below.
+
 ```bash
 cd /volume1/docker/clinicos
 DOCKER_BUILDKIT=0 sudo docker compose -f deploy/docker-compose.yml build clinicos-api clinicos-frontend

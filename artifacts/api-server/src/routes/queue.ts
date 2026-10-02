@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, desc, asc, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, asc, isNotNull, inArray, sql } from "drizzle-orm";
 import { db, queueTokensTable, patientsTable, usersTable, consultationsTable } from "@workspace/db";
 import {
   GetQueueQueryParams,
@@ -10,6 +10,8 @@ import {
 } from "@workspace/api-zod";
 import { authenticate } from "../middlewares/authenticate";
 import { localDateStr } from "../lib/date";
+import { averageMinutes, estimateDoctorQueue, runningSeconds } from "../lib/consultationTiming";
+import { lockDoctor, transitionQueueToken, updateQueueTokenStatus, QueueTransitionError } from "../lib/queueTransitions";
 
 const router = Router();
 
@@ -59,10 +61,14 @@ async function formatToken(t: typeof queueTokensTable.$inferSelect) {
     createdAt: t.createdAt.toISOString(),
     consultationStartedAt: t.consultationStartedAt?.toISOString() ?? null,
     consultationEndedAt: t.consultationEndedAt?.toISOString() ?? null,
+    activeStartedAt: t.activeStartedAt?.toISOString() ?? null,
+    activeAccumulatedSeconds: t.activeSeconds,
+    activeConsultationSeconds: t.activeSeconds === null ? null : t.activeSeconds + runningSeconds(t, new Date()),
+    elapsedConsultationMinutes: t.consultationStartedAt
+      ? Math.max(0, Math.round(((t.consultationEndedAt ?? new Date()).getTime() - t.consultationStartedAt.getTime()) / 60000)) : null,
+    sessionCount: t.sessionCount,
   };
 }
-
-const FALLBACK_DURATION = 8; // minutes, used when no completed consultations yet
 
 router.get("/queue", authenticate, async (req, res): Promise<void> => {
   const params = GetQueueQueryParams.safeParse(req.query);
@@ -86,49 +92,45 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
     ? and(
         eq(queueTokensTable.queueDate, date),
         eq(queueTokensTable.doctorId, doctorId),
-        eq(queueTokensTable.status, "completed"),
+        inArray(queueTokensTable.status, ["consultation_done", "completed"]),
         isNotNull(queueTokensTable.consultationStartedAt),
         isNotNull(queueTokensTable.consultationEndedAt),
       )
     : and(
         eq(queueTokensTable.queueDate, date),
-        eq(queueTokensTable.status, "completed"),
+        inArray(queueTokensTable.status, ["consultation_done", "completed"]),
         isNotNull(queueTokensTable.consultationStartedAt),
         isNotNull(queueTokensTable.consultationEndedAt),
       );
 
-  const recentCompleted = await db.select({
-    consultationStartedAt: queueTokensTable.consultationStartedAt,
-    consultationEndedAt: queueTokensTable.consultationEndedAt,
-  }).from(queueTokensTable)
-    .where(completedWhereClause)
-    .orderBy(desc(queueTokensTable.updatedAt))
+  const recentCompleted = await db.select().from(queueTokensTable)
+    .where(and(completedWhereClause, isNotNull(queueTokensTable.activeSeconds)))
+    .orderBy(desc(queueTokensTable.consultationEndedAt))
     .limit(10);
 
-  const durations = recentCompleted
-    .filter(t => t.consultationStartedAt && t.consultationEndedAt)
-    .map(t => (t.consultationEndedAt!.getTime() - t.consultationStartedAt!.getTime()) / 60000);
+  const avgConsultationDuration = averageMinutes(recentCompleted.map(t => t.activeSeconds!));
+  const elapsedCompleted = await db.select().from(queueTokensTable).where(completedWhereClause)
+    .orderBy(desc(queueTokensTable.consultationEndedAt)).limit(10);
+  const avgElapsedConsultationDuration = averageMinutes(elapsedCompleted.map(t =>
+    Math.max(0, (t.consultationEndedAt!.getTime() - t.consultationStartedAt!.getTime()) / 1000)));
 
-  const avgConsultationDuration = durations.length > 0
-    ? Math.max(1, Math.round(durations.reduce((a, b) => a + b, 0) / durations.length))
-    : null;
-
-  const rollingAvg = avgConsultationDuration ?? FALLBACK_DURATION;
-
-  // ── Assign estimated wait using: rollingAvg × (waitingPosition - 1) ───────
-  let waitingIndex = 0;
-  formatted.forEach(token => {
-    if (token.status === "waiting") {
-      token.estimatedWaitMinutes = rollingAvg * waitingIndex;
-      waitingIndex++;
-    } else {
-      token.estimatedWaitMinutes = null;
+  // Estimates follow the same review-first ordering as Call Next, independently per doctor.
+  // Investigation waits are excluded until staff marks the patient ready for review.
+  const now = new Date();
+  for (const currentDoctor of new Set(tokens.map(t => t.doctorId))) {
+    const samples = await db.select().from(queueTokensTable).where(and(
+      eq(queueTokensTable.doctorId, currentDoctor), eq(queueTokensTable.queueDate, date),
+      inArray(queueTokensTable.status, ["consultation_done", "completed"]),
+      isNotNull(queueTokensTable.activeSeconds), isNotNull(queueTokensTable.consultationEndedAt),
+    )).orderBy(desc(queueTokensTable.consultationEndedAt)).limit(10);
+    for (const estimate of estimateDoctorQueue(tokens.filter(t => t.doctorId === currentDoctor), samples, now)) {
+      formatted.find(token => token.id === estimate.id)!.estimatedWaitMinutes = estimate.estimatedWaitMinutes;
     }
-  });
+  }
 
   const result = visitType ? formatted.filter(t => t.visitType === visitType) : formatted;
-  const waiting = formatted.filter(t => t.status === "waiting");
-  const inProgress = formatted.find(t => t.status === "in_consultation" || t.status === "called");
+  const waiting = formatted.filter(t => t.status === "waiting" || t.status === "ready_for_review");
+  const inProgress = formatted.find(t => t.status === "in_consultation") ?? formatted.find(t => t.status === "called");
 
   const totalWaitMins = waiting.reduce((sum, t) => sum + (t.estimatedWaitMinutes ?? 0), 0);
   const avgWait = waiting.length > 0 ? Math.round(totalWaitMins / waiting.length) : 0;
@@ -139,6 +141,9 @@ router.get("/queue", authenticate, async (req, res): Promise<void> => {
     currentlyServing: inProgress?.tokenNumber ?? null,
     averageWaitMinutes: avgWait,
     avgConsultationDuration,
+    avgElapsedConsultationDuration,
+    returningReady: formatted.filter(t => t.status === "ready_for_review").length,
+    awaitingInvestigations: formatted.filter(t => t.status === "awaiting_investigations").length,
   });
 });
 
@@ -185,6 +190,10 @@ router.patch("/queue/tokens/:id/status", authenticate, async (req, res): Promise
     const [current] = await db.select().from(queueTokensTable).where(eq(queueTokensTable.id, params.data.id));
     if (!current) {
       res.status(404).json({ error: "Token not found" });
+      return;
+    }
+    if (current.status !== "waiting") {
+      res.status(409).json({ error: "Only waiting patients can be skipped" });
       return;
     }
 
@@ -237,13 +246,14 @@ router.patch("/queue/tokens/:id/status", authenticate, async (req, res): Promise
   }
 
   // ── Normal status transitions ─────────────────────────────────────────────
-  const updates: Partial<typeof queueTokensTable.$inferInsert> = { status: parsed.data.status };
-  if (parsed.data.status === "in_consultation") {
-    updates.consultationStartedAt = new Date();
-  } else if (parsed.data.status === "completed") {
-    updates.consultationEndedAt = new Date();
+  let token;
+  try {
+    token = await updateQueueTokenStatus(params.data.id, parsed.data.status);
+  } catch (error) {
+    if (!(error instanceof QueueTransitionError)) throw error;
+    res.status(409).json({ error: error.message });
+    return;
   }
-  const [token] = await db.update(queueTokensTable).set(updates).where(eq(queueTokensTable.id, params.data.id)).returning();
   if (!token) {
     res.status(404).json({ error: "Token not found" });
     return;
@@ -257,26 +267,24 @@ router.post("/queue/next", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const today = localDateStr();
-  await db.update(queueTokensTable)
-    .set({ status: "completed", consultationEndedAt: new Date() })
-    .where(and(eq(queueTokensTable.doctorId, parsed.data.doctorId), eq(queueTokensTable.status, "in_consultation"), eq(queueTokensTable.queueDate, today)));
-
-  // Pick the next waiting token respecting sortOrder
-  const waiting = await db.select().from(queueTokensTable)
-    .where(and(eq(queueTokensTable.doctorId, parsed.data.doctorId), eq(queueTokensTable.status, "waiting"), eq(queueTokensTable.queueDate, today)))
-    .orderBy(desc(queueTokensTable.priority), asc(queueTokensTable.sortOrder), asc(queueTokensTable.tokenNumber))
-    .limit(1);
-
-  if (!waiting.length) {
+  const today = parsed.data.date ?? localDateStr();
+  const token = await db.transaction(async tx => {
+    await lockDoctor(tx, parsed.data.doctorId);
+    const [next] = await tx.select().from(queueTokensTable)
+      .where(and(eq(queueTokensTable.doctorId, parsed.data.doctorId),
+        inArray(queueTokensTable.status, ["waiting", "ready_for_review"]), eq(queueTokensTable.queueDate, today)))
+      .orderBy(desc(queueTokensTable.priority),
+        sql`case when ${queueTokensTable.status} = 'ready_for_review' then 0 else 1 end`,
+        asc(queueTokensTable.sortOrder), asc(queueTokensTable.tokenNumber))
+      .limit(1);
+    if (!next) return undefined;
+    // Neither first nor review sessions start until the doctor presses Start/Resume.
+    return transitionQueueToken(tx, next.id, "called");
+  });
+  if (!token) {
     res.status(404).json({ error: "No patients waiting" });
     return;
   }
-
-  const [token] = await db.update(queueTokensTable)
-    .set({ status: "called", consultationStartedAt: new Date() })
-    .where(eq(queueTokensTable.id, waiting[0].id))
-    .returning();
 
   res.json(await formatToken(token));
 });

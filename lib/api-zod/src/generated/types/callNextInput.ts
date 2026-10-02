@@ -8,4 +8,9 @@
 
 export interface CallNextInput {
   doctorId: string;
+  /**
+     * Queue date currently being viewed; defaults to the clinic local date
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  date?: string;
 }

@@ -6,7 +6,7 @@ import { patientsTable } from "./patients";
 import { appointmentsTable } from "./appointments";
 
 export const queueStatusEnum = pgEnum("queue_status", [
-  "waiting", "called", "in_consultation", "consultation_done", "completed", "skipped", "cancelled"
+  "waiting", "called", "in_consultation", "paused", "awaiting_investigations", "ready_for_review", "consultation_done", "completed", "skipped", "cancelled"
 ]);
 
 export const visitTypeEnum = pgEnum("visit_type", ["new", "followup"]);
@@ -25,6 +25,11 @@ export const queueTokensTable = pgTable("queue_tokens", {
   queueDate: text("queue_date").notNull(),
   consultationStartedAt: timestamp("consultation_started_at", { withTimezone: true }),
   consultationEndedAt: timestamp("consultation_ended_at", { withTimezone: true }),
+  activeStartedAt: timestamp("active_started_at", { withTimezone: true }),
+  activeSeconds: integer("active_seconds"),
+  initialSeconds: integer("initial_seconds"),
+  reviewSeconds: integer("review_seconds").notNull().default(0),
+  sessionCount: integer("session_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { eq, desc, and } from "drizzle-orm";
 import { db, consultationsTable, patientsTable, usersTable, queueTokensTable, invoicesTable, investigationsTable, chargeTypesTable } from "@workspace/db";
+import { lockDoctor, transitionQueueToken, QueueTransitionError } from "../lib/queueTransitions";
 import {
   ListConsultationsQueryParams,
   CreateConsultationBody,
@@ -77,45 +78,54 @@ router.post("/consultations", authenticate, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const tokenRow = parsed.data.tokenId
-    ? (await db.select({ queueDate: queueTokensTable.queueDate, visitType: queueTokensTable.visitType }).from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
-    : null;
-  const visitDate = tokenRow?.queueDate ?? localDateStr();
-  const [c] = await db.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
-  await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", c.id, `Patient: ${c.patientId}`);
+  const result = await db.transaction(async tx => {
+    const tokenRow = parsed.data.tokenId
+      ? (await tx.select().from(queueTokensTable).where(eq(queueTokensTable.id, parsed.data.tokenId)))[0]
+      : null;
+    if (tokenRow) {
+      await lockDoctor(tx, tokenRow.doctorId);
+      // Resuming/retrying a queue visit must reuse its consultation and invoice.
+      const [existing] = await tx.select().from(consultationsTable).where(eq(consultationsTable.tokenId, tokenRow.id));
+      if (existing) return { c: existing, created: false };
+    }
+    const visitDate = tokenRow?.queueDate ?? localDateStr();
+    const [c] = await tx.insert(consultationsTable).values({ ...parsed.data, visitDate }).returning();
 
-  // Auto-generate invoice with consultation fee — new visits only, not follow-ups
-  const isNewVisit = !tokenRow || tokenRow.visitType === "new";
-  const consultationCharge = isNewVisit
-    ? await db.select().from(chargeTypesTable)
-        .where(and(eq(chargeTypesTable.category, "consultation"), eq(chargeTypesTable.isActive, true)))
-    : [];
-  const charge = consultationCharge[0];
-  if (charge) {
-    const item = { chargeTypeId: charge.id, description: charge.name, quantity: 1, unitPrice: charge.unitPrice, tax: 0, total: charge.unitPrice };
-    const now = new Date();
-    const y = now.getFullYear().toString().slice(-2);
-    const mo = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    const rand = Math.floor(Math.random() * 9000) + 1000;
-    await db.insert(invoicesTable).values({
-      invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
-      patientId: c.patientId,
-      consultationId: c.id,
-      doctorId: c.doctorId,
-      items: [item],
-      subtotal: charge.unitPrice,
-      discount: 0,
-      tax: 0,
-      total: charge.unitPrice,
-      amountPaid: 0,
-      balance: charge.unitPrice,
-      status: "pending",
-      createdById: req.user!.id,
-    });
-  }
+    // Auto-generate invoice with consultation fee — new visits only, not follow-ups
+    const isNewVisit = !tokenRow || tokenRow.visitType === "new";
+    const consultationCharge = isNewVisit
+      ? await tx.select().from(chargeTypesTable)
+          .where(and(eq(chargeTypesTable.category, "consultation"), eq(chargeTypesTable.isActive, true)))
+      : [];
+    const charge = consultationCharge[0];
+    if (charge) {
+      const item = { chargeTypeId: charge.id, description: charge.name, quantity: 1, unitPrice: charge.unitPrice, tax: 0, total: charge.unitPrice };
+      const now = new Date();
+      const y = now.getFullYear().toString().slice(-2);
+      const mo = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      const rand = Math.floor(Math.random() * 9000) + 1000;
+      await tx.insert(invoicesTable).values({
+        invoiceNumber: `INV-${y}${mo}${d}-${rand}`,
+        patientId: c.patientId,
+        consultationId: c.id,
+        doctorId: c.doctorId,
+        items: [item],
+        subtotal: charge.unitPrice,
+        discount: 0,
+        tax: 0,
+        total: charge.unitPrice,
+        amountPaid: 0,
+        balance: charge.unitPrice,
+        status: "pending",
+        createdById: req.user!.id,
+      });
+    }
+    return { c, created: true };
+  });
 
-  res.status(201).json(await formatConsultation(c));
+  if (result.created) await logAudit(req, req.user!.id, "CREATE_CONSULTATION", "consultations", result.c.id, `Patient: ${result.c.patientId}`);
+  res.status(result.created ? 201 : 200).json(await formatConsultation(result.c));
 });
 
 router.get("/consultations/:id", authenticate, async (req, res): Promise<void> => {
@@ -167,17 +177,22 @@ router.post("/consultations/:id/complete", authenticate, async (req, res): Promi
     if (parsed.data.advice) updates.advice = parsed.data.advice;
     if (parsed.data.followUpDate) updates.followUpDate = parsed.data.followUpDate;
   }
-  const [c] = await db.update(consultationsTable).set(updates).where(eq(consultationsTable.id, params.data.id)).returning();
+  let c;
+  try {
+    c = await db.transaction(async tx => {
+      const [updated] = await tx.update(consultationsTable).set(updates).where(eq(consultationsTable.id, params.data.id)).returning();
+      if (updated?.tokenId) await transitionQueueToken(tx, updated.tokenId, "consultation_done");
+      return updated;
+    });
+  } catch (error) {
+    if (!(error instanceof QueueTransitionError)) throw error;
+    res.status(409).json({ error: error.message });
+    return;
+  }
   if (!c) {
     res.status(404).json({ error: "Consultation not found" });
     return;
   }
-  if (c.tokenId) {
-    await db.update(queueTokensTable)
-      .set({ status: "consultation_done", consultationEndedAt: new Date() })
-      .where(eq(queueTokensTable.id, c.tokenId));
-  }
-
   await logAudit(req, req.user!.id, "COMPLETE_CONSULTATION", "consultations", c.id);
   res.json(await formatConsultation(c));
 });
