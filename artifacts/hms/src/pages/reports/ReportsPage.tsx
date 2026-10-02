@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import ReportDownload from "@/components/ReportDownload";
+import { dailyOpdDownload, revenueDownload, productivityDownload } from "@/lib/reportData";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 export default function ReportsPage() {
   const today = new Date().toLocaleDateString("en-CA");
@@ -24,18 +27,21 @@ export default function ReportsPage() {
   const [revenueEnd, setRevenueEnd] = useState(today);
   const [prodStart, setProdStart] = useState(thirtyDaysAgo);
   const [prodEnd, setProdEnd] = useState(today);
+  const opdDateValid = isDate(opdDate);
+  const revenueDatesValid = isDate(revenueStart) && isDate(revenueEnd) && revenueStart <= revenueEnd;
+  const productivityDatesValid = isDate(prodStart) && isDate(prodEnd) && prodStart <= prodEnd;
 
-  const { data: opdReport, isLoading: opdLoading } = useGetDailyOpdReport(
+  const { data: opdReport, isLoading: opdLoading, isFetching: opdFetching } = useGetDailyOpdReport(
     { date: opdDate },
-    { query: { queryKey: getGetDailyOpdReportQueryKey({ date: opdDate }) } }
+    { query: { enabled: opdDateValid, queryKey: getGetDailyOpdReportQueryKey({ date: opdDate }) } }
   );
-  const { data: revenueReport, isLoading: revLoading } = useGetRevenueReport(
+  const { data: revenueReport, isLoading: revLoading, isFetching: revFetching } = useGetRevenueReport(
     { startDate: revenueStart, endDate: revenueEnd },
-    { query: { queryKey: getGetRevenueReportQueryKey({ startDate: revenueStart, endDate: revenueEnd }) } }
+    { query: { enabled: revenueDatesValid, queryKey: getGetRevenueReportQueryKey({ startDate: revenueStart, endDate: revenueEnd }) } }
   );
-  const { data: prodReport, isLoading: prodLoading } = useGetDoctorProductivityReport(
+  const { data: prodReport, isLoading: prodLoading, isFetching: prodFetching } = useGetDoctorProductivityReport(
     { startDate: prodStart, endDate: prodEnd },
-    { query: { queryKey: getGetDoctorProductivityReportQueryKey({ startDate: prodStart, endDate: prodEnd }) } }
+    { query: { enabled: productivityDatesValid, queryKey: getGetDoctorProductivityReportQueryKey({ startDate: prodStart, endDate: prodEnd }) } }
   );
 
   return (
@@ -56,12 +62,15 @@ export default function ReportsPage() {
 
         {/* Daily OPD */}
         <TabsContent value="daily-opd" className="mt-4 space-y-4">
-          <div className="flex items-end gap-3">
+          <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Date</Label>
               <Input type="date" value={opdDate} onChange={e => setOpdDate(e.target.value)} className="w-44" />
             </div>
+            <ReportDownload report={opdReport ? dailyOpdDownload(opdReport) : undefined}
+              disabled={opdFetching || !opdDateValid} />
           </div>
+          {!opdDateValid && <p className="text-sm text-muted-foreground" role="status">Select a date to view and download this report.</p>}
 
           {opdLoading ? <Skeleton className="h-64 w-full" /> : opdReport && (
             <>
@@ -274,7 +283,10 @@ export default function ReportsPage() {
               <Label className="text-xs">End Date</Label>
               <Input type="date" value={revenueEnd} onChange={e => setRevenueEnd(e.target.value)} className="w-full" />
             </div>
+            <ReportDownload report={revenueReport ? revenueDownload(revenueReport) : undefined}
+              disabled={revFetching || !revenueDatesValid} />
           </div>
+          {!revenueDatesValid && <p className="text-sm text-muted-foreground" role="status">Select a valid date range with the end date on or after the start date.</p>}
 
           {revLoading ? <Skeleton className="h-64 w-full" /> : revenueReport && (
             <>
@@ -412,7 +424,10 @@ export default function ReportsPage() {
               <Label className="text-xs">End Date</Label>
               <Input type="date" value={prodEnd} onChange={e => setProdEnd(e.target.value)} className="w-full" />
             </div>
+            <ReportDownload report={prodReport ? productivityDownload(prodReport) : undefined}
+              disabled={prodFetching || !productivityDatesValid} />
           </div>
+          {!productivityDatesValid && <p className="text-sm text-muted-foreground" role="status">Select a valid date range with the end date on or after the start date.</p>}
 
           {prodLoading ? <Skeleton className="h-64 w-full" /> : prodReport && (
             <>
