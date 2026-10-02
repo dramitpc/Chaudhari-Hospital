@@ -109,7 +109,7 @@ function CertPreview({ form, patientName, doctorName, clinicName, clinicAddress,
             )}
             {form.content && (
               <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
-                <p>{form.content}</p>
+                <p className="whitespace-pre-wrap break-words">{form.content}</p>
               </div>
             )}
             <p className="mt-3">We look forward to continued collaboration.</p>

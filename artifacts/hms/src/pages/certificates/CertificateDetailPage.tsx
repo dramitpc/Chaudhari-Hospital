@@ -366,9 +366,9 @@ export default function CertificateDetailPage() {
                 <p>Period: <strong>{fmtDDMMYYYY(cert.fromDate)}</strong> to <strong>{fmtDDMMYYYY(cert.toDate)}</strong></p>
               )}
 
-              {cert.content && cert.type !== "sick_leave" && cert.type !== "fitness" && (
+              {cert.content && cert.type !== "fitness" && (
                 <div className="mt-4 p-4 bg-muted/20 rounded border border-border">
-                  <p>{cert.content}</p>
+                  <p className="whitespace-pre-wrap break-words">{cert.content}</p>
                 </div>
               )}
             </div>
