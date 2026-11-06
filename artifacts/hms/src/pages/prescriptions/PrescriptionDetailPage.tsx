@@ -1,5 +1,5 @@
 import { useRoute, useLocation, useSearch } from "wouter";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fmtDate, calcAge } from "@/lib/dateUtils";
 import {
   useGetPrescription, useGetClinicSettings, useGetPatient, useGetConsultation, useTranslatePrescription,
@@ -17,6 +17,8 @@ import { ArrowLeft, Download, Printer, Settings2, Share2, Languages, Loader2 } f
 import ShareDialog from "@/components/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { usesNativePdfPrinting, handoffPdfForPrinting } from "@/lib/nativePdfPrint";
+import { usePreparedPrintPdf } from "@/hooks/usePreparedPrintPdf";
 import "@fontsource/noto-sans/400.css";
 import "@fontsource/noto-sans-devanagari/400.css";
 import "@fontsource/noto-sans-gujarati/400.css";
@@ -174,6 +176,7 @@ export default function PrescriptionDetailPage() {
   const didAutoPrint = useRef(false);
   const printContentRef = useRef<HTMLDivElement>(null);
   const [printScale, setPrintScale] = useState(1);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(fmt));
@@ -216,62 +219,61 @@ export default function PrescriptionDetailPage() {
   const set = <K extends keyof RxFormat>(key: K, value: RxFormat[K]) =>
     setFmt(prev => ({ ...prev, [key]: value }));
 
-  const makePrescriptionPdf = (value = prescription) => value
+  const makePrescriptionPdf = useCallback((value = prescription) => value
     ? createPrescriptionPdf({ prescription: value, patient, consultation, settings, format: fmt, translation: value.translations as TranslatedData | null })
-    : null;
+    : null, [prescription, patient, consultation, settings, fmt]);
+  const createPrescriptionPdfFile = useCallback(async () => {
+    const pdf = makePrescriptionPdf();
+    if (!pdf || !prescription) throw new Error("Prescription is not ready");
+    return pdfToFile(await pdf, prescriptionPdfFileName(prescription));
+  }, [makePrescriptionPdf, prescription]);
+  const nativePdfPrinting = usesNativePdfPrinting();
+  const preparedPdf = usePreparedPrintPdf(createPrescriptionPdfFile, nativePdfPrinting && !!prescription);
 
-  const printPrescription = async () => {
-    if (/Android/i.test(navigator.userAgent) && prescription) {
-      const pdf = makePrescriptionPdf();
-      if (!pdf) return;
-
-      const file = pdfToFile(await pdf, prescriptionPdfFileName(prescription));
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Prescription — ${prescription.patientName}`,
-        });
-      } else {
-        downloadPdf(file, file.name);
-        toast({
-          title: "Single-page PDF saved",
-          description: "Open the downloaded file in Epson iPrint to print it.",
-        });
+  const printPrescription = async (value = prescription) => {
+    if (isPrinting) return;
+    setIsPrinting(true);
+    try {
+      if (nativePdfPrinting && value) {
+        const file = value === prescription && preparedPdf.file
+          ? preparedPdf.file
+          : pdfToFile(await makePrescriptionPdf(value)!, prescriptionPdfFileName(value));
+        const result = await handoffPdfForPrinting(file);
+        if (result === "downloaded") {
+          toast({
+            title: "Single-page PDF saved",
+            description: "Open the saved PDF in your PDF viewer or printer app and print on A4 paper.",
+          });
+        }
+        return;
       }
-      return;
+
+      await document.fonts?.ready;
+
+      const content = printContentRef.current;
+      if (content) {
+        const targetHeightPx = (270 / 25.4) * 96;
+        const measuredHeight = content.scrollHeight;
+        const scale = measuredHeight > targetHeightPx
+          ? Math.max(0.35, targetHeightPx / measuredHeight)
+          : 1;
+        content.style.setProperty("--prescription-print-scale", String(scale));
+        setPrintScale(scale);
+      }
+      await new Promise<void>(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      window.print();
+    } catch (error) {
+      toast({ title: "Could not prepare PDF for printing", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setIsPrinting(false);
     }
-
-    await document.fonts?.ready;
-
-    const content = printContentRef.current;
-    if (content) {
-      const targetHeightPx = (270 / 25.4) * 96;
-      const measuredHeight = content.scrollHeight;
-      const scale = measuredHeight > targetHeightPx
-        ? Math.max(0.35, targetHeightPx / measuredHeight)
-        : 1;
-
-      // Apply the value directly because React state updates triggered by
-      // beforeprint can arrive after Android has already captured the layout.
-      content.style.setProperty("--prescription-print-scale", String(scale));
-      setPrintScale(scale);
-    }
-
-    await new Promise<void>(resolve =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-    window.print();
   };
 
   const downloadPrescriptionPdf = async () => {
     const pdf = makePrescriptionPdf();
     if (pdf && prescription) downloadPdf(await pdf, prescriptionPdfFileName(prescription));
-  };
-
-  const createPrescriptionPdfFile = async () => {
-    const pdf = makePrescriptionPdf();
-    if (!pdf || !prescription) throw new Error("Prescription is not ready");
-    return pdfToFile(await pdf, prescriptionPdfFileName(prescription));
   };
 
   // Auto-print: translate first when a lang was passed, then print
@@ -284,7 +286,7 @@ export default function PrescriptionDetailPage() {
           {
             onSuccess: (translatedPrescription) => {
               queryClient.invalidateQueries({ queryKey: getGetPrescriptionQueryKey(id) });
-              setTimeout(() => void printPrescription(), 400);
+              setTimeout(() => void printPrescription(translatedPrescription), 400);
             },
             onError: () => setTimeout(() => void printPrescription(), 400),
           }
@@ -480,8 +482,9 @@ export default function PrescriptionDetailPage() {
             </PopoverContent>
           </Popover>
 
-          <Button onClick={() => void printPrescription()} data-testid="btn-print-prescription">
-            <Printer className="mr-2 h-4 w-4" />Print PDF
+          <Button onClick={() => void printPrescription()} disabled={isPrinting || preparedPdf.preparing} data-testid="btn-print-prescription">
+            {isPrinting || preparedPdf.preparing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+            {isPrinting || preparedPdf.preparing ? "Preparing PDF…" : "Print PDF"}
           </Button>
           <Button variant="outline" onClick={() => void downloadPrescriptionPdf()} data-testid="btn-save-prescription-pdf">
             <Download className="mr-2 h-4 w-4" />Save PDF
