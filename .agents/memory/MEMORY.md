@@ -2,3 +2,4 @@
 - [On-demand clinical PDFs](on-demand-clinical-pdfs.md) — generate clinical and billing PDFs from structured data, never screenshots; do not persist them unless immutable archives are required.
 - [Consultation workflow](consultation-workflow.md) — visits can include investigation waits while other patients are seen; distinguish active doctor time from elapsed visit time.
 - [Clinic date alignment](clinic-date-alignment.md) — queue actions must preserve the viewed date; browser and clinic timezones can differ around midnight.
+- [Workspace package installation](workspace-package-installation.md) — the install callback cannot accept pnpm filter flags; verify dependency installation actually succeeded.
