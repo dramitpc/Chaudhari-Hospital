@@ -17,10 +17,4 @@ If the renderer still returns multiple pages, impose those rendered pages propor
 
 **How to apply:** Reuse data-driven document builders for print, download, and native file sharing. Pass the active preview format and language into the builder, use script-specific bundled fonts, verify actual output pagination, keep database records as the source of truth, and treat generated PDF files as temporary client-side artifacts.
 
-Browser PDF viewers loaded from Blob URLs can become cross-origin inside the Replit preview, so the app must not call `print()` through a hidden PDF iframe. Desktop browsers may use the page's print layout with `window.print()`.
-
-On Android, including tablets in Desktop site mode, both prescription and invoice printing must use the generated PDF file. Prepare the current PDF before the user taps Print so native sharing is invoked during the original tap. If sharing is unavailable or denied, download that same PDF; never fall back to HTML printing. Cancelling the share sheet must not trigger a download.
-
-**Why:** Android HTML printing can add an unwanted second page, and native sharing can fail when PDF generation consumes the tap's temporary permission. Desktop-mode Android user agents may omit the word Android.
-
-**How to apply:** Keep the prepared file aligned with the current document and format, discard outdated preparation results, detect mobile platforms beyond the user-agent string alone, and verify generated page counts with a PDF parser.
+Browser PDF viewers loaded from Blob URLs can become cross-origin inside the Replit preview, so the app must not call `print()` through a hidden PDF iframe. Use the page's print layout with `window.print()` for popup-free printing and provide a separate direct-download action for saving the generated PDF.

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { fmtDate } from "@/lib/dateUtils";
 import {
@@ -14,9 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Download, Printer, Share2, XCircle, Loader2 } from "lucide-react";
-import { usesNativePdfPrinting, handoffPdfForPrinting } from "@/lib/nativePdfPrint";
-import { usePreparedPrintPdf } from "@/hooks/usePreparedPrintPdf";
+import { ArrowLeft, Download, Printer, Share2, XCircle } from "lucide-react";
 import ShareDialog from "@/components/ShareDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -77,17 +75,6 @@ export default function InvoiceDetailPage() {
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("cash");
   const [showShare, setShowShare] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const makeReceiptPdf = useCallback(() => {
-    if (!invoice) throw new Error("Invoice is not ready");
-    return createReceiptPdf({ invoice, patient, payments, settings });
-  }, [invoice, patient, payments, settings]);
-  const handleCreatePdfFile = useCallback(async () => {
-    if (!invoice) throw new Error("Invoice is not ready");
-    return pdfToFile(await makeReceiptPdf(), receiptPdfFileName(invoice));
-  }, [makeReceiptPdf, invoice]);
-  const nativePdfPrinting = usesNativePdfPrinting();
-  const preparedPdf = usePreparedPrintPdf(handleCreatePdfFile, nativePdfPrinting && !!invoice);
 
   const handleCancel = () => {
     if (!confirm("Cancel this invoice? This cannot be undone.")) return;
@@ -135,27 +122,10 @@ export default function InvoiceDetailPage() {
   if (!invoice) return <div className="text-center py-8 text-muted-foreground">Invoice not found</div>;
 
   const items = (invoice.items ?? []) as InvoiceItem[];
-  const handlePrintPdf = async () => {
-    if (isPrinting) return;
-    setIsPrinting(true);
-    try {
-      if (nativePdfPrinting) {
-        const file = preparedPdf.file ?? await handleCreatePdfFile();
-        const result = await handoffPdfForPrinting(file);
-        if (result === "downloaded") toast({
-          title: "Invoice PDF saved",
-          description: "Open the saved PDF in your PDF viewer or printer app and print on A4 paper.",
-        });
-      } else {
-        window.print();
-      }
-    } catch (error) {
-      toast({ title: "Could not prepare PDF for printing", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
-    } finally {
-      setIsPrinting(false);
-    }
-  };
+  const makeReceiptPdf = () => createReceiptPdf({ invoice, patient, payments, settings });
+  const handlePrintPdf = () => window.print();
   const handleDownloadPdf = async () => downloadPdf(await makeReceiptPdf(), receiptPdfFileName(invoice));
+  const handleCreatePdfFile = async () => pdfToFile(await makeReceiptPdf(), receiptPdfFileName(invoice));
 
   const invoiceShareMessage = (() => {
     const clinic = settings?.clinicName ?? "ClinicOS";
@@ -215,9 +185,8 @@ export default function InvoiceDetailPage() {
           <Button variant="outline" size="sm" onClick={() => setShowShare(true)}>
             <Share2 className="mr-1.5 h-4 w-4" /> Share
           </Button>
-          <Button variant="outline" onClick={() => void handlePrintPdf()} disabled={isPrinting || preparedPdf.preparing} data-testid="btn-print-invoice">
-            {isPrinting || preparedPdf.preparing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-            {isPrinting || preparedPdf.preparing ? "Preparing PDF…" : "Print PDF"}
+          <Button variant="outline" onClick={handlePrintPdf}>
+            <Printer className="mr-2 h-4 w-4" /> Print PDF
           </Button>
           <Button variant="outline" onClick={handleDownloadPdf}>
             <Download className="mr-2 h-4 w-4" /> Save PDF

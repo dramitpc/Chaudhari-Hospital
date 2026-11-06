@@ -1,6 +1,6 @@
 import pdfMake from "pdfmake/build/pdfmake";
 import type { Content, TDocumentDefinitions, TFontDictionary } from "pdfmake/interfaces";
-import { pdfPageCount, imposeOnSingleA4 } from "./singlePagePdf";
+import { PDFDocument } from "pdf-lib";
 import type {
   ClinicSettings,
   Consultation,
@@ -69,10 +69,7 @@ function loadFontVfs(): Promise<Record<string, string>> {
         if (!response.ok) throw new Error(`Unable to load PDF font: ${name}`);
         return [name, bufferToBase64(await response.arrayBuffer())] as const;
       }),
-    ).then(entries => Object.fromEntries(entries)).catch(error => {
-      fontVfsPromise = null;
-      throw error;
-    });
+    ).then(entries => Object.fromEntries(entries));
   }
   return fontVfsPromise;
 }
@@ -380,6 +377,53 @@ function buildPrescriptionDefinition(input: PrescriptionPdfInput, fit: number): 
 
   const size = format.fontSize === "lg" ? 11 : format.fontSize === "md" ? 10 : 9;
   return commonDefinition(content, `Prescription - ${prescription.patientName}`, size, fit);
+}
+
+async function pdfPageCount(pdf: Blob): Promise<number> {
+  const source = new TextDecoder("iso-8859-1").decode(await pdf.arrayBuffer());
+  const pageObjects = source.match(/\/Type\s*\/Page(?!s)\b/g)?.length ?? 0;
+  const pageTreeCounts = [...source.matchAll(/\/Count\s+(\d+)/g)]
+    .map(match => Number(match[1]))
+    .filter(Number.isFinite);
+  return Math.max(pageObjects, ...pageTreeCounts, 1);
+}
+
+async function imposeOnSingleA4(pdf: Blob): Promise<Blob> {
+  const source = await PDFDocument.load(await pdf.arrayBuffer());
+  const sourcePages = source.getPages();
+  if (sourcePages.length <= 1) return pdf;
+
+  const output = await PDFDocument.create();
+  const a4Width = 595.28;
+  const a4Height = 841.89;
+  const margin = 18;
+  const gap = 4;
+  const availableWidth = a4Width - margin * 2;
+  const availableHeight = a4Height - margin * 2 - gap * (sourcePages.length - 1);
+  const embeddedPages = await output.embedPages(sourcePages);
+  const totalHeight = sourcePages.reduce((sum, page) => sum + page.getHeight(), 0);
+  const widestPage = Math.max(...sourcePages.map(page => page.getWidth()));
+  const scale = Math.min(availableWidth / widestPage, availableHeight / totalHeight);
+  const target = output.addPage([a4Width, a4Height]);
+
+  let y = a4Height - margin;
+  embeddedPages.forEach((page, index) => {
+    const sourcePage = sourcePages[index];
+    const width = sourcePage.getWidth() * scale;
+    const height = sourcePage.getHeight() * scale;
+    y -= height;
+    target.drawPage(page, {
+      x: (a4Width - width) / 2,
+      y,
+      width,
+      height,
+    });
+    y -= gap;
+  });
+
+  const bytes = await output.save();
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return new Blob([buffer], { type: "application/pdf" });
 }
 
 export async function createPrescriptionPdf(input: PrescriptionPdfInput): Promise<Blob> {
