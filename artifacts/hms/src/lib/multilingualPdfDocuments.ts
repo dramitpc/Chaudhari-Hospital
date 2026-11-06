@@ -157,7 +157,7 @@ function textLabel(key: keyof typeof EN, lang: string, bilingual = true): Conten
   };
 }
 
-export async function renderReportPdf(definition: TDocumentDefinitions): Promise<Blob> {
+async function render(definition: TDocumentDefinitions): Promise<Blob> {
   const vfs = await loadFontVfs();
   return new Promise((resolve, reject) => {
     try {
@@ -167,8 +167,6 @@ export async function renderReportPdf(definition: TDocumentDefinitions): Promise
     }
   });
 }
-
-const render = renderReportPdf;
 
 function commonDefinition(content: Content[], title: string, baseSize: number, fit: number): TDocumentDefinitions {
   const marginX = Math.round(34 * fit);
